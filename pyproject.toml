@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "de-project-template"
+name = "Real-Time-Job-Market-Intelligence-Platform"
 version = "0.1.0"
-description = "A basic template for data egineering project"
+description = "A system that scrapes job postings, processes them at scale, extracts skills using NLP + GenAI, and stores analytics in a data warehouse."
 authors = ["ScriptFizz <nsimamail@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "de_project", from = "src" }]
+packages = [{ include = "job_plat", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"

@@ -2,7 +2,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-PROJECT_NAME = 
+PROJECT_NAME = Real-Time-Job-Market-Intelligence-Platform
 PYTHON_VERSION = 3.11.9
 PYTHON_INTERPRETER = python
 
