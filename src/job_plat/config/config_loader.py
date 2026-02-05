@@ -54,4 +54,8 @@ class ConfigLoader:
         
         return config
     
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._config.get(key, default)
     
+    def as_dict(self) -> dict[str, Any]:
+        return self._config
