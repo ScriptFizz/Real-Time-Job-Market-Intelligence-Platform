@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone
 from tenacity import retry, stop_after_attempt, wait_exponential
-from typing import List, Dict
+from typing import List, Dict, Iterable
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; JobPlatBot/1.0)"
@@ -52,16 +52,13 @@ def parse_job_cards(soup: BeautifulSoup) -> List[Dict]:
         if summary_tag:
             job["description_raw"] = summary_tag.get_text(" ", strip=True)
         
-        jobs.append(job)
-    
-    return jobs
+        yield job
 
 
 def scrape_indeed(url: str) -> List[Dict]:
     html = fetch_html(url)
     soup = BeautifulSoup(html, "html.parser")
-    company_results = company_data(soup)
-    return parse_job_cards(soup)
+    yield from parse_job_cards(soup)
 
 if __name__ == "__main__":
     TEST_URL = "https://www.indeed.com/jobs?q=data+engineer&l=Berlin"
