@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Any
 import numpy as np
 
 from sentence_transformers import SentenceTransformer
@@ -15,11 +15,16 @@ class EmbeddingSkillNormalizer:
         self.eps = eps
         self.min_samples = min_samples
     
-    def normalize(self, skills: List[str]) -> Dict[str, str]:
+    def normalize(self, skills: List[str]) -> List[Dict[str, Any]]:
         """
-        Returns mapping: raw_skill -> canonical_skill
+        Returns one record per canonical skill:
+        {
+            canonical_skill: str
+            embedding: List[float]
+            aliases: List[str]
+        }
         """
-        embeddings = self.model.encode(skills)
+        embeddings = self.model.encode(skills, show_progress_bar=True)
         
         clustering = DBSCAN(
             eps=self.eps,
@@ -28,16 +33,32 @@ class EmbeddingSkillNormalizer:
         ).fit(embeddings)
         
         clusters = {}
-        for skill, label in zip(skills, clustering.labels_):
-            clusters.setdefault(label, []).append(skill)
+        for skill, emb, label in zip(skills, embeddings, clustering.labels_):
+            clusters.setdefault(label, []).append((skill, emb))
         
-        normalized = {}
-        for _, group in clusters.items():
-            canonical = self._choose_canonical(group)
-            for skill in group:
-                normalized[skill] = canonical
+        results = []
+        for group in clusters.values():
+            skills_in_cluster = [s for s,_ in group]
+            vectors_in_cluster = np.array([e for _, e in group])
+            
+            canonical = self._choose_canonical(skills_in_cluster)
+            canonical_embedding = vectors_in_cluster.mean(axis=0)
+            
+            results.append({
+                "canonical_skill": canonical,
+                "embedding": canonical_embedding.tolist(),
+                "aliases": skills_in_cluster
+            })
         
-        return normalized
+        return results
+        
+        # normalized = {}
+        # for _, group in clusters.items():
+            # canonical = self._choose_canonical(group)
+            # for skill in group:
+                # normalized[skill] = canonical
+        
+        # return normalized
     
     def _choose_canonical(self, group: List[str]) -> str:
         """
