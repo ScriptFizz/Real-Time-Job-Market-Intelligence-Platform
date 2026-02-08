@@ -1,4 +1,8 @@
 from pyspark.sql import SparkSession
+from pyspark.sql.types import (
+    StructType, StructField,
+    StringType, ArrayType, FloatType
+)
 
 from job_plat.embeddings.normalize import (
     EmbeddingSkillNormalizer
@@ -29,13 +33,26 @@ def run_normalize(
     
     normalizer = EmbeddingSkillNormalizer()
     
-    mapping = normalizer.normalize(skills)
+    records = normalizer.normalize(skills)
     
-    lookup_df = spark.createDataFrame(
-        [(k, v) for k, v in mapping.items()],
-        ["raw_skill", "canonical_skill"]
-    )
+    schema = StructType([
+        StructField("canonical_skill", StringType(), False),
+        StructField("embedding", ArrayType(FloatType()), False),
+        StructField("aliases", ArrayType(StringType()), False)
+    ])
+    
+    lookup_df = spark.createDataFrame(records, schema=schema)
     
     lookup_df.write.mode("overwrite").parquet(
         lookup_output_path
     )
+    
+    
+    # lookup_df = spark.createDataFrame(
+        # [(k, v) for k, v in mapping.items()],
+        # ["raw_skill", "canonical_skill"]
+    # )
+    
+    # lookup_df.write.mode("overwrite").parquet(
+        # lookup_output_path
+    # )
