@@ -7,10 +7,18 @@ app = typer.Typer()
 
 @app.command()
 def scrape_indeed_cli(
-    run_date: date = typer.Option(),
-    query: str = "data engineer",
-    location: str = "Milan"
+    run_date: date = typer.Argument(..., help="Execution date of the scrape"),
+    query: str = typer.Option("data engineer", help="Job title or keyword to search for"),
+    location: str = typer.Option("Milan", help="Job location to search for")
 ) -> None:
+    """
+    Scrape Indeed job postings and store them in the Bronze layer as JSONL.
+
+    Args:
+        run_date (date): Execution date of the scrape.
+        query (str): Job title or keyword to search for.
+        location (str): Job location to search for.
+    """
     count = run_indeed_scrape(run_date = run_date, query = query, location = location)
     typer.echo(f"Scrapped {count} jobs from Indeed")
 

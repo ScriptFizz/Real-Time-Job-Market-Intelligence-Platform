@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone
 from tenacity import retry, stop_after_attempt, wait_exponential
-from typing import List, Dict, Iterable
+from typing import List, Dict, Iterator, Any
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; JobPlatBot/1.0)"
@@ -12,13 +12,30 @@ HEADERS = {
     stop = stop_after_attempt(5),
     wait = wait_exponential(multipliers=1, min=2, max=30)
 )
-def fetch_data(url: str) -> Dict:
+def fetch_response_text(url: str) -> str:
+    """
+    Fetch raw text data from a URL.
+
+    Args:
+        url (str): URL to fetch data from.
+
+    Returns:
+        str: Raw response text (e.g. HTML or JSON as string).
+    """
     response = requests.get(url, headers=HEADERS, timeout=10)
     response.raise_for_status()
     return response.text
     
-def parse_job_cards(soup: BeautifulSoup) -> List[Dict]:
+def parse_job_cards(soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
+    """
+    Parse job cards from an Indeed search results page.
     
+    Args;
+        soup (BeautfulSoup): Parsed HTML containing job cards.
+    
+    Yields: 
+        Dict[str, Any]: Parsed raw job data (Bronze layer).
+    """
     jobs = []
     
     job_cards = soup.find_all("div", attrs={"data-testid": "jobsearch-SerpJobCard"})
@@ -55,8 +72,17 @@ def parse_job_cards(soup: BeautifulSoup) -> List[Dict]:
         yield job
 
 
-def scrape_indeed(url: str) -> List[Dict]:
-    html = fetch_html(url)
+def scrape_indeed(url: str) -> Iterator[Dict[str, Any]]:
+    """
+    Fetch Indeed result page and yield parsed job cards
+    
+    Args:
+      url (str): URL to fetch data from.
+    
+    Yields:
+      Dict[str, Any]: Parsed raw job data (Bronze layer).
+    """
+    html = fetch_response_text(url)
     soup = BeautifulSoup(html, "html.parser")
     yield from parse_job_cards(soup)
 

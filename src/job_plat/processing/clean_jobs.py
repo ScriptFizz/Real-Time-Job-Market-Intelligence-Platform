@@ -31,11 +31,22 @@ def read_bronze(
 
 
 def clean_jobs(df: DataFrame) -> DataFrame:
+    """
+    Clean and normalize Bronze job data into a Silver-layer schema.
+    
+    Args:
+      df (DataFrame): Spark DataFrame of the Bronze layer data.
+    
+    Returns:
+      (DataFrame): Cleaned and normalized Spark DataFrame (Silver candidate).
+    """
     return (
         df
         # Drop broken records
         .filter(col("job_title_raw").isNotNull())
         .filter(col("description_raw").isNotNull())
+        .filter(trim(col("job_title_raw")) != "")
+        .filter(trim(col("description_raw")) != "")
         
         # Normalize text
         .withColumn("job_title", lower(trim(col("job_title_raw"))))
@@ -51,7 +62,7 @@ def clean_jobs(df: DataFrame) -> DataFrame:
         # Standardize timestamp
         .withColumn(
             "scraped_at",
-            to_timestamp(col("scraped_at"))
+            to_timestamp(col("scraped_at"), "yyyy-MM-dd'T'HH:mm:ssXXX")
         )
         
         # Unified schema
@@ -68,15 +79,24 @@ def clean_jobs(df: DataFrame) -> DataFrame:
     )
 
 def deduplicate_jobs(df: DataFrame) -> DataFrame:
+    """
+    Deduplicate job postings using a deterministic hash.
+
+    Args:
+        df (DataFrame): Cleaned Spark DataFrame (Silver candidate).
+
+    Returns:
+        DataFrame: Deduplicated Spark DataFrame (Silver layer).
+    """
     df_with_hash = df.withColumn(
         "job_hash",
         sha2(
             concat_ws(
                 "||",
-                col("source"),
-                col("job_title"),
-                col("company"),
-                col("location"
+                coalesce(col("source"), lit("")),
+                coalesce(col("job_title"), lit("")),
+                coalesce(col("company"), lit("")),
+                coalesce(col("location"), lit(""))
             ),
             256
         )
