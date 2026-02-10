@@ -14,7 +14,13 @@ def run_extract_skills(
     silver_path: str | Path,
     gold_path: str | Path
 ) -> None:
+    """
+    Extract skills from Silver job data and write them into a Gold layer.
     
+    Args:
+        silver_path (str | Path): Filepath of Silver job data.
+        gold_path: Filepath for the Gold layer data.
+    """
     spark = (
         SparkSession.builder
         .appName("extract_skills")

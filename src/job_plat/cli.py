@@ -42,7 +42,6 @@ def run_clean_cli(
     params = load_params("settings.yaml")
     
     base_bronze_path = bronze_path or params["path"]["bronze"]
-    
     base_silver_path = silver_path or params["path"]["silver"]
     
     full_silver_path = Path(base_silver_path) / f"{data_date.isoformat()}.parquet"
@@ -55,11 +54,17 @@ def extract_skills_cli(
     silver_path: str | None = None,
     gold_path: str | None = None
 ) -> None:
-
+    
+    params = load_params("settings.yaml")
+    
+    silver_path = silver_path or params["path"]["silver"]
+    gold_path = gold_path or params["path"]["gold"]
+    
     run_extract_skills(
         silver_path=silver_path,
         gold_path=gold_path
     )
+    typer.echo(f"Job skills extracted in {gold_path}")
 
 if __name__ == "__main__":
     app()
