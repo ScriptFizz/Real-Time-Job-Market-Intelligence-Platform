@@ -11,6 +11,9 @@ class EmbeddingSkillNormalizer:
         eps: float = 0.3,
         min_samples: int = 1
     ):
+        """
+        
+        """
         self.model = SentenceTransformer(model_name)
         self.eps = eps
         self.min_samples = min_samples
@@ -19,9 +22,9 @@ class EmbeddingSkillNormalizer:
         """
         Returns one record per canonical skill:
         {
-            canonical_skill: str
-            embedding: List[float]
-            aliases: List[str]
+            canonical_skill (str): Representative name of the skill.
+            embedding (List[float]): Embedding vector of the skill.
+            aliases (List[str]): List of aliases name for the skill.
         }
         """
         embeddings = self.model.encode(skills, show_progress_bar=True)
@@ -51,19 +54,18 @@ class EmbeddingSkillNormalizer:
             })
         
         return results
-        
-        # normalized = {}
-        # for _, group in clusters.items():
-            # canonical = self._choose_canonical(group)
-            # for skill in group:
-                # normalized[skill] = canonical
-        
-        # return normalized
+
     
     def _choose_canonical(self, group: List[str]) -> str:
         """
         Simple heuristic:
         - shortest token
         - lowercase
+        
+        Args:
+            group (List[str]): List of skills.
+            
+        Returns:
+            (str): Representative name of the group of skills.
         """
         return min(group, key=len).lower()
