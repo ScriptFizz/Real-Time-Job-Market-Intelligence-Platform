@@ -41,21 +41,13 @@ def run_clean_cli(
     
     params = load_params("settings.yaml")
     
-    base_bronze_path = (
-        bronze_path
-        if bronze_path is not None
-        else params["path"]["bronze"]
-    )
+    base_bronze_path = bronze_path or params["path"]["bronze"]
     
-    base_silver_path = (
-        silver_path
-        if silver_path is not None
-        else params["path"]["silver"]
-    )
+    base_silver_path = silver_path or params["path"]["silver"]
     
-    full_bronze_path = Path(base_bronze_path) / Path(f"{data_date.isoformat()}.jsonl")
-    full_silver_path = Path(base_silver_path) / Path(f"{data_date.isoformat()}.jsonl")
-    run_clean(bronze_path = full_bronze_path, silver_path = full_silver_path)
+    full_silver_path = Path(base_silver_path) / f"{data_date.isoformat()}.parquet"
+    
+    run_clean(base_bronze_path = base_bronze_path, silver_path = full_silver_path)
     typer.echo(f"Data cleaned and stored in {full_silver_path}")
 
 @app.command()

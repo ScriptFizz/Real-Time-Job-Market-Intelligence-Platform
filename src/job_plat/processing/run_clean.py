@@ -1,27 +1,46 @@
 from job_plat.processing.clean_jobs import read_bronze, clean_jobs, deduplicate_jobs
+from job_plat.utils.helpers import union_all
+from pyspark.sql.functions import lit
 from datetime import date
 from pathlib import Path
+from typing import List
 
 def run_clean(
-    run_date: date,
-    bronze_path: str | Path,
-    silver_path: str | Path
+    data_date: date,
+    base_bronze_path: str | Path,
+    silver_path: str | Path,
+    source: List[str] | None = None
 ) -> None:
     """
     Clean and deduplicate jobs data from the Bronze layer, store it in the Silver layer.
     
     Args:
-      run_date (date): Execution date of the scrape.
-      bronze_path (str | Path): filepath of the Bronze layer.
+      base_bronze_path (str | Path): base filepath of the Bronze layer.
       silver_path: (str | Path): filepath of the Silver layer.
     """
+    
     spark = create_spark()
     
-    df = read_bronze(spark, bronze_path)
-    df_clean = clean_jobs(df)
-    df_deduped = deduplicate_jobs(df_clean)
+    sources = sources or ["indeed", "linkedin"]
+    dfs = []
     
-    write_silver(df_deduped, silver_path)
+    for source in sources:
+        bronze_path = Path(base_bronze_path) / source / f"{data_date.isoformat()}.jsonl"
+        if not bronze_file.exists():
+            continue
+            
+        df = read_bronze(spark, bronze_path)
+        df_clean = clean_jobs(df=df)
+        dfs.append(df_clean)
+    
+    if not dfs:
+        raise RuntimeError("No bronze data found for given date")
+        
+    silver_df = union_all(dfs)
+    silver_df = deduplicate_jobs(silver_df)
+        
+    
+    write_silver(silver_df, silver_path)
     
     spark.stop()
 
@@ -37,6 +56,7 @@ def run_clean(
       bronze_path (str | Path): filepath of the Bronze layer.
       silver_path: (str | Path): filepath of the Silver layer.
     """
+    
     spark = create_spark()
     
     df = read_bronze(spark, bronze_path)
