@@ -24,6 +24,9 @@ def read_bronze(
     spark: SparkSession,
     input_path: str | Path
 ) -> DataFrame:
+    
+    if not Path(input_path).exists():
+        raise FileNotFoundError(f"{input_path} not found.")
     return (
         spark.read
         .json(input_path)
