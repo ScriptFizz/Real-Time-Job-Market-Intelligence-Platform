@@ -3,6 +3,7 @@ from datetime import date
 from job_plat.ingestion.run_scrape import run_indeed_scrape
 from job_plat.processing.run_clean import run_clean
 from job_plat.nlp.run_extract_skills import run_extract_skills
+from job_plat.embeddings.run_embed_normalize_skills import embed_normalize_skills
 
 app = typer.Typer()
 
@@ -34,9 +35,9 @@ def run_clean_cli(
     Clean and deduplicate jobs data from the Bronze layer, store it in the Silver layer.
 
     Args:
-        run_date (date): Execution date of the scrape.
-        bronze_path (str | Path): filepath of the Bronze layer.
-        silver_path: (str | Path): filepath of the Silver layer.
+        run_date (date): Logical data date (scrape date / snapshot version).
+        bronze_path (str | Path): Filepath of the Bronze layer.
+        silver_path: (str | Path): Filepath of the Silver layer.
     """
     
     params = load_params("settings.yaml")
@@ -51,20 +52,76 @@ def run_clean_cli(
 
 @app.command()
 def extract_skills_cli(
-    silver_path: str | None = None,
-    gold_path: str | None = None
+    data_date: date = typer.Argument(..., help="Logical data date (scrape date / snapshot version)"),
+    silver_path: str | None = typer.Option(None, help="filepath of the Silver layer."),
+    gold_path: str | None = typer.Option(None, help="filepath of the Gold layer.")
 ) -> None:
+    """
+    Extract from each job its skills, store the result in the Gold layer.
+    
+    Args:
+        run_date (date): Logical data date (scrape date / snapshot version).
+        bronze_path (str | Path): Filepath of the Bronze layer.
+        silver_path: (str | Path): Filepath of the Silver layer.
+        silver_path: (str | Path): Filepath of the Silver layer.
+    """
     
     params = load_params("settings.yaml")
     
-    silver_path = silver_path or params["path"]["silver"]
-    gold_path = gold_path or params["path"]["gold"]
+    base_silver_path = silver_path or params["path"]["silver"]
+    base_gold_path = gold_path or params["path"]["gold"]
+    
+    full_silver_path = Path(base_silver_path) / f"{data_date.isoformat()}.parquet"
+    full_gold_path = Path(base_gold_path) / f"job_skills_{data_date.isoformat()}.parquet"
     
     run_extract_skills(
         silver_path=silver_path,
         gold_path=gold_path
     )
-    typer.echo(f"Job skills extracted in {gold_path}")
+    typer.echo(f"Job skills extracted in {full_gold_path}")
+    
+    
+@app.command()
+def embed_normalize_skills_cli(
+    gold_path: str | None = None,
+    lookup_output_path: str | None = None
+) -> None:
+    """
+    Perform skills embeddings and store them in the Gold layer.
+    """
+    
+    params = load_params("settings.yaml")
+    
+    gold_path = gold_path or params["path"]["gold"]
+    lookup_output_path = lookup_output_path or params["path"]["lookout_output_path"]
+    
+    run_normalize(
+        gold_path = gold_path,
+        lookup_output_path = lookup_output_path
+    )
+    typer.echo(f"Skills embeddings stored in {lookup_output_path}")
 
 if __name__ == "__main__":
     app()
+
+
+
+# @app.command()
+# def run_normalize_cli(
+    # gold_path: str | None = None,
+    # lookup_output_path: str | None = None
+# ) -> None:
+    # """
+    # Perform skills embeddings and store them in the Gold layer.
+    # """
+    
+    # params = load_params("settings.yaml")
+    
+    # gold_path = gold_path or params["path"]["gold"]
+    # lookup_output_path = lookup_output_path or params["path"]["lookout_output_path"]
+    
+    # run_normalize(
+        # gold_path = gold_path,
+        # lookup_output_path = lookup_output_path
+    # )
+    # typer.echo(f"Skills embeddings stored in {lookup_output_path}")

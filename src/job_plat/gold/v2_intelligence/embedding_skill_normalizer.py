@@ -12,7 +12,7 @@ class EmbeddingSkillNormalizer:
         min_samples: int = 1
     ):
         """
-        
+        Normalizing class containing embedding logic.
         """
         self.model = SentenceTransformer(model_name)
         self.eps = eps
@@ -20,12 +20,18 @@ class EmbeddingSkillNormalizer:
     
     def normalize(self, skills: List[str]) -> List[Dict[str, Any]]:
         """
-        Returns one record per canonical skill:
-        {
-            canonical_skill (str): Representative name of the skill.
-            embedding (List[float]): Embedding vector of the skill.
-            aliases (List[str]): List of aliases name for the skill.
-        }
+        Returns one record per canonical skill with embedding information.
+        
+        Args:
+            skills (List[str]): List of skills from a job description.
+            
+        Returns:
+            (List[Dict[str, Any]]): Record for each canonical skill of the form
+                {
+                    canonical_skill (str): Representative name of the skill.
+                    embedding (List[float]): Embedding vector of the skill.
+                    aliases (List[str]): List of aliases name for the skill.
+                }
         """
         embeddings = self.model.encode(skills, show_progress_bar=True)
         

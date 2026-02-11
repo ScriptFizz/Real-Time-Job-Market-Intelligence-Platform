@@ -12,7 +12,7 @@ def run_clean(
     source: List[str] | None = None
 ) -> None:
     """
-    Clean and deduplicate jobs data from the Bronze layer, store it in the Silver layer.
+    Clean and deduplicate jobs data from the Bronze layer, store it in the Silver layer (jobs_silver).
     
     Args:
       base_bronze_path (str | Path): base filepath of the Bronze layer.
