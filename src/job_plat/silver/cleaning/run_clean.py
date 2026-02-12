@@ -1,5 +1,5 @@
 from job_plat.processing.clean_jobs import read_bronze, clean_jobs, deduplicate_jobs
-from job_plat.utils.helpers import union_all
+from job_plat.utils.helpers import create_spark, union_all
 from pyspark.sql.functions import lit
 from datetime import date
 from pathlib import Path
@@ -19,7 +19,9 @@ def run_clean(
       silver_path: (str | Path): filepath of the Silver layer.
     """
     
-    spark = create_spark()
+    spark = create_spark(
+        app_name = "clean-jobs-silver"
+    )
     
     sources = sources or ["indeed", "linkedin"]
     dfs = []

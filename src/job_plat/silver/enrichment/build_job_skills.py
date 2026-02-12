@@ -3,6 +3,7 @@ from pyspark.sql.functions import (
     col, lower, split, lit, current_timestamp, explode
 )
 
+from job_plat.utils.helpers import create_spark
 from job_plat.processing.spark_ops import (
     extract_skills_udf,
     normalize_skills_udf,
@@ -15,17 +16,14 @@ def run_extract_skills(
     output_path: str | Path
 ) -> None:
     """
-    Extract skills from Silver job data and write them into a Gold layer (job_skill_silver).
+    Extract skills from Silver job data and write them into the Gold_v1 layer (job_skill_silver).
     
     Args:
         job_silver_path (str | Path): Filepath of Silver job data.
         output_path: Filepath for the Silver job skills data.
     """
-    spark = (
-        SparkSession.builder
-        .appName("silver-extract_skills")
-        .getOrCreate()
-    )
+    spark = create_spark(app_name="silver-extract_skills")
+
         
     df = spark.read.parquet(silver_path)
     

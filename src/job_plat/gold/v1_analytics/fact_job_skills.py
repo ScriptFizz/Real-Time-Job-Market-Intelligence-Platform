@@ -1,10 +1,10 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from pathlib import Path
 
 
 def build_fact_job_skills(
-    job_skills_df: ,
-    dim_skills_df: ,
+    job_skills_df: DataFrame,
+    dim_skills_df: DataFrame,
 ) -> None:
 
     return (

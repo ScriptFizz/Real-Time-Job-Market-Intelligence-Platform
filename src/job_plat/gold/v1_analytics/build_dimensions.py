@@ -1,6 +1,6 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from pathlib import Path
-from pyspark.sql.functions import
+from pyspark.sql.functions import (
     monotonically_increasing_id,
     to_date,
     col,
@@ -9,8 +9,8 @@ from pyspark.sql.functions import
 
 
 def build_dim_jobs(
-    job_silver_df: 
-) -> None:
+    job_silver_df: DataFrame
+) -> DataFrame:
     return (
         job_silver_df
         .withColumn("scraped_date", to_date(col("scraped_at")))
@@ -28,24 +28,38 @@ def build_dim_jobs(
     
     
 def build_dim_skills(
-    job_skills_silver_path: str | Path,
-    output_path: str | Path
-) -> None:
+    job_skills_silver_df: DataFrame
+) -> DataFrame:
 
-    spark = (
-        SparkSession.builder
-        .appName("build-dim-skills")
-        .getOrCreate()
-    )
-    
-    df = spark.read.parquet(job_skills_silver_path)
-    
-    dim_skills = (
-        df
+    return (
+        job_skills_silver_df
         .select("skill")
         .distinct()
         .withColumn("skill_id", monotonically_increasing_id())
     )
     
-    dim_skills.write.mode("overwrite").parquet(output_path)
     
+
+
+
+# def build_dim_skills(
+    # job_skills_silver_path: str | Path,
+    # output_path: str | Path
+# ) -> None:
+
+    # spark = (
+        # SparkSession.builder
+        # .appName("build-dim-skills")
+        # .getOrCreate()
+    # )
+    
+    # df = spark.read.parquet(job_skills_silver_path)
+    
+    # dim_skills = (
+        # df
+        # .select("skill")
+        # .distinct()
+        # .withColumn("skill_id", monotonically_increasing_id())
+    # )
+    
+    # dim_skills.write.mode("overwrite").parquet(output_path)

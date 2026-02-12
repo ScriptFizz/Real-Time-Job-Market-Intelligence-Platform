@@ -80,8 +80,10 @@ def build_job_embeddins(
                     END
                 )
             """)
+        ).withColumn(
+        "generated_at", F.current_timestamp()
         )
-        .select("job_id", "job_embedding", "job_embedding_normalized")
+        .select("job_id", "job_embedding", "job_embedding_normalized", "generated_at")
     )
     
     job_embedding_normalized.write.mode("overwrite").parquet(output_path)
