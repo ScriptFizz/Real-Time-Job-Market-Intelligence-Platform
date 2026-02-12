@@ -1,5 +1,28 @@
 from functools import reduce
-from pyspark.sql import DataFrame
+from pyspark.sql import SparkSession, DataFrame
+
+
+def create_spark(
+    app_name: str,
+    master_url: str = "local[*]"
+) -> SparkSession:
+    """
+    Create a SparkSession with a specific application name and master URL.
+    
+    Args:
+        app_name (str): Name of the application to create.
+        master_url(str): Master URL of the application to create.
+        
+    Returns:
+        (SparkSession): Entry point to programming Spark.
+    """
+    return (
+        SparkSession.builder
+        .appName(app_name)
+        .master(master_url)
+        .getOrCreate()
+    )
+
 
 def union_all(dfs: list[DataFrame]) -> DataFrame:
     """
