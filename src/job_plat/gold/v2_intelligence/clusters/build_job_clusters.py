@@ -98,4 +98,4 @@ def build_job_clusters(
     
     metadata_df = spark.createDataFrame([metadata])
     
-    return membership_df, clusters_df
+    return membership_df, clusters_df, metadata_df

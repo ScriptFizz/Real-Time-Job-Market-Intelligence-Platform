@@ -12,14 +12,6 @@ from pyspark.sql.functions import (
 from pyspark.sql.types import StringType
 from pathlib import Path
 
-def create_spark() -> SparkSession:
-    return (
-        SparkSession.builder
-        .appName("clean-jobs-silver")
-        .master("local[*]")
-        .getOrCreate()
-    )
-
 def read_bronze(
     spark: SparkSession,
     input_path: str | Path
