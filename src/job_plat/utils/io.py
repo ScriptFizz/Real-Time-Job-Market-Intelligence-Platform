@@ -4,7 +4,10 @@ from typing import List, Dict, Iterable
 from pathlib import Path
 from job_plat.config.config_loader import ConfigLoader
 
-def load_params(env: str | None = None) -> Dict:
+def load_params(
+    config_path: str | None = None, 
+    env: str | None = None
+    ) -> Dict:
     """
     Read a configuration yaml file and return its data.
 
@@ -14,7 +17,7 @@ def load_params(env: str | None = None) -> Dict:
     Returns:
             Dict (Python object that best fits the data): configuration data in a nested structure
     """
-    return ConfigLoader(env=env).as_dict()
+    return ConfigLoader(config_path=config_path, env=env).as_dict()
 
 def write_jsonl(
     records: Iterable[Dict], 

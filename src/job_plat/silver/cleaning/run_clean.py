@@ -8,7 +8,7 @@ from typing import List
 def run_clean(
     data_date: date,
     base_bronze_path: str | Path,
-    silver_path: str | Path,
+    job_silver_path: str | Path,
     source: List[str] | None = None
 ) -> None:
     """
@@ -42,6 +42,6 @@ def run_clean(
     silver_df = deduplicate_jobs(silver_df)
         
     
-    write_silver(silver_df, silver_path)
+    write_silver(silver_df, job_silver_path)
     
     spark.stop()

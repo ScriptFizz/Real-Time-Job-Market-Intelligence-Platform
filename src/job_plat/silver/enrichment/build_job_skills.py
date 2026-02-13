@@ -11,21 +11,21 @@ from job_plat.processing.spark_ops import (
 )
 from pathlib import Path
 
-def run_extract_skills(
+def run_job_skills(
     job_silver_path: str | Path,
-    output_path: str | Path
+    job_skills_silver_path: str | Path
 ) -> None:
     """
     Extract skills from Silver job data and write them into the Gold_v1 layer (job_skill_silver).
     
     Args:
         job_silver_path (str | Path): Filepath of Silver job data.
-        output_path: Filepath for the Silver job skills data.
+        job_skills_silver_path: Filepath for the Silver job skills data.
     """
     spark = create_spark(app_name="silver-extract_skills")
 
         
-    df = spark.read.parquet(silver_path)
+    df = spark.read.parquet(job_silver_path)
     
     df = df.withColumn(
         "tokens",
@@ -61,7 +61,7 @@ def run_extract_skills(
     )
     
 
-    exploded_df.write.mode("overwrite").parquet(gold_path)
+    exploded_df.write.mode("overwrite").parquet(job_skills_silver_path)
 
 
 
