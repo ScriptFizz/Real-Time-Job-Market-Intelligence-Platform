@@ -1,5 +1,6 @@
 from functools import reduce
 from pyspark.sql import SparkSession, DataFrame
+from pathlib import Path
 
 
 def create_spark(
@@ -43,3 +44,11 @@ def union_all(dfs: list[DataFrame]) -> DataFrame:
         lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True),
         dfs,
     )
+
+def path_exists(spark: SparkSession, path: str | Path) -> bool:
+    
+    try:
+        spark.read.parquet(path).limit(1).collect()
+        return True
+    except Exception:
+        return False

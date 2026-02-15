@@ -3,6 +3,7 @@ from pathlib import Path
 from pyspark.sql.functions import (
     monotonically_increasing_id,
     to_date,
+    sha2,
     col,
     length
 )
@@ -35,7 +36,7 @@ def build_dim_skills(
         job_skills_silver_df
         .select("skill")
         .distinct()
-        .withColumn("skill_id", monotonically_increasing_id())
+        .withColumn("skill_id", sha2(col("skill"), 256))
     )
     
     

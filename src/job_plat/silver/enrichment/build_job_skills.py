@@ -14,6 +14,7 @@ from pathlib import Path
 def run_job_skills(
     job_silver_path: str | Path,
     job_skills_silver_path: str | Path
+    spark: SparkSession
 ) -> None:
     """
     Extract skills from Silver job data and write them into the Gold_v1 layer (job_skill_silver).
@@ -21,8 +22,8 @@ def run_job_skills(
     Args:
         job_silver_path (str | Path): Filepath of Silver job data.
         job_skills_silver_path: Filepath for the Silver job skills data.
+        spark (SparkSession): Entry point interface for Spark engine.
     """
-    spark = create_spark(app_name="silver-extract_skills")
 
         
     df = spark.read.parquet(job_silver_path)
