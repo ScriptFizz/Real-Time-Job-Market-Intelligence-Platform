@@ -3,12 +3,12 @@ from pathlib import Path
 
 
 def build_fact_job_skills(
-    job_skills_df: DataFrame,
+    job_skills_silver_df: DataFrame,
     dim_skills_df: DataFrame,
 ) -> None:
 
     return (
-        job_skills_df
+        job_skills_silver_df
         .join(dim_skills_df, "skill")
         .select(
             "job_id",

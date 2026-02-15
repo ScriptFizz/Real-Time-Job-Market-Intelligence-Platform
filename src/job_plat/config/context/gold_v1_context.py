@@ -15,7 +15,7 @@ class GoldV1Context:
     
     @property
     def dim_skills_path(self) -> Path:
-        return self.base_path / f"dim_jobs_{self.data_date}.parquet"
+        return self.base_path / f"dim_skills_{self.data_date}.parquet"
 
     @property
     def fact_job_skill_path(self) -> Path:
