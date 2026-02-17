@@ -1,7 +1,8 @@
 from datetime import date
 from pathlib import Path
 from job_plat.config.context import PipelineContext
-from job_plat.gold.v1_analytics.build_gold_v1 import run_gold_v1
+from job_plat.pipelines.stages import GoldV1Stage
+#from job_plat.gold.v1_analytics.build_gold_v1 import run_gold_v1
 
 
 
@@ -9,17 +10,28 @@ def gold_v1_pipeline(
     ctx: PipelineContext
 ) -> None:
     
-    silver_ctx = ctx.silver
-    gold_v1_ctx = ctx.gold_v1
-    
-    
-    
-    run_gold_v1(
-        silver_ctx = silver_ctx,
-        gold_v1_ctx = gold_v1_ctx
+    stage = GoldV1Stage(
+        silver_ctx = ctx.silver
+        gold_v1_ctx = ctx.gold_v1
     )
     
+    stage.execute()
+    
  
+ 
+# def gold_v1_pipeline(
+    # ctx: PipelineContext
+# ) -> None:
+    
+    # silver_ctx = ctx.silver
+    # gold_v1_ctx = ctx.gold_v1
+    
+    
+    
+    # run_gold_v1(
+        # silver_ctx = silver_ctx,
+        # gold_v1_ctx = gold_v1_ctx
+    # )
  
  # def gold_v1_pipeline(
     # ctx: PipelineContext

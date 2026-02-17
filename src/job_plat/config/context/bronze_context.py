@@ -9,6 +9,8 @@ from typing import List
 class BronzeContext:
     data_date: date
     base_path: Path
+    query: str,
+    location: str
     
     @property
     def indeed_jobs_path(self) -> Path:

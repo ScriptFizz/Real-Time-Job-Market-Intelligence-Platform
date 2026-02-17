@@ -19,16 +19,16 @@ def load_params(
     """
     return ConfigLoader(config_path=config_path, env=env).as_dict()
 
-def write_jsonl(
-    records: Iterable[Dict], 
-    output_path: str | Path ) -> None:
+# def write_jsonl(
+    # records: Iterable[Dict], 
+    # output_path: str | Path ) -> None:
     
-    output_path = Path(output_path)
-    output_path.mkdir(parents=True, exist_ok=True)
+    # output_path = Path(output_path)
+    # output_path.mkdir(parents=True, exist_ok=True)
         
-    with output_path.open("w", encoding="utf-8") as file:
-        for record in records:
-            file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    # with output_path.open("w", encoding="utf-8") as file:
+        # for record in records:
+            # file.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def iter_jsonl(
