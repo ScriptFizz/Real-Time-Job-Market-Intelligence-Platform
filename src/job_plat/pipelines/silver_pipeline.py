@@ -1,43 +1,53 @@
 from datetime import date
 from pathlib import Path
-from job_plat.config.context import PipelineContext
-from job_plat.silver.cleaning.run_clean import run_clean
-from job_plat.silver.enrichment.build_job_skills import run_job_skills
-from job_plat.silver.validation.quality_checks import run_quality_checks
+from job_plat.config.context import BronzeContext, SilverContext, PipelineContext
+from job_plat.pipelines.stages import SilverStage
+#from job_plat.silver.cleaning.run_clean import run_clean
+#from job_plat.silver.enrichment.build_job_skills import run_job_skills
+#from job_plat.silver.validation.quality_checks import run_quality_checks
 
 def silver_pipeline(
     ctx: PipelineContext
 ) -> None:
-    
-    bronze_ctx  = ctx.bronze
-    silver_ctx = ctx.silver
-    
-    job_bronze_paths = bronze_ctx.jobs_path_list
-    job_silver_path = silver_ctx.jobs_path
-    job_skills_silver_path = silver_ctx.job_skills_path
-    spark = ctx.spark
-    
-    
-    if not job_bronze_path.exists():
-        raise FileNotFoundError(f"Bronze data not found in {job_bronze_path}")
-    
-    
-    run_clean(
-        job_bronze_paths = job_bronze_paths,
-        job_silver_path = job_silver_path,
-        spark = spark
+    stage = SilverStage(
+        silver_ctx = ctx.silver
+        bronze_ctx = ctx.bronze
     )
     
-    run_job_skills(
-        job_silver_path = job_silver_path,
-        job_skills_silver_path = job_skills_silver_path,
-        spark = spark
-    )
-    
-    run_quality_checks()
+    stage.execute()
     
     
+
+# def silver_pipeline(
+    # ctx: PipelineContext
+# ) -> None:
     
+    # bronze_ctx  = ctx.bronze
+    # silver_ctx = ctx.silver
+    
+    # job_bronze_paths = bronze_ctx.jobs_path_list
+    # job_silver_path = silver_ctx.jobs_path
+    # job_skills_silver_path = silver_ctx.job_skills_path
+    # spark = ctx.spark
+    
+    
+    # if not job_bronze_path.exists():
+        # raise FileNotFoundError(f"Bronze data not found in {job_bronze_path}")
+    
+    
+    # run_clean(
+        # job_bronze_paths = job_bronze_paths,
+        # job_silver_path = job_silver_path,
+        # spark = spark
+    # )
+    
+    # run_job_skills(
+        # job_silver_path = job_silver_path,
+        # job_skills_silver_path = job_skills_silver_path,
+        # spark = spark
+    # )
+    
+    # run_quality_checks()
 
 # def silver_pipeline(
     # data_date: date,

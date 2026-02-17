@@ -1,7 +1,8 @@
 from datetime import date
 from pathlib import Path
 from pyspark.sql import DataFrame
-from job_plat.config.context import PipelineContext
+from job_plat.config.context import BronzeContext, SilverContext, PipelineContext
+from job_plat.pipelines.stages import BaseStage
 from job_plat.silver.cleaning.run_clean import run_clean
 from job_plat.utils.helpers import union_all
 from job_plat.processing.clean_jobs import clean_jobs, deduplicate_jobs
@@ -67,7 +68,7 @@ class SilverStage(BaseStage):
         for name, mode, path in [
             ("dim_jobs", "overwrite", self.gold_v1_ctx.dim_jobs_path),
             ("dim_skills", "overwrite", self.gold_v1_ctx.dim_skills_path),
-            ("fact_job_skills", self.gold_v1_ctx.fact_job_skill_path),
+            ("fact_job_skills", "append", self.gold_v1_ctx.fact_job_skill_path),
         ]:
             
             outputs[name] \
