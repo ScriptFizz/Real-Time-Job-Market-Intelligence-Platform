@@ -1,4 +1,4 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import (
     col, lower, split, lit, current_timestamp, explode
 )
@@ -12,10 +12,8 @@ from job_plat.processing.spark_ops import (
 from pathlib import Path
 
 def run_job_skills(
-    job_silver_path: str | Path,
-    job_skills_silver_path: str | Path
-    spark: SparkSession
-) -> None:
+    jobs_silver_df: DataFrame
+) -> DataFrame:
     """
     Extract skills from Silver job data and write them into the Gold_v1 layer (job_skill_silver).
     
@@ -24,11 +22,8 @@ def run_job_skills(
         job_skills_silver_path: Filepath for the Silver job skills data.
         spark (SparkSession): Entry point interface for Spark engine.
     """
-
-        
-    df = spark.read.parquet(job_silver_path)
     
-    df = df.withColumn(
+    df = jobs_silver_df.withColumn(
         "tokens",
         split(lower(col("description")), r"\W+")
     )
@@ -51,7 +46,7 @@ def run_job_skills(
             )
     )
     
-    exploded_df = df.select(
+    job_skills_df = df.select(
         "job_id",
         explode("skills_normalized").alias("skills"),
         "skill_confidence"
@@ -62,9 +57,62 @@ def run_job_skills(
     )
     
 
-    exploded_df.write.mode("overwrite").parquet(job_skills_silver_path)
+    return job_skills_df
 
 
+
+# def run_job_skills(
+    # job_silver_path: str | Path,
+    # job_skills_silver_path: str | Path
+    # spark: SparkSession
+# ) -> None:
+    # """
+    # Extract skills from Silver job data and write them into the Gold_v1 layer (job_skill_silver).
+    
+    # Args:
+        # job_silver_path (str | Path): Filepath of Silver job data.
+        # job_skills_silver_path: Filepath for the Silver job skills data.
+        # spark (SparkSession): Entry point interface for Spark engine.
+    # """
+
+        
+    # df = spark.read.parquet(job_silver_path)
+    
+    # df = df.withColumn(
+        # "tokens",
+        # split(lower(col("description")), r"\W+")
+    # )
+    
+    # df = df.withColumn(
+        # "skills",
+        # extract_skills_udf(col("tokens"))
+    # )
+    
+    # df = df.withColumn(
+        # "skills_normalized",
+        # normalize_skills_udf(col("skills"))
+    # )
+    
+    # df = df.withColumn(
+        # "skill_confidence",
+        # skill_confidence_udf(
+                # col("tokens"), 
+                # col("skills_normalized")
+            # )
+    # )
+    
+    # exploded_df = df.select(
+        # "job_id",
+        # explode("skills_normalized").alias("skills"),
+        # "skill_confidence"
+    # ).withColumn(
+        # "extraction_method", lit("dictionary_v1")
+    # ).withColumn(
+        # "processed_at", current_timestamp()
+    # )
+    
+
+    # exploded_df.write.mode("overwrite").parquet(job_skills_silver_path)
 
 # def run_extract_skills(
     # silver_path: str | Path,

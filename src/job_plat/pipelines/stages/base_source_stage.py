@@ -11,7 +11,7 @@ class BaseSourceStage(ABC):
         
     def execute(self) -> None:
         start = time.time()
-        self.logger.ingo("Starting source stage")
+        self.logger.info("Starting source stage")
         
         self.validate_config()
         count = self.produce()

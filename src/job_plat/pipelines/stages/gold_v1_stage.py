@@ -70,7 +70,7 @@ class GoldV1Stage(BaseStage):
         for name, mode, path in [
             ("dim_jobs", "overwrite", self.gold_v1_ctx.dim_jobs_path),
             ("dim_skills", "overwrite", self.gold_v1_ctx.dim_skills_path),
-            ("fact_job_skills", self.gold_v1_ctx.fact_job_skill_path),
+            ("fact_job_skills", "append", self.gold_v1_ctx.fact_job_skill_path),
         ]:
             
             outputs[name] \
