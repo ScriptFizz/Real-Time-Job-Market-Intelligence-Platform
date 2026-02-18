@@ -5,7 +5,7 @@ from functools import reduce
 
 # job_embeddings: 1 row per (job_id, model_version)
 
-def build_job_embeddins(
+def build_job_embeddings(
     fact_job_skills_df: DataFrame,
     #dim_skills_df: DataFrame,
     skill_embeddings_df: DataFrame,

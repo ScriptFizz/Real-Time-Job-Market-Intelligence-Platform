@@ -1,16 +1,13 @@
 from datetime import date
 from pathlib import Path
 from job_plat.config.context import BronzeContext, SilverContext, PipelineContext
-from job_plat.pipelines.stages import SilverStage
-#from job_plat.silver.cleaning.run_clean import run_clean
-#from job_plat.silver.enrichment.build_job_skills import run_job_skills
-#from job_plat.silver.validation.quality_checks import run_quality_checks
+from job_plat.pipelines.stages.silver_stage import SilverStage
 
 def silver_pipeline(
     ctx: PipelineContext
 ) -> None:
     stage = SilverStage(
-        silver_ctx = ctx.silver
+        silver_ctx = ctx.silver,
         bronze_ctx = ctx.bronze
     )
     
