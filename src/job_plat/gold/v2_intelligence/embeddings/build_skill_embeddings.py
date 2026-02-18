@@ -4,23 +4,27 @@ from pyspark.sql.types import (
     StringType, ArrayType, FloatType
 )
 
-from job_plat.embeddings.gold.v2_intelligence.embedding_skill_normalize import (
-    EmbeddingSkillNormalizer
-)
+from sentence_transformers import SentenceTransformer
 from pathlib import Path
+from typing import List
+
+# skill_embeddings: 1 row per (skill_id, model_version)
 
 def build_skill_embeddings(
     dim_skills_df: DataFrame,
     spark: SparkSession
-    model_name: str = "all-MiniLM-L6-v2"
+    model_name: str = "all-MiniLM-L6-v2",
+    model_version: str = "v1",
+    model_provider: str = "sentence-transformer"
 ) -> DataFrame:
     """
     Define embedding of normalized skills to store into Gold layer.
     """
     
     # Collect distinct skills
-    skills = (
+    skills: List[str] = (
         dim_skills_df
+        .orderBy("skill_id")
         .select("skill")
         .rdd
         .map(lambda r:r.skill)
@@ -30,28 +34,71 @@ def build_skill_embeddings(
     model = SentenceTransformer(model_name)
     embeddings = model.encode(skills, show_progress_bar=True)
     
+    embedding_dim = len(embeddings[0]) if embeddings else 0
+    
     records = [(skill, emb.tolist()) for skill, emb in zip(skills, embeddings)]
     
-    result = spark.sparkSession.createDataFrame(
-        records,
+    embedding_df = spark.createDataFrame(
+        records, 
         schema=["skill", "embedding"]
+    )
+    
+    result = (
+        dim_skills_df
+        .join(embedding_df, "skill")
+        .withColumn("embedding_dim", F.lit(embedding_dim))
+        .withColumn("model_name", F.lit(model_name))
+        .withColumn("model_version", F.lit(model_version))
+        .withColumn("model_provider", F.lit(model_provider))
+        .withColumn("generated_at", F.current_timestamp())
+        .withColumn("is_active", F.lit(True))
+        .select(
+            "skill_id",
+            "skill",
+            "embedding",
+            "embedding_dim",
+            "model_name",
+            "model_version",
+            "model_provider",
+            "generated_at",
+            "is_active"
+        )
     )
     
     return result
     
-    normalizer = EmbeddingSkillNormalizer()
+
+# def build_skill_embeddings(
+    # dim_skills_df: DataFrame,
+    # spark: SparkSession
+    # model_name: str = "all-MiniLM-L6-v2",
+    # model_version: str = "v1",
+    # model_provider: str = "sentence-transformer"
+# ) -> DataFrame:
+    # """
+    # Define embedding of normalized skills to store into Gold layer.
+    # """
     
-    records = normalizer.normalize(skills)
+    # # Collect distinct skills
+    # skills = (
+        # dim_skills_df
+        # .select("skill")
+        # .rdd
+        # .map(lambda r:r.skill)
+        # .collect()
+    # )
     
-    schema = StructType([
-        StructField("skill", StringType(), False),
-        StructField("embedding", ArrayType(FloatType()), False),
-        StructField("aliases", ArrayType(StringType()), False)
-    ])
+    # model = SentenceTransformer(model_name)
+    # embeddings = model.encode(skills, show_progress_bar=True)
     
-    skill_lookup_df = spark.createDataFrame(records, schema=schema)
+    # records = [(skill, emb.tolist()) for skill, emb in zip(skills, embeddings)]
     
-    return skill_lookup_df
+    # result = spark.sparkSession.createDataFrame(
+        # records,
+        # schema=["skill", "embedding"]
+    # )
+    
+    # return result
     
     
 # def build_skill_embeddings(
