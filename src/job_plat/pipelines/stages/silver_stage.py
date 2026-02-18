@@ -4,6 +4,7 @@ from pyspark.sql import DataFrame
 from job_plat.config.context import BronzeContext, SilverContext, PipelineContext
 from job_plat.pipelines.stages import BaseStage
 from job_plat.silver.cleaning.run_clean import run_clean
+from job_plat.silver.enrichment.build_job_skills import run_job_skills
 from job_plat.utils.helpers import union_all
 from job_plat.processing.clean_jobs import clean_jobs, deduplicate_jobs
 from job_plat.silver.validation.quality_checks import run_quality_checks
@@ -46,16 +47,18 @@ class SilverStage(BaseStage):
             df_clean = clean_jobs(df=df)
             dfs.append(df_clean)
         
-        silver_df = union_all(dfs)
-        silver_df = deduplicate_jobs(silver_df)
+        jobs_silver_df = union_all(dfs)
+        jobs_silver_df = deduplicate_jobs(jobs_silver_df)
+        
+        job_skills_silver_df = run_job_skills(jobs_silver_df = jobs_silver_df)
         
         data_date = self.silver_ctx.data_date
-        silver_df = silver_df.withColumn("data_date", lit(data_date))
+        jobs_silver_df = jobs_silver_df.withColumn("data_date", lit(data_date))
+        job_skills_silver_df = job_skills_silver_df.withColumn("data_date", lit(data_date))
         
         return {
-            "dim_jobs": dim_jobs_df,
-            "dim_skills": dim_skills_df,
-            "fact_job_skills": fact_df
+            "jobs_silver": job_silver_df,
+            "job_skills_silver": job_skills_silver_df
         }
     
     def write(self, outputs: dict) -> None:
@@ -66,9 +69,8 @@ class SilverStage(BaseStage):
         )
         
         for name, mode, path in [
-            ("dim_jobs", "overwrite", self.gold_v1_ctx.dim_jobs_path),
-            ("dim_skills", "overwrite", self.gold_v1_ctx.dim_skills_path),
-            ("fact_job_skills", "append", self.gold_v1_ctx.fact_job_skill_path),
+            ("jobs_silver", "overwrite", self.silver_ctx.jobs_path),
+            ("job_skills_", "overwrite", self.silver_ctx.job_skills_path)
         ]:
             
             outputs[name] \
