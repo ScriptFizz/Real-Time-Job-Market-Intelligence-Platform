@@ -1,6 +1,7 @@
 from functools import reduce
 from pyspark.sql import SparkSession, DataFrame
 from pathlib import Path
+from urllib.parse import urlencode
 
 
 def create_spark(
@@ -52,3 +53,26 @@ def path_exists(spark: SparkSession, path: str | Path) -> bool:
         return True
     except Exception:
         return False
+
+
+def build_indeed_url(
+    query str,
+    location: str
+    ) -> str:
+    """
+    
+    """
+    missing = []
+    if not query:
+        missing.append("Missing job role")
+    if not location:
+        missing.append("Missing location")
+    
+    if missing:
+        raise ValueError(f"Incomplete data: {', '.join(missing)}")
+    
+    params = {
+        "q": query,
+        "l": location
+    }
+    return f"https://www.indeed.com/jobs?{urlencode(params)}"
