@@ -2,12 +2,14 @@ from abc import ABC, abstractmethod
 from pyspark.sql import DataFrame, SparkSession
 import logging
 import time
+from job_plat.utils.storage import Storage
 
 
 class BaseStage(ABC):
     
-    def __init__(self, spark: SparkSession):
+    def __init__(self, spark: SparkSession, storage: Storage):
         self.spark = spark
+        self.storage = storage
         self.logger = logging.getLogger(self.__class__.__name__)
     
     def execute(self) -> None:

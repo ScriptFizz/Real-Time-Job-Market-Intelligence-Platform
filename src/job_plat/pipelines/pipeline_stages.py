@@ -6,9 +6,9 @@ from job_plat.pipelines.context.contexts import (
     PipelineContext
     )
 from job_plat.pipelines.stages.bronze_stage import BronzeStage
-from job_plat.pipelines.stages.silver_stage import silverStage
+from job_plat.pipelines.stages.silver_stage import SilverStage
 from job_plat.pipelines.stages.gold_v1_stage import GoldV1Stage
-from job_plat.pipelines.stages.gold_v2_stage import Goldv2Stage
+from job_plat.pipelines.stages.gold_v2_stage import GoldV2Stage
 
 
 ## BRONZE PIPELINE ##
@@ -17,7 +17,7 @@ def bronze_pipeline(ctx: PipelineContext) -> None:
     stage = BronzeStage(
         bronze_ctx = ctx.bronze
     )
-    stage.produce()
+    stage.execute()
 
 
 ## SILVER PIPELINE ##

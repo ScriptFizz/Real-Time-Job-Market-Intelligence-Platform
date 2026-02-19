@@ -1,9 +1,10 @@
 from datetime import date
 from pathlib import Path
 from pyspark.sql import DataFrame
+from job_plat.utils.helpers import build_indeed_url
 from job_plat.config.context import BronzeContext, SilverContext, PipelineContext
 from job_plat.pipelines.stages import BaseSourceStage
-from job_plat.ingestion.scrape_indeed import scrape_indeed
+from job_plat.bronze.ingestion.scrape_indeed import scrape_indeed
 
 class BronzeStage(BaseSourceStage):
     
