@@ -1,12 +1,12 @@
 from job_plat.pipelines.stages.base_stage import BaseStage
 from job_plat.config.context import SilverContext, GoldV1Context
 from job_plat.gold.v1_analytics.build_dimensions import build_dim_jobs, build_dim_skills, build_fact_job_skills
-
+from job_plat.utils.storage import Storage
 
 class GoldV1Stage(BaseStage):
     
-    def __init__(self, gold_v1_ctx: GoldV1Context, silver_ctx: SilverContext):
-        super().__init__(gold_v1_ctx.spark)
+    def __init__(self, gold_v1_ctx: GoldV1Context, silver_ctx: SilverContext, storage: Storage):
+        super().__init__(spark=gold_v1_ctx.spark, storage=storage)
         self.gold_v1_ctx = gold_v1_ctx
         self.silver_ctx = silver_ctx
         
@@ -72,13 +72,21 @@ class GoldV1Stage(BaseStage):
             ("dim_skills", "overwrite", self.gold_v1_ctx.dim_skills_path),
             ("fact_job_skills", "append", self.gold_v1_ctx.fact_job_skill_path),
         ]:
+            self.storage.write_dataframe(
+                df=outputs[name],
+                path=path,
+                mode=mode,
+                partition_cols=["data_date"]
+            )
+            # outputs[name] \
+            # .write \
+            # .mode(mode) \
+            # .partitionBy("data_date") \
+            # .parquet(path)
             
-            outputs[name] \
-            .write \
-            .mode(mode) \
-            .partitionBy("data_date") \
-            .parquet(path)
             
+            
+############################################################
         # outputs["dim_jobs"] \
             # .write \
             # .mode("append") \
