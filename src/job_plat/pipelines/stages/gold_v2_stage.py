@@ -3,12 +3,17 @@ from job_plat.config.context import GoldV1Context, GoldV2Context
 from job_plat.gold.v2_intelligence.embeddings.build_skill_embeddings import build_skill_embeddings
 from job_plat.gold.v2_intelligence.embeddings.build_job_embeddings import build_job_embeddings
 from job_plat.gold.v2_intelligence.clusters.build_job_clusters import build_job_clusters
+from job_plat.utils.storage import Storage
 
 
 class GoldV2Stage(BaseStage):
     
-    def __init__(self, gold_v1_ctx: GoldV1Context, gold_v2_ctx: GoldV2Context):
-        super().__init__(gold_v2_ctx.spark)
+    def __init__(
+        self, 
+        gold_v1_ctx: GoldV1Context, 
+        gold_v2_ctx: GoldV2Context,
+        storage: Storage):
+        super().__init__(spark=gold_v2_ctx.spark, storage=storage)
         self.gold_v1_ctx = gold_v1_ctx
         self.gold_v2_ctx = gold_v2_ctx
         
@@ -79,8 +84,16 @@ class GoldV2Stage(BaseStage):
             ("job_cluster_metadata_df", "overwrite", self.gold_v1_ctx.)
         ]:
             
-            outputs[name] \
-            .write \
-            .mode(mode) \
-            .partitionBy("data_date") \
-            .parquet(path)
+            
+            self.storage.write_dataframe(
+                df=outputs[name],
+                path=path,
+                mode=mode,
+                partition_cols=["data_date"]
+            )
+            
+            # outputs[name] \
+            # .write \
+            # .mode(mode) \
+            # .partitionBy("data_date") \
+            # .parquet(path)

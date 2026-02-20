@@ -111,5 +111,10 @@ def scrape_indeed(
 
 if __name__ == "__main__":
     TEST_URL = "https://www.indeed.com/jobs?q=data+engineer&l=Berlin"
-    jobs = scrape_indeed(TEST_URL)
+    client = HttpClient(headers={
+        "User-Agent": "Mozilla/5.0 (compatible; JobPlatBot/1.0)"
+        })
+    jobs = scrape_indeed(
+        url=TEST_URL,
+        client=client)
     print(jobs[:2])
