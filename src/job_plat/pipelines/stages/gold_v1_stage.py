@@ -5,7 +5,11 @@ from job_plat.utils.storage import Storage
 
 class GoldV1Stage(BaseStage):
     
-    def __init__(self, gold_v1_ctx: GoldV1Context, silver_ctx: SilverContext, storage: Storage):
+    def __init__(
+        self, 
+        gold_v1_ctx: GoldV1Context, 
+        silver_ctx: SilverContext, 
+        storage: Storage):
         super().__init__(spark=gold_v1_ctx.spark, storage=storage)
         self.gold_v1_ctx = gold_v1_ctx
         self.silver_ctx = silver_ctx

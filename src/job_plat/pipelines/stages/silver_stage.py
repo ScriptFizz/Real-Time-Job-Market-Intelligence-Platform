@@ -9,12 +9,17 @@ from job_plat.utils.helpers import union_all
 from job_plat.processing.clean_jobs import clean_jobs, deduplicate_jobs
 from job_plat.silver.validation.quality_checks import run_quality_checks
 from typing import List
+from job_plat.utils.storage import Storage
 
 
 class SilverStage(BaseStage):
     
-    def __init__(self, silver_ctx: SilverContext, bronze_ctx: BronzeContext):
-        super().__init__(silver_ctx.spark)
+    def __init__(
+        self, 
+        silver_ctx: SilverContext, 
+        bronze_ctx: BronzeContext
+        storage: Storage):
+        super().__init__(spark=silver_ctx.spark, storage=storage)
         self.silver_ctx = silver_ctx
         self.bronze_ctx = bronze_ctx
         
@@ -73,8 +78,15 @@ class SilverStage(BaseStage):
             ("job_skills_", "overwrite", self.silver_ctx.job_skills_path)
         ]:
             
-            outputs[name] \
-            .write \
-            .mode(mode) \
-            .partitionBy("data_date") \
-            .parquet(path)
+            self.storage.write_dataframe(
+                df=outputs[name],
+                path=path,
+                mode=mode,
+                partition_cols=["data_date"]
+                )
+            
+            # outputs[name] \
+            # .write \
+            # .mode(mode) \
+            # .partitionBy("data_date") \
+            # .parquet(path)

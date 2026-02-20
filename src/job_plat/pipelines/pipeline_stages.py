@@ -9,13 +9,19 @@ from job_plat.pipelines.stages.bronze_stage import BronzeStage
 from job_plat.pipelines.stages.silver_stage import SilverStage
 from job_plat.pipelines.stages.gold_v1_stage import GoldV1Stage
 from job_plat.pipelines.stages.gold_v2_stage import GoldV2Stage
+from job_plat.utils.storage import Storage
+
 
 
 ## BRONZE PIPELINE ##
 
-def bronze_pipeline(ctx: PipelineContext) -> None:
+def bronze_pipeline(
+    ctx: PipelineContext,
+    storage: Storage
+    ) -> None:
     stage = BronzeStage(
-        bronze_ctx = ctx.bronze
+        bronze_ctx = ctx.bronze,
+        storage = storage
     )
     stage.execute()
 
@@ -23,11 +29,13 @@ def bronze_pipeline(ctx: PipelineContext) -> None:
 ## SILVER PIPELINE ##
 
 def silver_pipeline(
-    ctx: PipelineContext
+    ctx: PipelineContext,
+    storage: Storage
 ) -> None:
     stage = SilverStage(
         silver_ctx = ctx.silver,
-        bronze_ctx = ctx.bronze
+        bronze_ctx = ctx.bronze,
+        storage = storage
     )
     
     stage.execute()
@@ -36,12 +44,14 @@ def silver_pipeline(
 ## GOLD V1 PIPELINE ##
 
 def gold_v1_pipeline(
-    ctx: PipelineContext
+    ctx: PipelineContext,
+    storage: Storage
 ) -> None:
     
     stage = GoldV1Stage(
         silver_ctx = ctx.silver,
-        gold_v1_ctx = ctx.gold_v1
+        gold_v1_ctx = ctx.gold_v1,
+        storage = storage
     )
     
     stage.execute()
@@ -50,11 +60,13 @@ def gold_v1_pipeline(
 ## GOLD V2 PIPELINE ##
 
 def gold_v2_pipeline(
-    ctx: PipelineContext
+    ctx: PipelineContext,
+    storage: Storage
 ) -> None:
     stage = GoldV2Stage(
         gold_v1_ctx = ctx.gold_v1,
-        gold_v2_ctx = ctx.gold_v2
+        gold_v2_ctx = ctx.gold_v2,
+        storage = storage
     )
     
     stage.execute()

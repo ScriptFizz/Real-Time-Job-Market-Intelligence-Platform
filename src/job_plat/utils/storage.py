@@ -24,6 +24,7 @@
 
 
 from abc import ABC, abstractmethod
+from typing import Dict
 import json
 
 class Storage(ABC):
@@ -62,3 +63,15 @@ class LocalStorage(Storage):
                 f.write(json.dumps(record) + "\n")
                 count += 1
         return count
+
+
+def get_storage(config: Dict) -> Storage:
+    
+    storage_config = config["storage"]["type"]
+    if not storage_config:
+        raise ValueError("Storage settings not configured.")
+        
+    if storage_config == "local":
+        return LocalStorage()
+    else:
+        pass
