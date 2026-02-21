@@ -27,11 +27,11 @@ def fetch_response_text(url: str) -> str:
     response.raise_for_status()
     return response.text
     
-def parse_job_cards(soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
+def parse_indeed_job_cards(soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
     """
     Parse job cards from an Indeed search results page.
     
-    Args;
+    Args:
         soup (BeautfulSoup): Parsed HTML containing job cards.
     
     Yields: 
@@ -92,7 +92,7 @@ def scrape_indeed(
     """
     html = client.get_text(url)
     soup = BeautifulSoup(html, "html.parser")
-    yield from parse_job_cards(soup)
+    yield from parse_indeed_job_cards(soup)
     
     
 # def scrape_indeed(url: str) -> Iterator[Dict[str, Any]]:
