@@ -14,20 +14,9 @@ class BronzeContext:
     location: str
     
     @property
-    def indeed_jobs_path(self) -> Path:
-        return self.base_path / "indeed" / f"{self.data_date}.jsonl"
-    
-    @property
-    def linkedin_jobs_path(self) -> Path:
-        return self.base_path / "linkedin" / f"{self.data_date}.jsonl"
+    def bronze_root(self) -> str:
+        return str(self.base_path)
         
-    @property
-    def jobs_path_list(self) -> List[Path]:
-        return [
-            self.indeed_jobs_path,
-            self.linkedin_jobs_path
-        ]
-
 
 # SILVER CONTEXT
 
@@ -39,11 +28,11 @@ class SilverContext:
     
     @property
     def jobs_path(self) -> Path:
-        return self.base_path / "jobs" / f"data_date={self.data_date}.parquet"
+        return self.base_path / "jobs"
     
     @property
     def job_skills_path(self) -> Path:
-        return self.base_path / "job_skills" / f"data_date={self.data_date}.parquet"
+        return self.base_path / "job_skills"
 
 
 # GOLD V1 CONTEXT
@@ -77,23 +66,23 @@ class GoldV2Context:
     
     @property
     def job_cluster_membership_path(self) -> Path:
-        return self.base_path / f"job_cluster_membership_{self.data_date}.parquet"
+        return self.base_path / f"job_cluster_membership"
     
     @property
     def job_cluster_path(self) -> Path:
-        return self.base_path / f"job_cluster_{self.data_date}.parquet"
+        return self.base_path / f"job_cluster"
 
     @property
     def cluster_metadata_path(self) -> Path:
-        return self.base_path / f"cluster_metadata_{self.data_date}.parquet"
+        return self.base_path / f"cluster_metadata"
         
     @property
     def job_embeddings_path(self) -> Path:
-        return self.base_path / f"job_embeddings_{self.data_date}.parquet"
+        return self.base_path / f"job_embeddings"
         
     @property
     def skill_embeddings_path(self) -> Path:
-        return self.base_path / f"skill_embeddings_{self.data_date}.parquet"
+        return self.base_path / f"skill_embeddings"
         
 
 # FULL PIPELINE CONTEXT
@@ -107,3 +96,54 @@ class PipelineContext:
     silver: SilverContext
     gold_v1: GoldV1Context
     gold_v2: GoldV2Context
+
+
+
+# @dataclass
+# class BronzeContext:
+    # data_date: date
+    # base_path: Path
+    # query: str,
+    # location: str
+    
+    # @property
+    # def indeed_jobs_path(self) -> Path:
+        # return self.base_path / "indeed" / f"{self.data_date}.jsonl"
+    
+    # @property
+    # def linkedin_jobs_path(self) -> Path:
+        # return self.base_path / "linkedin" / f"{self.data_date}.jsonl"
+        
+    # @property
+    # def jobs_path_list(self) -> List[Path]:
+        # return [
+            # self.indeed_jobs_path,
+            # self.linkedin_jobs_path
+        # ]
+
+
+# @dataclass
+# class GoldV2Context:
+    # data_date: date
+    # base_path: Path
+    # spark: SparkSession
+    
+    # @property
+    # def job_cluster_membership_path(self) -> Path:
+        # return self.base_path / f"job_cluster_membership_{self.data_date}.parquet"
+    
+    # @property
+    # def job_cluster_path(self) -> Path:
+        # return self.base_path / f"job_cluster_{self.data_date}.parquet"
+
+    # @property
+    # def cluster_metadata_path(self) -> Path:
+        # return self.base_path / f"cluster_metadata_{self.data_date}.parquet"
+        
+    # @property
+    # def job_embeddings_path(self) -> Path:
+        # return self.base_path / f"job_embeddings_{self.data_date}.parquet"
+        
+    # @property
+    # def skill_embeddings_path(self) -> Path:
+        # return self.base_path / f"skill_embeddings_{self.data_date}.parquet"
