@@ -25,7 +25,11 @@
 
 from abc import ABC, abstractmethod
 from typing import Dict
+import os
 import json
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from ... import IngestionRun
 
 class Storage(ABC):
     
@@ -48,6 +52,22 @@ class Storage(ABC):
         pass
 
 
+# class LocalStorage(Storage):
+    
+    # def write_dataframe(self, df, path, mode, partition_cols=None):
+        # writer = df.write.mode(mode)
+        # if partition_cols:
+            # writer = writer.partitionBy(*partition_cols)
+        # writer.parquet(path)
+    
+    # def write_jsonl(self, records, path):
+        # count = 0
+        # with open(path, "w", encoding="utf-8") as f:
+            # for record in records:
+                # f.write(json.dumps(record) + "\n")
+                # count += 1
+        # return count
+
 class LocalStorage(Storage):
     
     def write_dataframe(self, df, path, mode, partition_cols=None):
@@ -56,14 +76,21 @@ class LocalStorage(Storage):
             writer = writer.partitionBy(*partition_cols)
         writer.parquet(path)
     
-    def write_jsonl(self, records, path):
+    def write_jsonl(self, records, path: Path) -> int: 
+        
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
         count = 0
-        with open(path, "w", encoding="utf-8") as f:
+        with NamedTemporaryFile("w", delete=False, encoding="utf-8") as tmp:
+            tmp_path = Path(tmp.name)
+            
             for record in records:
-                f.write(json.dumps(record) + "\n")
+                tmp.write(json.dumps(record) + "\n")
                 count += 1
+        
+        os.replace(tmp_path, path)
+         
         return count
-
 
 def get_storage(config: Dict) -> Storage:
     
