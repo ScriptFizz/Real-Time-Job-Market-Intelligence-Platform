@@ -18,6 +18,7 @@ from job_plat.config.context.contexts import (
 
 from job_plat.config.context.build_pipeline_context import build_pipeline_context
 from job_plat.utils.storage import get_storage
+from job_plat.bronze.ingestion.scrapers import IndeedScraper, LinkedInScraper
 
 
 
@@ -27,7 +28,11 @@ def full_pipeline(config: Dict) -> None:
     storage = get_storage(config=config)
     pipeline_ctx = build_pipeline_context(data_date = data_date)
     
-    bronze_pipeline(ctx=pipeline_ctx, storage=storage)
+    indeed_scraper = IndeedScraper()
+    linkedin_scraper = LinkedInScraper()
+    
+    bronze_pipeline(ctx=pipeline_ctx, storage=storage, scraper=indeed_scraper)
+    bronze_pipeline(ctx=pipeline_ctx, storage=storage, scraper=linkedin_scraper)
     silver_pipeline(ctx=pipeline_ctx, storage=storage)
     gold_v1_pipeline(ctx=pipeline_ctx, storage=storage)
     gold_v2_pipeline(ctx=pipeline_ctx, storage=storage)

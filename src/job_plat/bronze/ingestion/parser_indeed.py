@@ -4,28 +4,29 @@ from datetime import datetime, timezone
 from tenacity import retry, stop_after_attempt, wait_exponential
 from typing import List, Dict, Iterator, Any
 from job_plat.bronze.ingestion.http_client import HttpClient
+from job_plat.bronze.ingestion.url_builders import build_indeed_url
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; JobPlatBot/1.0)"
-} 
+# HEADERS = {
+    # "User-Agent": "Mozilla/5.0 (compatible; JobPlatBot/1.0)"
+# } 
 
-@retry(
-    stop = stop_after_attempt(5),
-    wait = wait_exponential(multipliers=1, min=2, max=30)
-)
-def fetch_response_text(url: str) -> str:
-    """
-    Fetch raw text data from a URL.
+# @retry(
+    # stop = stop_after_attempt(5),
+    # wait = wait_exponential(multipliers=1, min=2, max=30)
+# )
+# def fetch_response_text(url: str) -> str:
+    # """
+    # Fetch raw text data from a URL.
 
-    Args:
-        url (str): URL to fetch data from.
+    # Args:
+        # url (str): URL to fetch data from.
 
-    Returns:
-        str: Raw response text (e.g. HTML or JSON as string).
-    """
-    response = requests.get(url, headers=HEADERS, timeout=10)
-    response.raise_for_status()
-    return response.text
+    # Returns:
+        # str: Raw response text (e.g. HTML or JSON as string).
+    # """
+    # response = requests.get(url, headers=HEADERS, timeout=10)
+    # response.raise_for_status()
+    # return response.text
     
 def parse_indeed_job_cards(soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
     """
@@ -110,7 +111,10 @@ def scrape_indeed(
     # yield from parse_job_cards(soup)
 
 if __name__ == "__main__":
-    TEST_URL = "https://www.indeed.com/jobs?q=data+engineer&l=Berlin"
+    TEST_URL = build_indeed_url(
+        query="data engineer",
+        location="Milan"
+    )
     client = HttpClient(headers={
         "User-Agent": "Mozilla/5.0 (compatible; JobPlatBot/1.0)"
         })
