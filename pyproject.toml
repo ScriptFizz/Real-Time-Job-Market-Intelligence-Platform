@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "Real-Time-Job-Market-Intelligence-Platform"
 version = "0.1.0"
-description = "A system that scrapes job postings, processes them at scale, extracts skills using NLP + GenAI, and stores analytics in a data warehouse."
+description = "A system that scrapes job postings, processes them at scale, extracts skills using NLP, and stores analytics in a data warehouse."
 authors = ["ScriptFizz <nsimamail@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "job_plat", from = "src" }]
@@ -22,6 +22,13 @@ ipykernel = ">=7.1.0,<8.0.0"
 rich = "^13.7"
 tenacity = "^8.3"
 pydantic = "^2.7"
+
+[tool.poetry.group.spark.dependencies]
+pyspark = ">=3.5.1,<4.0.0"
+
+[tool.poetry.group.scraping.dependencies]
+beautifulsoup4 = ">=4.12.3,<5.0.0"
+lxml = ">=5.2.0,<6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mkdocs = "^1.6.1"

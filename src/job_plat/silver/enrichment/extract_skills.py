@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from job_plat.processing.skills import RAW_SKILLS, SKILL_SYNONYMS
+from job_plat.silver.enrichment.skills import RAW_SKILLS, SKILL_SYNONYMS
 
 SKILL_SET = set(RAW_SKILLS)
 
