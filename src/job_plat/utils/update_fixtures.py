@@ -1,54 +1,57 @@
 from job_plat.bronze.ingestion.http_client import HttpClient
 from job_plat.bronze.ingestion.url_builders import build_indeed_url, build_linkedin_url
 from pathlib import Path
-#from datetime import datetime
+#from job_plat.config.browser import DEFAULT_BROWSER_HEADERS
 import argparse
+
+PROJ_ROOT = Path(__file__).resolve().parents[3]
 
 def update_fixtures_f(
     base_path: str = "tests/fixtures",
     query: str = "data engineer",
     location: str = "Berlin"
 ) -> None:
-    client = HttpClient(headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/117.0.0.0 Safari/537.36",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Referer": "https://www.google.com/",
-            })
-
+    
     linkedin_url = build_linkedin_url(
             query=query,
             location=location
         )
-    linkedin_html = client.get_text(linkedin_url)
-    
-    client.close()
     
     indeed_url = build_indeed_url(
             query=query,
             location=location
         )
-    indeed_html = client.get_text(indeed_url)
     
-    #timestamp = datetime.utcnow().strftime("%Y_%m_%d")
+    with HttpClient() as client:
+        linkedin_html = client.get_text(linkedin_url)
+        
+        try:
+            indeed_html = client.get_text(indeed_url)
+        except Exception as e:
+            print("Indeed fetch failed: ", e)
+            indeed_html = None
     
-    linkedin_path = Path(base_path) / "linkedin" / "current.html" #f"v1_{timestamp}"
-    indeed_path = Path(base_path) / "indeed" / "current.html" #f"v1_{timestamp}"
+    
+    linkedin_path = PROJ_ROOT / base_path / "linkedin" / "current.html" 
+    indeed_path = PROJ_ROOT / base_path / "indeed" / "current.html" 
     
     linkedin_path.parent.mkdir(parents=True, exist_ok=True)
     indeed_path.parent.mkdir(parents=True, exist_ok=True)
     
-    Path(linkedin_path).write_text(
+    linkedin_path.write_text(
         linkedin_html,
         encoding="utf-8"
     )
+    print("Linkedin fixture updated")
     
-    Path(indeed_path).write_text(
-        indeed_html,
-        encoding="utf-8"
-    )
+    if indeed_html is not None:
+        indeed_path.write_text(
+            indeed_html,
+            encoding="utf-8"
+        )
+        print("Indeed fixture updated")
+    else:
+        print("Indeed fixture NOT updated")
     
     print("Fixtures updated.")
 
