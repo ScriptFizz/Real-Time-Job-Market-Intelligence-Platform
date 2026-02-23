@@ -17,7 +17,9 @@ from job_plat.config.context.contexts import (
     )
 
 from job_plat.config.context.build_pipeline_context import build_pipeline_context
+from job_plat.config.browser import DEFAULT_BROWSER_HEADERS
 from job_plat.utils.storage import get_storage
+from job_plat.bronze.ingestion.http_client import HttpClient
 from job_plat.bronze.ingestion.scrapers import IndeedScraper, LinkedInScraper
 
 
@@ -27,12 +29,15 @@ def full_pipeline(config: Dict) -> None:
     data_date = date.today()
     storage = get_storage(config=config)
     pipeline_ctx = build_pipeline_context(data_date = data_date)
-    
-    indeed_scraper = IndeedScraper()
-    linkedin_scraper = LinkedInScraper()
-    
-    bronze_pipeline(ctx=pipeline_ctx, storage=storage, scraper=indeed_scraper)
-    bronze_pipeline(ctx=pipeline_ctx, storage=storage, scraper=linkedin_scraper)
+
+    with HttpClient(headers=DEFAULT_BROWSER_HEADERS) as client:
+        indeed_scraper = IndeedScraper(client=client)
+        linkedin_scraper = LinkedInScraper(client=client)
+        
+        bronze_pipeline(ctx=pipeline_ctx, storage=storage, scraper=indeed_scraper)
+        bronze_pipeline(ctx=pipeline_ctx, storage=storage, scraper=linkedin_scraper)
+        
+        
     silver_pipeline(ctx=pipeline_ctx, storage=storage)
     gold_v1_pipeline(ctx=pipeline_ctx, storage=storage)
     gold_v2_pipeline(ctx=pipeline_ctx, storage=storage)
