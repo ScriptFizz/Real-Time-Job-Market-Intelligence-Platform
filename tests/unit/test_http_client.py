@@ -5,7 +5,7 @@ def test_http_client_success():
     client = HttpClient()
     
     with patch.object(client.session, "get") as mock_get:
-        mock_response = MagicMock
+        mock_response = MagicMock()
         mock_response.text = "<html></html>"
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Iterator, Dict, Any
 from bs4 import BeautifulSoup
 from job_plat.bronze.ingestion.http_client import HttpClient
-from ... import build_indeed_url, build_linkedin_url
+from job_plat.bronze.ingestion.url_builders import build_indeed_url, build_linkedin_url
 
 class BaseJobScraper(ABC):
     

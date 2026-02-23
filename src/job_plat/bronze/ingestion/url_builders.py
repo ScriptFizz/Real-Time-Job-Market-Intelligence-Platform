@@ -1,7 +1,7 @@
 from urllib.parse import urlencode
 
 def build_indeed_url(
-    query str,
+    query: str,
     location: str
     ) -> str:
     """
@@ -24,7 +24,7 @@ def build_indeed_url(
 
 
 def build_linkedin_url(
-    query str,
+    query: str,
     location: str
     ) -> str:
     """

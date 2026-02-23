@@ -7,8 +7,8 @@ from job_plat.pipelines.stages import BaseSourceStage
 from job_plat.bronze.ingestion.scrape_indeed import scrape_indeed
 from job_plat.bronze.ingestion.http_client import HttpClient
 from job_plat.utils.storage import Storage
-from ... import BaseJobScraper
-from ... import IngestionRun, write_metadata
+from job_plat.bronze.ingestion.scrapers import BaseJobScraper
+from job_plat.bronze.ingestion.metadata import IngestionRun, write_metadata
 
 class BronzeStage(BaseSourceStage):
     
