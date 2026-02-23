@@ -1,5 +1,7 @@
 # Data
 /data/
+# Test fixture
+/tests/fixtures/
 
 # Mac OS-specific storage files
 .DS_Store
