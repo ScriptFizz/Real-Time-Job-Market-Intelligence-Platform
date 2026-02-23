@@ -2,6 +2,7 @@ from typing import Iterator, Dict, Any
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
+from job_plat.bronze.ingestion.http_client import HttpClient
 from job_plat.bronze.ingestion.url_builders import build_linkedin_url
 
 def extract_linkedin_job_id(url: str) -> str | None:
@@ -27,7 +28,7 @@ def extract_linkedin_job_id(url: str) -> str | None:
     
 def parse_linkedin_job_cards(soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
     
-    job_cards = soup.find_all("div", class="base-card")
+    job_cards = soup.find_all("div", class_="base-card")
     
     if not job_cards:
         raise ValueError("No LinkedIn job cards found - selector likely broken")
