@@ -1,5 +1,4 @@
 from urllib.parse import urlencode
-from job_plat.bronze.ingestion.sources_config import IndeedJobSource, LinkedInJobSource
 
 INDEED_DOMAINS = {
     "us": "https://www.indeed.com",
@@ -87,3 +86,54 @@ def build_linkedin_source(
         search_url=search_url,
         ready_selector='div.base-card',
     )
+
+
+
+# def build_indeed_url(
+    # query: str,
+    # location: str,
+    # country: str = "us") -> str:
+    # """
+    
+    # """
+    # errors = []
+    # if not query:
+        # errors.append("Missing job role")
+    # if not location:
+        # errors.append("Missing location")
+    
+    # base = INDEED_DOMAINS.get(country.lower())
+    # if not base:
+        # errors.append(f"Unsupported country: {country}")
+    
+    # if errors:
+        # raise ValueError(f"Error in building the url: {', '.join(errors)}")
+    
+    # params = {
+        # "q": query,
+        # "l": location
+    # }
+    # return f"{base}/jobs?{urlencode(params)}"
+
+
+# def build_linkedin_url(
+    # query: str,
+    # location: str
+    # ) -> str:
+    # """
+    
+    # """
+    # missing = []
+    # if not query:
+        # missing.append("Missing job role")
+    # if not location:
+        # missing.append("Missing location")
+    
+    # if missing:
+        # raise ValueError(f"Incomplete data: {', '.join(missing)}")
+    
+    # params = {
+        # "q": query,
+        # "l": location
+    # }
+    # return f"https://www.linkedin.com/jobs/search?{urlencode(params)}"

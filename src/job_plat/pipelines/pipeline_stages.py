@@ -10,7 +10,7 @@ from job_plat.pipelines.stages.silver_stage import SilverStage
 from job_plat.pipelines.stages.gold_v1_stage import GoldV1Stage
 from job_plat.pipelines.stages.gold_v2_stage import GoldV2Stage
 from job_plat.utils.storage import Storage
-from job_plat.bronze.ingestion.scrapers import BaseJobScraper
+from job_plat.bronze.ingestion.scrapers import JobScraper
 
 
 
@@ -19,7 +19,7 @@ from job_plat.bronze.ingestion.scrapers import BaseJobScraper
 def bronze_pipeline(
     ctx: PipelineContext,
     storage: Storage,
-    scraper: BaseJobScraper
+    scraper: JobScraper
     ) -> None:
     stage = BronzeStage(
         bronze_ctx = ctx.bronze,
