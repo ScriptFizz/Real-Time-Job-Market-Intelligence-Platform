@@ -29,7 +29,7 @@ class HttpClient:
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True
     )
-    def get_text(self, url: str) -> str:
+    def get_text(self, url: str, ready_selector: str) -> str:
         """
             Fetches the HTML content of a URL with JS execution.
             Retries on failure using Tenacity.
@@ -37,7 +37,7 @@ class HttpClient:
         page = self._context.new_page()
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            page.wait_for_selector('[data-testid="job-card"], text="No jobs found"', timeout=15000)
+            page.wait_for_selector(ready_selector, timeout=15000)
             
             # Small human-like pause
             page.wait_for_timeout(random.randint(1000, 2500))

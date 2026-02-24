@@ -10,7 +10,7 @@ class JobScraper:
         self.source = source
         
     def scrape(self) -> Iterator[Dict[str, Any]]:
-        html = self.client.get_text(self.source.search_url)
+        html = self.client.get_text(self.source.search_url, self.source.ready_selector)
         soup = BeautifulSoup(html, "html.parser")
         yield from self.source.parse(soup)
 

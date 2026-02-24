@@ -11,7 +11,7 @@ class JobSource(ABC):
     base_url: str
     search_url: str
     ready_selector: str
-    job_card_selector: str
+    #job_card_selector: str
     
     @abstractmethod
     def parse(self, soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
@@ -25,53 +25,53 @@ class JobSource(ABC):
 class IndeedJobSource(JobSource):
     job_card_selector: str = '[data-testid="job-card"]'
 
-    def parse_indeed_job_cards(soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
-    """
-    Parse job cards from an Indeed search results page.
-    
-    Args:
-        soup (BeautfulSoup): Parsed HTML containing job cards.
-    
-    Yields: 
-        Dict[str, Any]: Parsed raw job data (Bronze layer).
-    """
-    jobs = []
-    
-    job_cards = soup.select(self.job_card_selector) #soup.find_all("div", job_card_selector)
-    
-    if not job_cards:
-        raise ValueError("No job cards found - selector likely broken")
-    
-    for card in job_cards:
-        job = {
-            "source": self.name,
-            "job_id": card.get("data-jk"),
-            "job_title_raw": None,
-            "company_raw": None,
-            "location_raw": None,
-            "description_raw": None,
-            "url": None,
-            "scraped_at": datetime.now(timezone.utc).isoformat(),
-        }
+    def parse(soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
+        """
+        Parse job cards from an Indeed search results page.
         
-        title_tag = card.select_one("h2.title a")
-        if title_tag and title_tag.a:
-            job["job_title_raw"] = title_tag.a.get_text(strip=True)
-            job["url"] = self.base_url + title_tag.a["href"]
+        Args:
+            soup (BeautfulSoup): Parsed HTML containing job cards.
         
-        company_tag = card.find("span", class_="company")
-        if company_tag:
-            job["company_raw"] =  company_tag.get_text(strip=True)
+        Yields: 
+            Dict[str, Any]: Parsed raw job data (Bronze layer).
+        """
+        jobs = []
         
-        location_tag = card.find("div", class_="recJobLoc")
-        if location_tag:
-            job["location_raw"] = location_tag.get("data-rc-loc")
+        job_cards = soup.select(self.job_card_selector) #soup.find_all("div", job_card_selector)
+        
+        if not job_cards:
+            raise ValueError("No job cards found - selector likely broken")
+        
+        for card in job_cards:
+            job = {
+                "source": self.name,
+                "job_id": card.get("data-jk"),
+                "job_title_raw": None,
+                "company_raw": None,
+                "location_raw": None,
+                "description_raw": None,
+                "url": None,
+                "scraped_at": datetime.now(timezone.utc).isoformat(),
+            }
             
-        summary_tag = card.find("div", class_="summary")
-        if summary_tag:
-            job["description_raw"] = summary_tag.get_text(" ", strip=True)
-        
-        yield job
+            title_tag = card.select_one("h2.title a")
+            if title_tag and title_tag.a:
+                job["job_title_raw"] = title_tag.a.get_text(strip=True)
+                job["url"] = self.base_url + title_tag.a["href"]
+            
+            company_tag = card.find("span", class_="company")
+            if company_tag:
+                job["company_raw"] =  company_tag.get_text(strip=True)
+            
+            location_tag = card.find("div", class_="recJobLoc")
+            if location_tag:
+                job["location_raw"] = location_tag.get("data-rc-loc")
+                
+            summary_tag = card.find("div", class_="summary")
+            if summary_tag:
+                job["description_raw"] = summary_tag.get_text(" ", strip=True)
+            
+            yield job
 
 
 @dataclass
@@ -108,43 +108,43 @@ class LinkedInJobSource(JobSource):
             yield job
 
         
-def indeed_source
-    query: str,
-    location: str,
-    country: str = "us") -> JobSource:
+# def indeed_source
+    # query: str,
+    # location: str,
+    # country: str = "us") -> JobSource:
         
-    domains = {
-    "us": "https://www.indeed.com",
-    "de": "https://de.indeed.com",
-    "uk": "https://uk.indeed.com",
-    "fr": "https://fr.indeed.com",
-    "it": "https://it.indeed.com",
-    }   
+    # domains = {
+    # "us": "https://www.indeed.com",
+    # "de": "https://de.indeed.com",
+    # "uk": "https://uk.indeed.com",
+    # "fr": "https://fr.indeed.com",
+    # "it": "https://it.indeed.com",
+    # }   
     
-    errors = []
-    if not query:
-        errors.append("Missing job role")
-    if not location:
-        errors.append("Missing location")
+    # errors = []
+    # if not query:
+        # errors.append("Missing job role")
+    # if not location:
+        # errors.append("Missing location")
     
-    base_url = domains.get(country.lower())
-    if not base_url:
-        errors.append(f"Unsupported country: {country}")
+    # base_url = domains.get(country.lower())
+    # if not base_url:
+        # errors.append(f"Unsupported country: {country}")
     
-    if errors:
-        raise ValueError(f"Error in building the url: {', '.join(errors)}")
+    # if errors:
+        # raise ValueError(f"Error in building the url: {', '.join(errors)}")
     
-    params = {
-        "q": query,
-        "l": location
-    }
-    full_url = f"{base}/jobs?{urlencode(params)}"
+    # params = {
+        # "q": query,
+        # "l": location
+    # }
+    # full_url = f"{base}/jobs?{urlencode(params)}"
     
-    return JobSource(
-        name="indeed",
-        base_url=base_url,
-        search_url=full_url,
-        ready_selector='[data-testid="job-card"], :has-text("No jobs found")',
-        job_card_selector='[data-testid="job-card"]',
-        parser=parse_indeed_job_cards
-    )
+    # return JobSource(
+        # name="indeed",
+        # base_url=base_url,
+        # search_url=full_url,
+        # ready_selector='[data-testid="job-card"], :has-text("No jobs found")',
+        # job_card_selector='[data-testid="job-card"]',
+        # parser=parse_indeed_job_cards
+    # )
