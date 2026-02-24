@@ -12,7 +12,7 @@ INDEED_DOMAINS = {
 def build_indeed_source(
     query: str,
     location: str,
-    country: str = "us") -> IndeedJobSource:
+    domain: str = "us") -> IndeedJobSource:
         
     domains = {
     "us": "https://www.indeed.com",
@@ -28,9 +28,9 @@ def build_indeed_source(
     if not location:
         errors.append("Missing location")
     
-    base_url = domains.get(country.lower())
+    base_url = domains.get(domain.lower())
     if not base_url:
-        errors.append(f"Unsupported country: {country}")
+        errors.append(f"Unsupported country: {domain}")
     
     if errors:
         raise ValueError(f"Error in building the url: {', '.join(errors)}")
@@ -39,7 +39,7 @@ def build_indeed_source(
         "q": query,
         "l": location
     }
-    search_url = f"{base}/jobs?{urlencode(params)}"
+    search_url = f"{base_url}/jobs?{urlencode(params)}"
     
     return IndeedJobSource(
         name="indeed",
@@ -52,25 +52,18 @@ def build_indeed_source(
 def build_linkedin_source(
     query: str,
     location: str,
-    country: str = "us") -> LinkedInJobSource:
+    #domain: str = "us"
+    ) -> LinkedInJobSource:
         
-    domains = {
-    "us": "https://www.indeed.com",
-    "de": "https://de.indeed.com",
-    "uk": "https://uk.indeed.com",
-    "fr": "https://fr.indeed.com",
-    "it": "https://it.indeed.com",
-    }   
-    
     errors = []
     if not query:
         errors.append("Missing job role")
     if not location:
         errors.append("Missing location")
     
-    base_url = domains.get(country.lower())
-    if not base_url:
-        errors.append(f"Unsupported country: {country}")
+    # base_url = domains.get(domain.lower())
+    # if not base_url:
+        # errors.append(f"Unsupported country: {domain}")
     
     if errors:
         raise ValueError(f"Error in building the url: {', '.join(errors)}")
