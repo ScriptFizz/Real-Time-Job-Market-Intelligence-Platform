@@ -6,7 +6,7 @@ from job_plat.pipelines.stages import BaseStage
 from job_plat.silver.cleaning.run_clean import run_clean
 from job_plat.silver.enrichment.build_job_skills import run_job_skills
 from job_plat.utils.helpers import union_all
-from job_plat.processing.clean_jobs import clean_jobs, deduplicate_jobs
+from job_plat.processing.clean_jobs import normalize_jobs, clean_jobs, deduplicate_jobs
 from job_plat.silver.validation.quality_checks import run_quality_checks
 from typing import List
 from job_plat.utils.storage import Storage
@@ -17,7 +17,7 @@ class SilverStage(BaseStage):
     def __init__(
         self, 
         silver_ctx: SilverContext, 
-        bronze_ctx: BronzeContext
+        bronze_ctx: BronzeContext,
         storage: Storage):
         super().__init__(spark=silver_ctx.spark, storage=storage)
         self.silver_ctx = silver_ctx
@@ -43,7 +43,7 @@ class SilverStage(BaseStage):
             self.spark.read
             .option("recursiveFileLookup", "true")
             .json(bronze_root)
-            .where(col("ingestion_date") == str.silver_ctx.data_date)
+            .where(col("ingestion_date") == str(silver_ctx.data_date))
             )
         return {"job_bronze_df": df}
     
@@ -53,7 +53,9 @@ class SilverStage(BaseStage):
         ) -> dict:
         
         
-        df_clean = clean_jobs(df=job_bronze_df)
+        df_normalized = normalize_jobs(df=job_bronze_df)
+        
+        df_clean = clean_jobs(df=df_normalized)
     
         jobs_silver_df = deduplicate_jobs(df_clean)
         
