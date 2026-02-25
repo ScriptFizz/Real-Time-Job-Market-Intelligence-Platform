@@ -3,6 +3,8 @@ from pyspark.sql import DataFrame, SparkSession
 import logging
 import time
 from job_plat.utils.storage import Storage
+from job_plat.bronze.ingestion.metadata import IngestionRun
+from typing import Dict
 
 
 class BaseSourceStage(ABC):
@@ -25,6 +27,10 @@ class BaseSourceStage(ABC):
     def validate_config(self) -> None:
         pass
     
+    @abstractmethod
+    def _enrich_with_ingestion_metadata(self records: Dict, run: IngestionRun) -> int:
+        pass
+        
     @abstractmethod
     def produce(self) -> int:
         pass

@@ -1,4 +1,5 @@
 import requests
+import random
 from tenacity import retry, stop_after_attempt, wait_exponential
 from typing import Optional
 from playwright.sync_api import sync_playwright

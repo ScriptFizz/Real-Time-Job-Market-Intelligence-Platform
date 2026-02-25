@@ -10,16 +10,37 @@ class IngestionRun:
     location: str
     ingestion_ts: datetime
     run_id: str
+    pipeline_version: str
     
     @classmethod
-    def create(cls, source: str, query: str, location: str):
+    def create(cls, source: str, query: str, location: str, version: str):
         return cls(
             source=source,
             query=query,
             location=location,
-            ingestion_ts=datetime.uctnow(),
+            ingestion_ts=datetime.utcnow(),
             run_id=str(uuid.uuid4()),
+            pipeline_version=version,
         )
+
+
+# @dataclass
+# class IngestionRun:
+    # source: str
+    # query: str
+    # location: str
+    # ingestion_ts: datetime
+    # run_id: str
+    
+    # @classmethod
+    # def create(cls, source: str, query: str, location: str):
+        # return cls(
+            # source=source,
+            # query=query,
+            # location=location,
+            # ingestion_ts=datetime.uctnow(),
+            # run_id=str(uuid.uuid4()),
+        # )
 
 
 def write_metadata(path: Path, run: IngestionRun, row_count: int):
