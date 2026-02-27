@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 import requests
 import time
 import logging
+from job_plat.bronze.ingestion.job_schema import CanonicalJobV1
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class USAJobConnector(JobConnector):
         total_records = 0
         
         while True:
-            data = self._call_api(keyword, page)
+            data = self._api_call(keyword, page)
             results = data["SearchResult"]["SearchResultItems"]
             
             if not results:
@@ -121,22 +122,171 @@ class USAJobConnector(JobConnector):
             
             page += 1
     
-    def normalize(self, raw_job: dict) -> dict:
+    
+    def normalize(self, raw_job: dict) -> CanonicalJobV1:
         desc = raw_job["MatchedObjectDescriptor"]
         
-        return {
-            "source": self.name,
-            "source_job_id": desc["PositionID"],
-            "job_title_raw": desc["PositionTitle"],
-            "company_raw": desc["OrganizationName"],
-            "location_raw": desc["PositionLocationDisplay"],
-            "description_raw": desc.get("UserArea", {}).get("Details", {}).get("JobSummary"),
-            "employment_type_raw": desc.get("PositionSchedule", [{}])[0].get("Name"),
-            "salary_min_raw": desc.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
-            "salary_max_raw": desc.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
-            "currency_raw": "USD",
-            "posted_at": desc.get("PublicationStartDate")
+        return CanonicalJobV1(
+            source: self.name,
+            source_job_id: desc["PositionID"],
+            job_title_raw: desc["PositionTitle"],
+            company_raw: desc["OrganizationName"],
+            location_raw: desc["PositionLocationDisplay"],
+            description_raw: desc.get("UserArea", {}).get("Details", {}).get("JobSummary"),
+            
+            employment_type_raw: desc.get("PositionSchedule", [{}])[0].get("Name"),
+            salary_min_raw: desc.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
+            salary_max_raw: desc.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
+            currency_raw: "USD",
+            posted_at_raw: desc.get("PublicationStartDate")
+        )
+        
+    # def normalize(self, raw_job: dict) -> dict:
+        # desc = raw_job["MatchedObjectDescriptor"]
+        
+        # return {
+            # "source": self.name,
+            # "source_job_id": desc["PositionID"],
+            # "job_title_raw": desc["PositionTitle"],
+            # "company_raw": desc["OrganizationName"],
+            # "location_raw": desc["PositionLocationDisplay"],
+            # "description_raw": desc.get("UserArea", {}).get("Details", {}).get("JobSummary"),
+            # "employment_type_raw": desc.get("PositionSchedule", [{}])[0].get("Name"),
+            # "salary_min_raw": desc.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
+            # "salary_max_raw": desc.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
+            # "currency_raw": "USD",
+            # "posted_at": desc.get("PublicationStartDate")
+        # }
+
+
+
+
+
+class ADZunaConnector(JobConnector):
+    
+    def __init__(self, api_key: str):
+        self.name = "adzuna"
+        self.base_url = "https://api.adzuna.com/v1/api/jobs/us/search"
+        self.params={
+            "app_id": self.app_id,
+            "app_key": api_key,
+            "what": keyword
         }
+    
+    def _api_call(self, keyword: str, page: int) -> dict:
+        
+        start = time.time()
+        
+        try:
+            response = requests.get(
+                self.base_url,
+                params={"Keyword": keyword, "Page": page},
+                headers=self.headers,
+                timeout=30,
+            )
+            
+            duration = round(time.time() - start, 3)
+            
+            logger.info(
+                "adzuna_api_call",
+                extra={
+                    "source": self.name,
+                    "page": page,
+                    "status_code": response.status_code,
+                    "duration_sec": duration,
+                },
+            )
+            
+            response.raise_for_status()
+            
+            return response.json()
+        
+        except requests.RequestException:
+            logger.error(
+                "adzuna_api_call_failed",
+                extra={
+                    "source": self.name,
+                    "page": page,
+                },
+                exc_info=True
+            )
+            raise
+    
+    def fetch(self, keyword: str) -> Iterator[dict]:
+        
+        logger.info(
+            "connector_fetch_started",
+            extra={"source": self.name, "keyword": keyword}
+        )
+        
+        page = 1
+        total_records = 0
+        
+        while True:
+            data = self._api_call(keyword, page)
+            results = data.get("results", []) #data["SearchResult"]["SearchResultItems"]
+            
+            if not results:
+                break
+            
+            logger.info(
+                "connector_page_fetched",
+                extra={
+                    "source": self.name,
+                    "page": page,
+                    "records_in_page": len(results)
+                }
+            )
+            
+            for item in results:
+                total_records += 1
+                yield item
+            
+            logger.info(
+                "connector_fetch_completed",
+                extra={
+                    "source": self.name,
+                    "total_records": total_records,
+                    "pages_fetched": page - 1,
+                },
+            )
+            
+            page += 1
+    
+    def normalize(self, raw_job: dict) -> CanonicalJobV1:
+        #desc = raw_job["MatchedObjectDescriptor"]
+        
+        return CanonicalJobV1(
+            source: self.name,
+            source_job_id: raw_job["id"],
+            job_title_raw: raw_job["title"],
+            company_raw: raw_job.get("company", [{}])[0].get("display_name"),
+            url: raw_job.get("redirect_url")
+            location_raw: raw_job.get("location", [{}])[0].get("display_name"),
+            description_raw: raw_job.get("UserArea", {}).get("Details", {}).get("description"),
+            employment_type_raw: raw_job.get("PositionSchedule", [{}])[0].get("Name"),
+            salary_min_raw: raw_job.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
+            salary_max_raw: raw_job.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
+            currency_raw: "USD",
+            posted_at: raw_job.get("PublicationStartDate")
+        )
+    
+    # def normalize(self, raw_job: dict) -> dict:
+        # desc = raw_job["MatchedObjectDescriptor"]
+        
+        # return {
+            # "source": self.name,
+            # "source_job_id": desc["id"],
+            # "job_title_raw": desc["title"],
+            # "company_raw": desc[""],
+            # "location_raw": desc["location.display_name"],
+            # "description_raw": desc.get("UserArea", {}).get("Details", {}).get("description"),
+            # "employment_type_raw": desc.get("PositionSchedule", [{}])[0].get("Name"),
+            # "salary_min_raw": desc.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
+            # "salary_max_raw": desc.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
+            # "currency_raw": "USD",
+            # "posted_at": desc.get("PublicationStartDate")
+        # }
 
 
 # @dataclass

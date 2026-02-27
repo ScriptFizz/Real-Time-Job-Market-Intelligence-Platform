@@ -11,6 +11,7 @@ from pyspark.sql.functions import (
     sha2,
     concat_ws,
     row_number,
+    coalesce,
     desc
 )
 from pyspark.sql.types import StringType
@@ -36,31 +37,31 @@ def normalize_jobs(df: DataFrame) -> DataFrame:
     df = df.withColumn("source", col("ingestion_metadata.source"))
     df = df.withColumn(
         "job_id",
-        when(col("source") == "usejobs", col("payload.PositionID")),
+        when(col("source") == "usajobs", col("payload.PositionID"))
         .when(col("source") == "adzuna", col("payload.id"))
     )
     
     df = df.withColumn(
         "job_title_raw",
-        when(col("source") == "usejobs", col("payload.PositionTitle")),
+        when(col("source") == "usajobs", col("payload.PositionTitle"))
         .when(col("source") == "adzuna", col("payload.title"))
     )
     
     df = df.withColumn(
         "location_raw",
-        when(col("source") == "usejobs", col("payload.PositionLocationDisplay")),
+        when(col("source") == "usajobs", col("payload.PositionLocationDisplay"))
         .when(col("source") == "adzuna", col("payload.location.display_name"))
     )
     
     df = df.withColumn(
         "description_raw",
-        when(col("source") == "usejobs", col("payload.JobSummary")),
+        when(col("source") == "usajobs", col("payload.JobSummary"))
         .when(col("source") == "adzuna", col("payload.description"))
     )
     
     df = df.withColumn(
         "url",
-        when(col("source") == "usejobs", col("payload.PositionURI")),
+        when(col("source") == "usajobs", col("payload.PositionURI"))
         .when(col("source") == "adzuna", col("payload.redirect_url"))
     )
     
@@ -149,22 +150,21 @@ def deduplicate_jobs(df: DataFrame) -> DataFrame:
         .drop("row_num")
     )
     
-    before_count = df.count()
-    after_count = df_dedup.count()
+    # before_count = df.count()
+    # after_count = df_dedup.count()
     
-    logger.info(
-        "silver_deduplication_completed",
-        extra={
-            "before_count": before_count,
-            "after_count": after_count,
-            "dropped": before_count - after_count,
-        },
-    )
+    # logger.info(
+        # "silver_deduplication_completed",
+        # extra={
+            # "before_count": before_count,
+            # "after_count": after_count,
+            # "dropped": before_count - after_count,
+        # },
+    # )
     
     return df_dedup
 
 
-from pyspark.sql.functions import sha2, concat_ws, coalesce, lit
 
 def robust_deduplicate_jobs(df: DataFrame) -> DataFrame:
 

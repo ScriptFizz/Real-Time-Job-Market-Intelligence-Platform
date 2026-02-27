@@ -55,6 +55,17 @@ class SilverStage(BaseStage):
         
         df_normalized = normalize_jobs(df=job_bronze_df)
         
+        ########### TO LOG!!!!!!!!!!! #########
+        quality_metrics = (
+            df_normalized
+            .select(
+                count("*").alias("total"),
+                sum(when(col("job_title_raw").isNull(), 1).otherwise(0)).alias("null_titles"),
+                sum(when(col("description_raw").isNull(), 1).otherwise(0)).alias("null_descriptions"),
+            )
+            .collect()[0]
+        )
+        
         df_clean = clean_jobs(df=df_normalized)
     
         jobs_silver_df = deduplicate_jobs(df_clean)
