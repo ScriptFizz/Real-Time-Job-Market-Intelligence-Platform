@@ -46,12 +46,16 @@ class IngestionRun:
 def write_metadata(path: Path, run: IngestionRun, row_count: int):
     
     metadata = {
+        "run_id": run_id,
         "source": run.source,
         "query": run.query,
         "location": run.location,
         "ingestion_ts": run.ingestion_ts.isoformat(),
+        "pipeline_version": run.pipeline_version,
         "row_count": row_count,
     }
+    
+    path.mkdir(parents=True, exist_ok=True)
     
     with open(path / "_metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
