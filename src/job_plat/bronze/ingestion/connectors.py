@@ -111,7 +111,9 @@ class USAJobConnector(JobConnector):
                 total_records += 1
                 yield item
             
-            logger.info(
+            page += 1
+        
+        logger.info(
                 "connector_fetch_completed",
                 extra={
                     "source": self.name,
@@ -119,26 +121,24 @@ class USAJobConnector(JobConnector):
                     "pages_fetched": page - 1,
                 },
             )
-            
-            page += 1
     
     
     def normalize(self, raw_job: dict) -> CanonicalJobV1:
         desc = raw_job["MatchedObjectDescriptor"]
         
         return CanonicalJobV1(
-            source: self.name,
-            source_job_id: desc["PositionID"],
-            job_title_raw: desc["PositionTitle"],
-            company_raw: desc["OrganizationName"],
-            location_raw: desc["PositionLocationDisplay"],
-            description_raw: desc.get("UserArea", {}).get("Details", {}).get("JobSummary"),
+            source=self.name,
+            source_job_id=desc["PositionID"],
+            job_title_raw=desc["PositionTitle"],
+            company_raw=desc["OrganizationName"],
+            location_raw=desc["PositionLocationDisplay"],
+            description_raw=desc.get("UserArea", {}).get("Details", {}).get("JobSummary"),
             
-            employment_type_raw: desc.get("PositionSchedule", [{}])[0].get("Name"),
-            salary_min_raw: desc.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
-            salary_max_raw: desc.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
-            currency_raw: "USD",
-            posted_at_raw: desc.get("PublicationStartDate")
+            employment_type_raw=desc.get("PositionSchedule", [{}])[0].get("Name"),
+            salary_min_raw=desc.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
+            salary_max_raw=desc.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
+            currency_raw="USD",
+            posted_at_raw=desc.get("PublicationStartDate")
         )
         
     # def normalize(self, raw_job: dict) -> dict:
@@ -164,24 +164,28 @@ class USAJobConnector(JobConnector):
 
 class ADZunaConnector(JobConnector):
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, app_id: str):
         self.name = "adzuna"
         self.base_url = "https://api.adzuna.com/v1/api/jobs/us/search"
-        self.params={
-            "app_id": self.app_id,
-            "app_key": api_key,
-            "what": keyword
-        }
-    
+        self.app_id = app_id,
+        self.api_key = api_key
+            
     def _api_call(self, keyword: str, page: int) -> dict:
         
         start = time.time()
         
         try:
+            url = f"{self.base_url}/{page}"
+            
+            params = {
+                "app_id": self.app_id,
+                "api_key": self.api_key,
+                "what": keyword,
+            }
+            
             response = requests.get(
                 self.base_url,
-                params={"Keyword": keyword, "Page": page},
-                headers=self.headers,
+                params=params,
                 timeout=30,
             )
             
@@ -224,7 +228,7 @@ class ADZunaConnector(JobConnector):
         
         while True:
             data = self._api_call(keyword, page)
-            results = data.get("results", []) #data["SearchResult"]["SearchResultItems"]
+            results = data.get("results", []) 
             
             if not results:
                 break
@@ -242,7 +246,9 @@ class ADZunaConnector(JobConnector):
                 total_records += 1
                 yield item
             
-            logger.info(
+            page += 1
+        
+        logger.info(
                 "connector_fetch_completed",
                 extra={
                     "source": self.name,
@@ -250,25 +256,24 @@ class ADZunaConnector(JobConnector):
                     "pages_fetched": page - 1,
                 },
             )
-            
-            page += 1
     
     def normalize(self, raw_job: dict) -> CanonicalJobV1:
         #desc = raw_job["MatchedObjectDescriptor"]
         
         return CanonicalJobV1(
-            source: self.name,
-            source_job_id: raw_job["id"],
-            job_title_raw: raw_job["title"],
-            company_raw: raw_job.get("company", [{}])[0].get("display_name"),
-            url: raw_job.get("redirect_url")
-            location_raw: raw_job.get("location", [{}])[0].get("display_name"),
-            description_raw: raw_job.get("UserArea", {}).get("Details", {}).get("description"),
-            employment_type_raw: raw_job.get("PositionSchedule", [{}])[0].get("Name"),
-            salary_min_raw: raw_job.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
-            salary_max_raw: raw_job.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
-            currency_raw: "USD",
-            posted_at: raw_job.get("PublicationStartDate")
+            source= self.name,
+            source_job_id=raw_job.get("id"),
+            job_title_raw=raw_job.get("title"),
+            company_raw=raw_job.get("company", {}).get("display_name"),
+            url=raw_job.get("redirect_url"),
+            location_raw=raw_job.get("location", {}).get("display_name"),
+            description_raw=raw_job.get("description"),
+            employment_type_raw=raw_job.get("contract_time"),
+            contract_type_raw=raw_job.get("contract_type"),
+            salary_min_raw=raw_job.get("salary_min"),
+            salary_max_raw=raw_job.get("salary_max"),
+            currency_raw=None,
+            posted_at_raw=raw_job.get("created")
         )
     
     # def normalize(self, raw_job: dict) -> dict:
