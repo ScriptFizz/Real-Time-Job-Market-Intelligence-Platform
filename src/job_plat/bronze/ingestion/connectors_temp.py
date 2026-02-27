@@ -8,6 +8,7 @@ import requests
 import time
 import logging
 from job_plat.bronze.ingestion.job_schema import CanonicalJobV1
+from job_plat.bronze.ingestion.search_criteria import JobSearchCriteria
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +35,34 @@ class PaginatedAPIConnector(JobConnector):
     
     base_url: str
     
+    def __init__(
+        self,
+        max_pages: int | None = None,
+        min_interval_seconds: float | None = None,):
+            
+        self.max_pages = max_pages
+        self.min_interval_seconds = min_interval_seconds
+        self._last_request_ts: float | None = None
+    
+    def _throttle(self) -> None:
+        if not self.min_interval_seconds:
+            return
+        now = time.time()
+        
+        if self._last_request_ts is not None:
+            elapsed = now - self.last_request_ts
+            remaining = self.min_interval_seconds - elapsed
+            if remaining > 0:
+                time.sleep(remaining)
+        
+        self._last_request_ts = time.time()
+    
     def  _api_get_response(
         self, 
         url: str,
         params: dict, 
         headers: dict | None = None, 
-        timeout: int = 30
+        timeout: int = 30,
         meta: dict| None = None) -> dict:
         
         start = time.time()
@@ -57,7 +80,7 @@ class PaginatedAPIConnector(JobConnector):
                 f"{self.name}_api_call",
                 extra={
                     "source": self.name,
-                    "page": meta.get("page"),
+                    "page": meta.get("page") if meta else None,
                     "status_code": response.status_code,
                     "duration_sec": duration,
                 },
@@ -72,32 +95,47 @@ class PaginatedAPIConnector(JobConnector):
                 f"{self.name}_api_call_failed",
                 extra={
                     "source": self.name,
-                    "page": meta.get("page"),
+                    "page": meta.get("page") if meta else None,
                 },
                 exc_info=True
             )
             raise
         
     @abstractmethod
-    def _api_call(self, keyword: str, page: int) -> dict:
+    def _api_call(self, criteria: JobSearchCriteria, page: int) -> dict:
             pass
     
     @abstractmethod
     def _extract_results(self, data: dict) -> list[dict]:
         pass
     
-    def fetch(self, keyword: str) -> Iterator[dict]:
+    def fetch(self, criteria: JobSearchCriteria) -> Iterator[dict]:
         
         logger.info(
             "connector_fetch_started",
-            extra={"source": self.name, "keyword": keyword}
+            extra={"source": self.name, "query": criteria.query, "location": criteria.location}
         )
         
         page = 1
         total_records = 0
         
         while True:
-            data = self._api_call(keyword=keyword, page=page)
+            
+            # Page cap
+            if self.max_pages and page > self.max_pages:
+                logger.info(
+                    "connector_page_limit_reached",
+                    extra={
+                        "source": self.name,
+                        "max_pages": self.max_pages,
+                    },
+                )
+                break
+            
+            # Throttle before request
+            self._thottle()
+            
+            data = self._api_call(criteria=criteria, page=page)
             results = self._extract_results(data)
             
             if not results:
@@ -128,12 +166,20 @@ class PaginatedAPIConnector(JobConnector):
             )
 
 
-
-
-
 class USAJobConnector(PaginatedAPIConnector):
     
-    def __init__(self, api_key: str):
+    def __init__(
+        self, 
+        api_key: str,
+        max_pages: int | None = None,
+        min_interval_seconds: float | None = None,
+        ):
+            
+        super().__init__(
+            max_pages=max_pages,
+            min_interval_seconds=min_interval_seconds
+        )
+        
         self.name = "usajobs"
         self.base_url = "https://data.usajobs.gov/api/search"
         self.headers = {
@@ -142,8 +188,13 @@ class USAJobConnector(PaginatedAPIConnector):
             "Authorization-Key": api_key,
         }
     
-    def _api_call(self, keyword: str, page: int) -> dict:
-        params={"Keyword": keyword, "Page": page}
+    def _api_call(self, criteria: JobSearchCriteria, page: int) -> dict:
+        
+        params={"Keyword": criteria.query,  "Page": page}
+        
+        if criteria.location:
+            params["LocationName"] = criteria.location
+        
         meta = {"page": page}
         return self._api_get_response(
             url=self.base_url, 
@@ -171,27 +222,41 @@ class USAJobConnector(PaginatedAPIConnector):
             currency_raw="USD",
             posted_at_raw=desc.get("PublicationStartDate")
         )
-        
-
-
 
 
 
 class ADZunaConnector(PaginatedAPIConnector):
     
-    def __init__(self, api_key: str, app_id: str):
+    def __init__(
+        self, 
+        api_key: str, 
+        app_id: str,
+        max_pages: int | None = None,
+        min_interval_seconds: float | None = None,
+        ):
+            
+        super().__init__(
+            max_pages=max_pages,
+            min_interval_seconds=min_interval_seconds
+        )
+            
+            
         self.name = "adzuna"
         self.base_url = "https://api.adzuna.com/v1/api/jobs/us/search"
         self.app_id = app_id
         self.api_key = api_key
             
-    def _api_call(self, keyword: str, page: int) -> dict:
+    def _api_call(self, criteria: JobSearchCriteria, page: int) -> dict:
         url = f"{self.base_url}/{page}"
         params = {
             "app_id": self.app_id,
             "app_key": self.api_key,
-            "what": keyword,
+            "what": criteria.query,
         }
+        
+        if criteria.location:
+            params["where"] = criteria.location
+        
         meta = {"page": page}
         return self._api_get_response(
         url=url, 
@@ -218,4 +283,3 @@ class ADZunaConnector(PaginatedAPIConnector):
             currency_raw=None,
             posted_at_raw=raw_job.get("created")
         )
-    
