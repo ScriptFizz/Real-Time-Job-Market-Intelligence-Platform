@@ -92,13 +92,13 @@ class LocalStorage(Storage):
          
         return count
 
-def get_storage(config: Dict) -> Storage:
+def get_storage(storage_type: str | None) -> Storage:
     
-    storage_config = config["storage"]["type"]
-    if not storage_config:
+    #storage_config = config["storage"]["type"]
+    if not storage_type:
         raise ValueError("Storage settings not configured.")
         
-    if storage_config == "local":
+    if storage_type == "local":
         return LocalStorage()
     else:
-        pass
+        return GCStorage()

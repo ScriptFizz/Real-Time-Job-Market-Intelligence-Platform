@@ -12,7 +12,6 @@ class BronzeContext:
     base_path: Path
     query: str,
     location: str
-    domain: str
     
     @property
     def bronze_root(self) -> str:

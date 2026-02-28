@@ -9,43 +9,43 @@ from job_plat.config.context import (
     )
 from datetime import date
 from pyspark.sql import SparkSession
+from typing import Dict
 
 
 def build_pipeline_context(
     data_date: date,
-    config_path: str = "settings.yaml"
+    config: Dict
 ) -> PipelineContext:
 
-    params = load_params(config_path = config_path)
     
     spark = create_spark()
     
     bronze_ctx = BronzeContext(
         data_date = data_date,
-        base_path = params["path"]["bronze"]
+        base_path = config["path"]["bronze"]
     )
     
     silver_ctx = SilverContext(
         data_date = data_date,
-        base_path = params["path"]["silver"],
+        base_path = config["path"]["silver"],
         spark = spark
     )
     
     gold_v1_ctx = GoldV1Context(
         data_date = data_date,
-        base_path = params["path"]["gold_v1"],
+        base_path = config["path"]["gold_v1"],
         spark = spark
     )
     
     gold_v2_ctx = GoldV2Context(
         data_date = data_date,
-        base_path = params["path"]["gold_v2"],
+        base_path = config["path"]["gold_v2"],
         spark = spark
     )
     
     return PipelineContext(
         data_date = data_date,
-        env = params["env"],
+        env = config["env"],
         spark = spark,
         bronze = bronze_ctx,
         silver = silver_ctx,
@@ -53,3 +53,47 @@ def build_pipeline_context(
         gold_v2 = gold_v2_ctx
         
     )
+    
+    
+    # def build_pipeline_context(
+    # data_date: date,
+    # config_path: str = "settings.yaml"
+# ) -> PipelineContext:
+
+    # params = load_params(config_path = config_path)
+    
+    # spark = create_spark()
+    
+    # bronze_ctx = BronzeContext(
+        # data_date = data_date,
+        # base_path = params["path"]["bronze"]
+    # )
+    
+    # silver_ctx = SilverContext(
+        # data_date = data_date,
+        # base_path = params["path"]["silver"],
+        # spark = spark
+    # )
+    
+    # gold_v1_ctx = GoldV1Context(
+        # data_date = data_date,
+        # base_path = params["path"]["gold_v1"],
+        # spark = spark
+    # )
+    
+    # gold_v2_ctx = GoldV2Context(
+        # data_date = data_date,
+        # base_path = params["path"]["gold_v2"],
+        # spark = spark
+    # )
+    
+    # return PipelineContext(
+        # data_date = data_date,
+        # env = params["env"],
+        # spark = spark,
+        # bronze = bronze_ctx,
+        # silver = silver_ctx,
+        # gold_v1 = gold_v1_ctx,
+        # gold_v2 = gold_v2_ctx
+        
+    # )
