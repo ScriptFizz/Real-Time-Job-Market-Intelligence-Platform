@@ -1,5 +1,6 @@
 from datetime import date
 import time
+import logging
 from pathlib import Path
 from typing import Iterator, Dict
 from pyspark.sql import DataFrame
@@ -61,15 +62,9 @@ class BronzeStage(BaseSourceStage):
                 "payload": self.connector.normalize(record).model_dump()
             }
     
-    def produce(self, run: IngestionRun) -> int:
-
-        log_context = {
-            "run_id": run.run_id,
-            "stage": run.stage,
-            "source": run.source,
-        }
+    def produce(self, run: IngestionRun, logger: logging.Logger) -> int:
         
-        self.logger.info("bronze_run_started", extra=log_context)
+        logger.info("bronze_run_started", extra={"source": run.source},)
 
         criteria = JobSearchCriteria(
             query=run.query,
@@ -77,7 +72,6 @@ class BronzeStage(BaseSourceStage):
         )
         
         raw_stream = self.connector.fetch(
-            #query=run.query,
             criteria=criteria,
         )
         
@@ -117,10 +111,10 @@ class BronzeStage(BaseSourceStage):
         
         # Log bronze run stats 
 
-        self.logger.info(
+        logger.info(
             "bronze_run_completed",
             extra={
-                **log_context,
+                "source": run.source,
                 "row_count": row_count,
 
             },

@@ -58,3 +58,23 @@ def full_pipeline(config: Dict) -> None:
     silver_pipeline(ctx=pipeline_ctx, storage=storage)
     gold_v1_pipeline(ctx=pipeline_ctx, storage=storage)
     gold_v2_pipeline(ctx=pipeline_ctx, storage=storage)
+
+
+
+def full_pipeline(config: Dict) -> None:
+    
+    data_date = date.today()
+    storage = get_storage(config=config)
+    
+    pipeline_ctx = build_pipeline_context(data_date = data_date)
+    query = pipeline_ctx.bronze.query
+    location = pipeline_ctx.bronze.location
+
+        
+    bronze_pipeline(ctx=pipeline_ctx, storage=storage, connector=indeed_scraper)
+    bronze_pipeline(ctx=pipeline_ctx, storage=storage, connector=linkedin_scraper)
+        
+        
+    silver_pipeline(ctx=pipeline_ctx, storage=storage)
+    gold_v1_pipeline(ctx=pipeline_ctx, storage=storage)
+    gold_v2_pipeline(ctx=pipeline_ctx, storage=storage)

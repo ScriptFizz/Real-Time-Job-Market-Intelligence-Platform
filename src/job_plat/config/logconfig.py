@@ -54,3 +54,12 @@ def setup_logging(log_level=logging.INFO):
     }
     
     logging.config.dictConfig(logging_config)
+
+
+class ContextLogger(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
+        extra = kwargs.get("extra", {})
+        merged_extra = {**self.extra, **extra}
+        kwargs["extra"] = merged_extra
+        return msg, kwargs
+
