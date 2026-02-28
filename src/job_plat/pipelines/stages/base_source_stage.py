@@ -3,7 +3,7 @@ from pyspark.sql import DataFrame, SparkSession
 import logging
 import time
 from job_plat.utils.storage import Storage
-from job_plat.bronze.ingestion.metadata import IngestionRun
+from job_plat.bronze.ingestion.metadata import StageExecutionContext, IngestionRun
 from typing import Dict
 
 
@@ -11,17 +11,44 @@ class BaseSourceStage(ABC):
     
     def __init__(self, storage: Storage):
         self.storage = storage
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(f"pipeline.{self.__module__}.{self.__class__.__name__}")
         
     def execute(self) -> None:
+        
+        run_context = self.create_context()
+        
+        log_context = {
+            "run_id": run_context.run_id,
+            "stage": run_context.stage,
+        }
         start = time.time()
-        self.logger.info("Starting source stage")
+        self.logger.info("stage_started", extra=log_context)
         
-        self.validate_config()
-        count = self.produce()
+        try:
+            self.validate_config()
+            count = sel.produce(context=context)
+
         
-        duration = time.time() - start
-        self.logger.info(f"Produced {count} records in {duration:.2f}s")
+            duration = round(time.time() - start, 2)
+            self.logger.info(
+                "stage_completed",
+                extra={
+                    **log_context,
+                    "records_produced": count,
+                    "duraion_seconds": duration,
+                },
+            )
+        except Exception:
+            duration = round(time.time() - start, 2)
+            self.logger.error(
+                "stage_failed",
+                extra={
+                    **log_context,
+                    "duration_seconds": duration,
+                },
+                exc_info=True,
+            )
+            raise
     
     @abstractmethod
     def validate_config(self) -> None:
@@ -32,5 +59,37 @@ class BaseSourceStage(ABC):
         pass
         
     @abstractmethod
-    def produce(self) -> int:
+    def produce(self, context: StageExecutionContext) -> int:
         pass
+    
+    @abstractmethod
+    def create_context(self) -> IngestionRun:
+        pass
+
+# class BaseSourceStage(ABC):
+    
+    # def __init__(self, storage: Storage):
+        # self.storage = storage
+        # self.logger = logging.getLogger(self.__class__.__name__)
+        
+    # def execute(self) -> None:
+        # start = time.time()
+        # self.logger.info("Starting source stage")
+        
+        # self.validate_config()
+        # count = self.produce()
+        
+        # duration = time.time() - start
+        # self.logger.info(f"Produced {count} records in {duration:.2f}s")
+    
+    # @abstractmethod
+    # def validate_config(self) -> None:
+        # pass
+    
+    # @abstractmethod
+    # def _enrich_with_ingestion_metadata(self records: Dict, run: IngestionRun) -> int:
+        # pass
+        
+    # @abstractmethod
+    # def produce(self) -> int:
+        # pass

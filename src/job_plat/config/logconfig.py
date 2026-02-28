@@ -17,12 +17,9 @@ def setup_logging(log_level=logging.INFO):
         "disable_existing_loggers": False,
         "formatters": {
             "minimal": {"format": "%(message)s"},
-            "detailed": {
-                "format": (
-                    "%(levelname)s %(asctime)s "
-                    "[%(name)s:%(filename)s:%(funcName)s:%(lineno)d]\n"
-                    "%(message)s\n"
-                )
+            "json": {
+                "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+                "format": "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
             },
         },
         "handlers": {
@@ -34,18 +31,18 @@ def setup_logging(log_level=logging.INFO):
             },
             "info": {
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": logs_dir / "info.log",
+                "filename": str(logs_dir / "info.log"),
                 "maxBytes": 10_000_000,
                 "backupCount": 5,
-                "formatter": "detailed",
+                "formatter": "json",
                 "level": logging.INFO,
             },
             "error": {
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": logs_dir / "error.log",
+                "filename": str(logs_dir / "error.log"),
                 "maxBytes": 10_000_000,
                 "backupCount": 5,
-                "formatter": "detailed",
+                "formatter": "json",
                 "level": logging.ERROR,
             },
         },

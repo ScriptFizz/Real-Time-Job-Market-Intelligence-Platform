@@ -3,44 +3,49 @@ from datetime import datetime
 import uuid
 from pathlib import Path
 
+
 @dataclass
-class IngestionRun:
+class StageExecutionContext:
+    run_id: str
+    stage: str
+    pipeline_version: str
+    started_at: datetime
+    
+    @classmethod
+    def create(cls, stage: str, pipeline_version: str):
+        return cls(
+            run_id = str(uuid.uuid4()),
+            stage = stage,
+            pipeline_version = pipeline_version,
+            started_at = datetime.utcnow(),
+        )
+
+@dataclass
+class IngestionRun(StageExecutionContext):
     source: str
     query: str
     location: str
-    ingestion_ts: datetime
-    run_id: str
-    pipeline_version: str
-    
     @classmethod
-    def create(cls, source: str, query: str, location: str, version: str):
+    def create(
+        cls, 
+        source: str, 
+        query: str, 
+        location: str, 
+        pipeline_version: str
+        ):
+        
+        base_ctx = super().create(
+            stage="bronze",
+            pipeline_version=pipeline_version,
+        )
         return cls(
             source=source,
             query=query,
             location=location,
-            ingestion_ts=datetime.utcnow(),
-            run_id=str(uuid.uuid4()),
-            pipeline_version=version,
+            started_at=base_ctx.started_at,
+            run_id=base_ctx.run_id,
+            pipeline_version=base_ctx.pipeline_version,
         )
-
-
-# @dataclass
-# class IngestionRun:
-    # source: str
-    # query: str
-    # location: str
-    # ingestion_ts: datetime
-    # run_id: str
-    
-    # @classmethod
-    # def create(cls, source: str, query: str, location: str):
-        # return cls(
-            # source=source,
-            # query=query,
-            # location=location,
-            # ingestion_ts=datetime.uctnow(),
-            # run_id=str(uuid.uuid4()),
-        # )
 
 
 def write_metadata(path: Path, run: IngestionRun, row_count: int):
