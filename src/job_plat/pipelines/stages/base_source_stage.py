@@ -30,12 +30,12 @@ class BaseSourceStage(ABC):
         )
         
         start = time.time()
-        logger.info("stage_started", extra=log_context)
+        logger.info("stage_started")
         
         try:
             self.validate_config()
-            count = sel.produce(
-                context=context,
+            count = self.produce(
+                run=run_context,
                 logger=logger
                 )
 
@@ -44,9 +44,8 @@ class BaseSourceStage(ABC):
             logger.info(
                 "stage_completed",
                 extra={
-                    **log_context,
                     "records_produced": count,
-                    "duraion_seconds": duration,
+                    "duration_seconds": duration,
                 },
             )
         except Exception:
@@ -54,7 +53,6 @@ class BaseSourceStage(ABC):
             logger.error(
                 "stage_failed",
                 extra={
-                    **log_context,
                     "duration_seconds": duration,
                 },
                 exc_info=True,

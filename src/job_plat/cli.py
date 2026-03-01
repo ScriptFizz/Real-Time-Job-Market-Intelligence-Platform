@@ -1,7 +1,7 @@
 import typer
 from dotenv import load_dotenv
 from datetime import datetime
-from ... import load_config, resolve_bronze_params
+from job_plat.config.config_loader import ConfigLoader
 from job_plat.bronze.ingestion.connectors import build_connectors
 from job_plat.pipelines.contexts.context_builders import build_pipeline_context, build_bronze_context
 from job_plat.pipelines.pipeline_stages import run_bronze_pipeline, run_full_pipeline
@@ -24,8 +24,8 @@ def bronze(
     Run bronze ingestion stage.
     """
     
-    full_config = load_params(config)
-    env_config = full_config["environments"][env]
+    config_loader = ConfigLoader(config_path=config, env=env)
+    env_config = config_loader.as_dict()
     
     setup_logging(getattr(logging, env_config["logging_level"]))
     

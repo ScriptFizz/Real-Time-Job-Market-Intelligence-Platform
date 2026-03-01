@@ -55,24 +55,24 @@ def path_exists(spark: SparkSession, path: str | Path) -> bool:
         return False
 
 
-def build_indeed_url(
-    query str,
-    location: str
-    ) -> str:
-    """
+# def build_indeed_url(
+    # query str,
+    # location: str
+    # ) -> str:
+    # """
     
-    """
-    missing = []
-    if not query:
-        missing.append("Missing job role")
-    if not location:
-        missing.append("Missing location")
+    # """
+    # missing = []
+    # if not query:
+        # missing.append("Missing job role")
+    # if not location:
+        # missing.append("Missing location")
     
-    if missing:
-        raise ValueError(f"Incomplete data: {', '.join(missing)}")
+    # if missing:
+        # raise ValueError(f"Incomplete data: {', '.join(missing)}")
     
-    params = {
-        "q": query,
-        "l": location
-    }
-    return f"https://www.indeed.com/jobs?{urlencode(params)}"
+    # params = {
+        # "q": query,
+        # "l": location
+    # }
+    # return f"https://www.indeed.com/jobs?{urlencode(params)}"

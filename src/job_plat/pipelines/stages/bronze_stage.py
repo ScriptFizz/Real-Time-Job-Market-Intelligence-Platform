@@ -55,7 +55,7 @@ class BronzeStage(BaseSourceStage):
                     "source": run.source,
                     "query": run.query,
                     "location": run.location,
-                    "ingestion_ts": run.ingestion_ts.isoformat(),
+                    "started_at": run.started_at.isoformat(),
                     "canonical_schema_version": "1.0.0",
                 },
                 "raw_payload": record,
@@ -84,7 +84,7 @@ class BronzeStage(BaseSourceStage):
         base_path = (
             self.bronze_ctx.base_path
             / f"source={run.source}"
-            / f"ingestion_date={run.ingestion_ts.date()}"
+            / f"ingestion_date={run.started_at.date()}"
             / f"run_id={run.run_id}"
         )
     
@@ -116,7 +116,6 @@ class BronzeStage(BaseSourceStage):
             extra={
                 "source": run.source,
                 "row_count": row_count,
-
             },
         )
         return row_count

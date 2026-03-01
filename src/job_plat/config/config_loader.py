@@ -10,7 +10,7 @@ class ConfigLoader:
     
     def __init__(
         self,
-        config_path: str | Path = "settings.yaml"
+        config_path: str | Path = "settings.yaml",
         env: str | None = None,
         project_root: Path | None = None,
     ):
@@ -33,9 +33,9 @@ class ConfigLoader:
         Returns:
             (Path): path of the project root directory.
         """
-        return Path(__file__)resolve().parents[3]
+        return Path(__file__).resolve().parents[3]
     
-    def _load(self) -> dicr[str, Any]:
+    def _load(self) -> dict[str, Any]:
         """
         Return the configuration data in a dictionary structure.
         
@@ -44,10 +44,10 @@ class ConfigLoader:
             (Dict[str, Any]): dictionary with configuration data.
         """
         with self.config_path.open() as f:
-            config = ymal.safe_load(f)
+            config = yaml.safe_load(f)
         
         if self.env:
-            env_config = config.get(self.env)
+            env_config = config["environments"].get(self.env)
             if env_config is None:
                 raise KeyError(f"Environment '{self.env}' not found in config.")
             return env_config
