@@ -1,10 +1,14 @@
 import typer
+from dotenv import load_dotenv
 from datetime import datetime
 from ... import load_config, resolve_bronze_params
-from ... import build_pipeline_context
-from ... import run_bronze, run_full_pipeline
-from ... import setup_logging
-from ... import get_storage
+from job_plat.bronze.ingestion.connectors import build_connectors
+from job_plat.pipelines.contexts.context_builders import build_pipeline_context, build_bronze_context
+from job_plat.pipelines.pipeline_stages import run_bronze_pipeline, run_full_pipeline
+from job_plat.config.logconfig import setup_logging
+from job_plat.utils.storage import get_storage
+
+load_dotenv()
 
 app = typer.Typer(help="Job postings data pipeline CLI")
 
@@ -31,22 +35,27 @@ def bronze(
         else datetime.utcnow().date()
     )
     
-    ctx = build_pipeline_context(data_date=data_date, config=env_config)
+    pipeline_ctx = build_pipeline_context(
+        data_date=data_date, 
+        config=env_config
+        )
+        
+    bronze_ctx = build_bronze_context(
+        pipeline_ctx = pipeline_ctx,
+        query = query,
+        location = location
+    )
     
     storage = get_storage(env_config["storage"]["type"])
     
-    bronze_params = resolve_bronze_params(
-        config=config_dict,
-        query=query,
-        location=location,
-    )
+    connectors = build_connectors(env_config)
     
-    run_bronze(
-        ctx=ctx,
-        storage=storage,
-        query=bronze_params["query"],
-        location=bronze_params["location"]
-    )
+    for connector in connectors:
+        run_bronze_pipeline(
+            ctx=bronze_ctx,
+            storage=storage,
+            connector=connector
+        )
 
 @app.command()
 def full(

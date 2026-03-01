@@ -33,42 +33,6 @@ def full_pipeline(config: Dict) -> None:
     pipeline_ctx = build_pipeline_context(data_date = data_date)
     query = pipeline_ctx.bronze.query
     location = pipeline_ctx.bronze.location
-    domain = pipeline_ctx.bronze.domain
-    
-    #with HttpClient(headers=DEFAULT_BROWSER_HEADERS) as client:
-    with HttpClient() as client:
-        indeed_source = build_indeed_source(
-            query=query,
-            location=location,
-            domain=domain
-        )
-        
-        linkedin_source = build_linkedin_source(
-            query=query,
-            location=location
-        )
-        
-        indeed_scraper = JobScraper(client=client, source=indeed_source)
-        linkedin_scraper = JobScraper(client=client, source=linkedin_source)
-        
-        bronze_pipeline(ctx=pipeline_ctx, storage=storage, scraper=indeed_scraper)
-        bronze_pipeline(ctx=pipeline_ctx, storage=storage, scraper=linkedin_scraper)
-        
-        
-    silver_pipeline(ctx=pipeline_ctx, storage=storage)
-    gold_v1_pipeline(ctx=pipeline_ctx, storage=storage)
-    gold_v2_pipeline(ctx=pipeline_ctx, storage=storage)
-
-
-
-def full_pipeline(config: Dict) -> None:
-    
-    data_date = date.today()
-    storage = get_storage(config=config)
-    
-    pipeline_ctx = build_pipeline_context(data_date = data_date)
-    query = pipeline_ctx.bronze.query
-    location = pipeline_ctx.bronze.location
 
         
     bronze_pipeline(ctx=pipeline_ctx, storage=storage, connector=indeed_scraper)

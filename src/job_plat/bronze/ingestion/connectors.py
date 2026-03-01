@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import Callable, Iterator, Dict, Any
@@ -283,6 +284,21 @@ class ADZunaConnector(PaginatedAPIConnector):
             currency_raw=None,
             posted_at_raw=raw_job.get("created")
         )
+
+
+
+def build_connnectors(config: dict) -> list[JobConnector]:
+    return [
+        USAJobConnector(
+            api_key=os.getenv("USAJOBS_API_KEY"),
+            max_pages=config["bronze"]["max_pages"],
+        ),
+        ADZunaConnector(
+            api_key=os.getenv("ADZUNA_API_KEY"),
+            app_id=os.getenv("ADZUNA_APP_ID"),
+            max_pages=config["bronze"]["max_pages"],
+        )
+    ]
 
     # def normalize(self, raw_job: dict) -> dict:
         # desc = raw_job["MatchedObjectDescriptor"]
