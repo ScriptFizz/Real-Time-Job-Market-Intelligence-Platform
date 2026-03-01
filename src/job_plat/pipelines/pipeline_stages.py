@@ -15,13 +15,13 @@ from job_plat.bronze.ingestion.connectors import JobConnector
 
 ## BRONZE PIPELINE ##
 
-def bronze_pipeline(
-    ctx: PipelineContext,
+def run_bronze_pipeline(
+    ctx: BronzeContext,
     storage: Storage,
     connector: JobConnector
     ) -> None:
     stage = BronzeStage(
-        bronze_ctx = ctx.bronze,
+        bronze_ctx = ctx,
         storage = storage,
         connector = connector
     )
@@ -30,7 +30,7 @@ def bronze_pipeline(
 
 ## SILVER PIPELINE ##
 
-def silver_pipeline(
+def run_silver_pipeline(
     ctx: PipelineContext,
     storage: Storage
 ) -> None:
@@ -45,7 +45,7 @@ def silver_pipeline(
 
 ## GOLD V1 PIPELINE ##
 
-def gold_v1_pipeline(
+def run_gold_v1_pipeline(
     ctx: PipelineContext,
     storage: Storage
 ) -> None:
@@ -61,7 +61,7 @@ def gold_v1_pipeline(
 
 ## GOLD V2 PIPELINE ##
 
-def gold_v2_pipeline(
+def run_gold_v2_pipeline(
     ctx: PipelineContext,
     storage: Storage
 ) -> None:
@@ -72,3 +72,66 @@ def gold_v2_pipeline(
     )
     
     stage.execute()
+
+
+##############
+
+# ## BRONZE PIPELINE ##
+
+# def run_bronze_pipeline(
+    # ctx: PipelineContext,
+    # storage: Storage,
+    # connector: JobConnector
+    # ) -> None:
+    # stage = BronzeStage(
+        # bronze_ctx = ctx.bronze,
+        # storage = storage,
+        # connector = connector
+    # )
+    # stage.execute()
+
+
+# ## SILVER PIPELINE ##
+
+# def run_silver_pipeline(
+    # ctx: PipelineContext,
+    # storage: Storage
+# ) -> None:
+    # stage = SilverStage(
+        # silver_ctx = ctx.silver,
+        # bronze_ctx = ctx.bronze,
+        # storage = storage
+    # )
+    
+    # stage.execute()
+
+
+# ## GOLD V1 PIPELINE ##
+
+# def run_gold_v1_pipeline(
+    # ctx: PipelineContext,
+    # storage: Storage
+# ) -> None:
+    
+    # stage = GoldV1Stage(
+        # silver_ctx = ctx.silver,
+        # gold_v1_ctx = ctx.gold_v1,
+        # storage = storage
+    # )
+    
+    # stage.execute()
+    
+
+# ## GOLD V2 PIPELINE ##
+
+# def run_gold_v2_pipeline(
+    # ctx: PipelineContext,
+    # storage: Storage
+# ) -> None:
+    # stage = GoldV2Stage(
+        # gold_v1_ctx = ctx.gold_v1,
+        # gold_v2_ctx = ctx.gold_v2,
+        # storage = storage
+    # )
+    
+    # stage.execute()

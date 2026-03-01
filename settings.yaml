@@ -1,0 +1,25 @@
+environments:
+  dev:
+    storage:
+      type: local
+    paths:
+      bronze: ./data/bronze
+      silver: ./data/silver
+      gold: ./data/gold
+    bronze:
+      query: "data engineer"
+      location: "Berlin"
+      max_pages: 5
+    logging_level: DEBUG
+
+  prod:
+    storage:
+      type: gcs
+    paths:
+      bronze: gs://job-pipeline/bronze
+      silver: gs://job-pipeline/silver
+      gold: gs://job-pipeline/gold
+    bronze:
+      query: "data engineer"
+      location: "Berlin"
+    logging_level: INFO

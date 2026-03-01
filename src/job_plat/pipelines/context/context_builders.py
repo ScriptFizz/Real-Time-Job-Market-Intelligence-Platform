@@ -54,6 +54,31 @@ def build_pipeline_context(
         
     )
     
+def build_bronze_context(
+    pipeline_ctx: PipelineContext,
+    query: str | None,
+    location: str | None,
+) -> BronzeContext:
+    
+    final_query = query or pipeline_ctx.config["bronze"]["query"]
+    final_location = location or pipeline_ctx.config["bronze"]["location"]
+    
+    missing = []
+    if not final_query:
+        missing.append("Query must not be empty")
+    if not final_location:
+        missing.append("Location must not be empty")
+    if missing:
+        raise ValueError(", ".join(missing))
+    
+    return BronzeContext(
+        data_date = pipeline_ctx.data_date,
+        base_path = pipeline_ctx.bronze.base_path,
+        query = final_query,
+        location = final_location
+    )
+    
+    
     
     # def build_pipeline_context(
     # data_date: date,
