@@ -135,7 +135,7 @@ class PaginatedAPIConnector(JobConnector):
                 break
             
             # Throttle before request
-            self._thottle()
+            self._throttle()
             
             data = self._api_call(criteria=criteria, page=page)
             results = self._extract_results(data)

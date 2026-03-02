@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Literal
+from typing import Optional, Literal, Any
 
 
 class PathsConfig(BaseModel):
@@ -11,7 +11,7 @@ class PathsConfig(BaseModel):
 class SparkConfig(BaseModel):
     app_name: str
     master: str
-    config: dict[str, str] = Field(default_factory=dict)
+    config: dict[str, Any] = Field(default_factory=dict)
 
 class StorageConfig(BaseModel):
     type: Literal["local", "gcs"]

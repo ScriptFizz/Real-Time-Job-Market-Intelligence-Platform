@@ -29,6 +29,7 @@ import os
 import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+import shutil
 #from ... import IngestionRun
 
 class Storage(ABC):
@@ -88,7 +89,8 @@ class LocalStorage(Storage):
                 tmp.write(json.dumps(record) + "\n")
                 count += 1
         
-        os.replace(tmp_path, path)
+        #os.replace(tmp_path, path)
+        shutil.move(str(tmp_path), str(path))
          
         return count
 
@@ -100,5 +102,7 @@ def get_storage(storage_type: str | None) -> Storage:
         
     if storage_type == "local":
         return LocalStorage()
-    else:
+    elif storage_type == "gcs":
         return GCStorage()
+    else:
+        raise ValueError(f"Type of storage {storage_type} is not recognized")

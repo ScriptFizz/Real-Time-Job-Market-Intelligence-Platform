@@ -8,6 +8,7 @@ from job_plat.pipelines.context.context_builders import build_pipeline_context, 
 from job_plat.pipelines.pipeline_stages import run_bronze_pipeline, run_full_pipeline
 from job_plat.config.logconfig import setup_logging
 from job_plat.utils.storage import get_storage
+from job_plat.utils.helpers import create_spark
 
 load_dotenv()
 
@@ -29,7 +30,6 @@ def bronze(
     env_config = config_loader.load_env()
     
     log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-    print("log_level: ", log_level)
     setup_logging(log_level=log_level)
     
     data_date = (
@@ -38,9 +38,12 @@ def bronze(
         else datetime.utcnow().date()
     )
     
+    spark = create_spark(env_config.spark)
+    
     pipeline_ctx = build_pipeline_context(
         data_date=data_date, 
-        config=env_config
+        config=env_config,
+        spark=spark
         )
         
     bronze_ctx = build_bronze_context(
@@ -48,6 +51,9 @@ def bronze(
         query = query,
         location = location
     )
+    
+    print("cli_QUERY: ", bronze_ctx.query) 
+    print("cli_LOCATION: ", bronze_ctx.location) 
     
     storage = get_storage(env_config.storage.type)
     

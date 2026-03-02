@@ -36,12 +36,16 @@ class BronzeStage(BaseSourceStage):
             raise ValueError(", ".join(missing))
     
     def create_context(self) -> IngestionRun:
-        return IngestionRun.create(
+        print("QUERY: ", self.bronze_ctx.query) 
+        print("LOCATION: ", self.bronze_ctx.location) 
+        print("SOURCE: ", self.connector.name) 
+        run_context = IngestionRun(
             source=self.connector.name,
             query=self.bronze_ctx.query,
             location=self.bronze_ctx.location,
             pipeline_version="1.0.0"
         )
+        return run_context
     
     def _enrich_with_ingestion_metadata(
         self, 
