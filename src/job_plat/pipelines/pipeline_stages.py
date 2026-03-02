@@ -2,7 +2,7 @@ from job_plat.pipelines.context.contexts import (
     BronzeContext, 
     SilverContext,
     GoldV1Context,
-    GoldV2Context
+    GoldV2Context,
     PipelineContext
     )
 from job_plat.pipelines.stages.bronze_stage import BronzeStage
@@ -11,6 +11,7 @@ from job_plat.pipelines.stages.gold_v1_stage import GoldV1Stage
 from job_plat.pipelines.stages.gold_v2_stage import GoldV2Stage
 from job_plat.utils.storage import Storage
 from job_plat.bronze.ingestion.connectors import JobConnector
+from typing import List
 
 
 ## BRONZE PIPELINE ##
@@ -73,6 +74,25 @@ def run_gold_v2_pipeline(
     
     stage.execute()
 
+### FULL PIPELINE ###
+
+
+def run_full_pipeline(
+    ctx: PipelineContext,
+    storage: Storage,
+    connectors: List[JobConnector],
+) -> None:
+    
+    for connector in connectors:
+        run_bronze_pipeline(
+            ctx=bronze_ctx,
+            storage=storage,
+            connector=connector
+        )
+        
+    silver_pipeline(ctx=pipeline_ctx, storage=storage)
+    gold_v1_pipeline(ctx=pipeline_ctx, storage=storage)
+    gold_v2_pipeline(ctx=pipeline_ctx, storage=storage)
 
 ##############
 

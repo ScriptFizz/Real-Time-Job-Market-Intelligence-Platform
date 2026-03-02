@@ -1,10 +1,10 @@
 from job_plat.pipelines.stages.base_stage import BaseStage
-from job_plat.config.context import GoldV1Context, GoldV2Context
+from job_plat.pipelines.context.contexts import GoldV1Context, GoldV2Context
 from job_plat.gold.v2_intelligence.embeddings.build_skill_embeddings import build_skill_embeddings
 from job_plat.gold.v2_intelligence.embeddings.build_job_embeddings import build_job_embeddings
 from job_plat.gold.v2_intelligence.clusters.build_job_clusters import build_job_clusters
 from job_plat.utils.storage import Storage
-
+from pyspark.sql import DataFrame
 
 class GoldV2Stage(BaseStage):
     
@@ -79,9 +79,9 @@ class GoldV2Stage(BaseStage):
             ("skill_embeddings", "overwrite", self.gold_v1_ctx.skill_embeddings_path),
             ("job_embeddings", "overwrite", self.gold_v1_ctx.job_embeddings_path),
             ("job_clusters", "overwrite", self.gold_v1_ctx.job_cluster_path),
-            ("job_membership_df", "overwrite", self.gold_v1_ctx.),
-            ("job_centroids_df", "overwrite", self.gold_v1_ctx.),
-            ("job_cluster_metadata_df", "overwrite", self.gold_v1_ctx.)
+            ("job_membership_df", "overwrite", self.gold_v1_ctx.job_cluster_membership_path),
+            ("job_centroids_df", "overwrite", self.gold_v1_ctx.job_centroids_path),
+            ("job_cluster_metadata_df", "overwrite", self.gold_v1_ctx.cluster_metadata_path)
         ]:
             
             

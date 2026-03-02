@@ -1,12 +1,12 @@
 from datetime import date
 from pathlib import Path
 from pyspark.sql import DataFrame
-from job_plat.config.context import BronzeContext, SilverContext, PipelineContext
-from job_plat.pipelines.stages import BaseStage
-from job_plat.silver.cleaning.run_clean import run_clean
+from job_plat.pipelines.context.contexts import BronzeContext, SilverContext, PipelineContext
+from job_plat.pipelines.stages.base_stage import BaseStage
+#from job_plat.silver.cleaning.clean_jobs import run_clean
 from job_plat.silver.enrichment.build_job_skills import run_job_skills
 from job_plat.utils.helpers import union_all
-from job_plat.processing.clean_jobs import normalize_jobs, clean_jobs, deduplicate_jobs
+from job_plat.silver.cleaning.clean_jobs import normalize_jobs, clean_jobs, deduplicate_jobs
 from job_plat.silver.validation.quality_checks import run_quality_checks
 from typing import List
 from job_plat.utils.storage import Storage

@@ -17,12 +17,12 @@ from job_plat.config.context.contexts import (
     )
 
 from job_plat.config.context.build_pipeline_context import build_pipeline_context
-from job_plat.config.browser import DEFAULT_BROWSER_HEADERS
+#from job_plat.config.browser import DEFAULT_BROWSER_HEADERS
 from job_plat.utils.storage import get_storage
-from job_plat.bronze.ingestion.http_client import HttpClient
-from job_plat.bronze.ingestion.sources_builders import build_indeed_source, build_linkedin_source
-from job_plat.bronze.ingestion.scrapers import jobScraper
-
+#from job_plat.bronze.ingestion.http_client import HttpClient
+#from job_plat.bronze.ingestion.sources_builders import build_indeed_source, build_linkedin_source
+#from job_plat.bronze.ingestion.scrapers import jobScraper
+from job_plat.bronze.ingestion.connectors import JobConnector
 
 
 def full_pipeline(config: Dict) -> None:

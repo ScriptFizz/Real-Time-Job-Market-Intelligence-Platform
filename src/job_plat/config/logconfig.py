@@ -19,7 +19,7 @@ def setup_logging(log_level=logging.INFO):
             "minimal": {"format": "%(message)s"},
             "json": {
                 "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-                "format": "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+                "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
             },
         },
         "handlers": {

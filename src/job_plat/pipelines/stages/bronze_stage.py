@@ -4,11 +4,11 @@ import logging
 from pathlib import Path
 from typing import Iterator, Dict
 from pyspark.sql import DataFrame
-from job_plat.utils.helpers import build_indeed_url
-from job_plat.config.context import BronzeContext, SilverContext, PipelineContext
-from job_plat.pipelines.stages import BaseSourceStage
-from job_plat.bronze.ingestion.scrape_indeed import scrape_indeed
-from job_plat.bronze.ingestion.http_client import HttpClient
+#from job_plat.utils.helpers import build_indeed_url
+from job_plat.pipelines.context.contexts import BronzeContext, SilverContext, PipelineContext
+from job_plat.pipelines.stages.base_source_stage import BaseSourceStage
+#from job_plat.bronze.ingestion.scrape_indeed import scrape_indeed
+#from job_plat.bronze.ingestion.http_client import HttpClient
 from job_plat.utils.storage import Storage
 from job_plat.bronze.ingestion.connectors import JobConnector
 from job_plat.bronze.ingestion.metadata import IngestionRun, write_metadata

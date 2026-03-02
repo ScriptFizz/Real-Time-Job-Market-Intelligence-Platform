@@ -12,7 +12,7 @@ from typing import List
 
 def build_skill_embeddings(
     dim_skills_df: DataFrame,
-    spark: SparkSession
+    spark: SparkSession,
     model_name: str = "all-MiniLM-L6-v2",
     model_version: str = "v1",
     model_provider: str = "sentence-transformer"
