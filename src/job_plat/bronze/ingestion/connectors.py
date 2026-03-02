@@ -10,6 +10,7 @@ import time
 import logging
 from job_plat.bronze.ingestion.job_schema import CanonicalJobV1
 from job_plat.bronze.ingestion.search_criteria import JobSearchCriteria
+from job_plat.config.env_config import EnvironmentConfig
 
 logger = logging.getLogger(__name__)
 
@@ -287,16 +288,16 @@ class ADZunaConnector(PaginatedAPIConnector):
 
 
 
-def build_connnectors(config: dict) -> list[JobConnector]:
+def build_connectors(config: EnvironmentConfig) -> list[JobConnector]:
     return [
-        USAJobConnector(
-            api_key=os.getenv("USAJOBS_API_KEY"),
-            max_pages=config["bronze"]["max_pages"],
-        ),
+        # USAJobConnector(
+            # api_key=os.getenv("USAJOBS_API_KEY"),
+            # max_pages=config.bronze.max_pages,
+        # ),
         ADZunaConnector(
             api_key=os.getenv("ADZUNA_API_KEY"),
             app_id=os.getenv("ADZUNA_APP_ID"),
-            max_pages=config["bronze"]["max_pages"],
+            max_pages=config.bronze.max_pages,
         )
     ]
 

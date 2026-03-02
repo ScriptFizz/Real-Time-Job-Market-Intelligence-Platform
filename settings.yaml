@@ -1,20 +1,31 @@
 environments:
   dev:
+    spark:
+      app_name: "job-platform-dev"
+      master: "local[*]"
+      config:
+        spark.sql.shuffle.partitions: 4
     storage:
-      type: local
+      type: "local"
     paths:
       bronze: ./data/bronze
       silver: ./data/silver
-      gold: ./data/gold
+      gold_v1: ./data/gold_v1
+      gold_v2: ./data/gold_v2
     bronze:
       query: "data engineer"
       location: "Berlin"
       max_pages: 5
-    logging_level: DEBUG
+    logging_level: "DEBUG"
 
   prod:
+    spark:
+      app_name: "job-platform-prod"
+      master: "yarn"
+      config:
+        spark.sql.shuffle.partitions: 200
     storage:
-      type: gcs
+      type: "gcs"
     paths:
       bronze: gs://job-pipeline/bronze
       silver: gs://job-pipeline/silver
@@ -22,4 +33,4 @@ environments:
     bronze:
       query: "data engineer"
       location: "Berlin"
-    logging_level: INFO
+    logging_level: "INFO"

@@ -44,7 +44,7 @@ def check_freshness(
         > max_seconds
         ).count()
     if old_hours > 0:
-        raise ValueError(f"{old_hours} rows are older than {max_hours} hours"
+        raise ValueError(f"{old_hours} rows are older than {max_hours} hours")
     
 def run_quality_checks(df: DataFrame) -> None:
     

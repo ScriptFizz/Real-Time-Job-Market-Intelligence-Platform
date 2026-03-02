@@ -2,28 +2,55 @@ from functools import reduce
 from pyspark.sql import SparkSession, DataFrame
 from pathlib import Path
 from urllib.parse import urlencode
+from job_plat.config.env_config import SparkConfig
 
 
 def create_spark(
-    app_name: str,
-    master_url: str = "local[*]"
+    spark_config: SparkConfig
 ) -> SparkSession:
     """
     Create a SparkSession with a specific application name and master URL.
     
     Args:
-        app_name (str): Name of the application to create.
-        master_url(str): Master URL of the application to create.
+        
         
     Returns:
         (SparkSession): Entry point to programming Spark.
     """
-    return (
+    
+    builder = (
         SparkSession.builder
-        .appName(app_name)
-        .master(master_url)
-        .getOrCreate()
+        .appName(spark_config.app_name)
+        .master(spark_config.master)
     )
+    
+    for key, value in spark_config.config.items():
+        builder = builder.config(key, value)
+    
+    return builder.getOrCreate()
+
+
+# def create_spark(
+    # app_name: str,
+    # master_url: str = "local[*]"
+# ) -> SparkSession:
+    # """
+    # Create a SparkSession with a specific application name and master URL.
+    
+    # Args:
+        # app_name (str): Name of the application to create.
+        # master_url(str): Master URL of the application to create.
+        
+    # Returns:
+        # (SparkSession): Entry point to programming Spark.
+    # """
+    # return (
+        # SparkSession.builder
+        # .appName(app_name)
+        # .master(master_url)
+        # .getOrCreate()
+    # )
+
 
 
 def union_all(dfs: list[DataFrame]) -> DataFrame:

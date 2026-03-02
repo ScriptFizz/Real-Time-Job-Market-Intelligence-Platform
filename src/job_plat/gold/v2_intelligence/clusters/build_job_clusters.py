@@ -138,10 +138,10 @@ def build_job_clusters(
         "model_name": "job_clustering",
         "model_version": model_version,
         "algorithm": "spark_ml_kmeans",
-        "hyperparameters": json.dumps([
+        "hyperparameters": json.dumps({
             "k": n_clusters,
             "seed": 42
-        ]),
+        }),
         "training_size": df.count(),
         "silhouette_score": float(silhouette_score),
         "created_at": training_ts

@@ -34,17 +34,15 @@ class IngestionRun(StageExecutionContext):
         pipeline_version: str
         ):
         
-        base_ctx = super().create(
+        base = super().create(
             stage="bronze",
             pipeline_version=pipeline_version,
         )
         return cls(
+            **base.__dict__,
             source=source,
             query=query,
             location=location,
-            started_at=base_ctx.started_at,
-            run_id=base_ctx.run_id,
-            pipeline_version=base_ctx.pipeline_version,
         )
 
 

@@ -1,6 +1,6 @@
 import json
 from pyspark.sql import SparkSession, DataFrame
-from typing import List, Dict, Iterable
+from typing import List, Dict, Iterable, Iterator
 from pathlib import Path
 from job_plat.config.config_loader import ConfigLoader
 
@@ -43,7 +43,7 @@ def load_jsonl(
     n_samples: int | None = None ) -> List[Dict]:
     
     if n_samples:
-        return list(iter_jsonl(input_path=input_path)
+        return list(iter_jsonl(input_path=input_path))
     else:
         return list(islice(iter_jsonl(input_path=input_path), n_samples))
     
@@ -66,6 +66,7 @@ def jsonl_to_dataframe(
     return (
         spark.read
         .json(input_path)
+        )
 
 
 def write_parquet(

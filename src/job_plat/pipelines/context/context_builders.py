@@ -1,6 +1,6 @@
 from job_plat.utils.io import load_params
 from job_plat.utils.helpers import create_spark
-from job_plat.config.context import (
+from job_plat.pipelines.context.contexts import (
     BronzeContext, 
     SilverContext, 
     GoldV1Context, 
@@ -10,42 +10,42 @@ from job_plat.config.context import (
 from datetime import date
 from pyspark.sql import SparkSession
 from typing import Dict
-
+from job_plat.config.env_config import EnvironmentConfig
 
 def build_pipeline_context(
     data_date: date,
-    config: Dict
+    config: EnvironmentConfig
 ) -> PipelineContext:
 
     
-    spark = create_spark()
+    spark = create_spark(spark_config=env_config.spark)
     
     bronze_ctx = BronzeContext(
         data_date = data_date,
-        base_path = config["path"]["bronze"]
+        base_path = config.paths.bronze
     )
     
     silver_ctx = SilverContext(
         data_date = data_date,
-        base_path = config["path"]["silver"],
+        base_path = config.paths.silver,
         spark = spark
     )
     
     gold_v1_ctx = GoldV1Context(
         data_date = data_date,
-        base_path = config["path"]["gold_v1"],
+        base_path = config.paths.gold_v1,
         spark = spark
     )
     
     gold_v2_ctx = GoldV2Context(
         data_date = data_date,
-        base_path = config["path"]["gold_v2"],
+        base_path = config.paths.gold_v2,
         spark = spark
     )
     
     return PipelineContext(
         data_date = data_date,
-        env = config["env"],
+        env = config.env,
         spark = spark,
         bronze = bronze_ctx,
         silver = silver_ctx,

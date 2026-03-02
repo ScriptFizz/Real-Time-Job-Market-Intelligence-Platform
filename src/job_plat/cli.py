@@ -1,9 +1,10 @@
 import typer
+import logging
 from dotenv import load_dotenv
 from datetime import datetime
 from job_plat.config.config_loader import ConfigLoader
 from job_plat.bronze.ingestion.connectors import build_connectors
-from job_plat.pipelines.contexts.context_builders import build_pipeline_context, build_bronze_context
+from job_plat.pipelines.context.context_builders import build_pipeline_context, build_bronze_context
 from job_plat.pipelines.pipeline_stages import run_bronze_pipeline, run_full_pipeline
 from job_plat.config.logconfig import setup_logging
 from job_plat.utils.storage import get_storage
@@ -25,9 +26,11 @@ def bronze(
     """
     
     config_loader = ConfigLoader(config_path=config, env=env)
-    env_config = config_loader.as_dict()
+    env_config = config_loader.load_env()
     
-    setup_logging(getattr(logging, env_config["logging_level"]))
+    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
+    print("log_level: ", log_level)
+    setup_logging(log_level=log_level)
     
     data_date = (
         datetime.strptime(date, "%Y-%m-%d").date()
@@ -46,7 +49,7 @@ def bronze(
         location = location
     )
     
-    storage = get_storage(env_config["storage"]["type"])
+    storage = get_storage(env_config.storage.type)
     
     connectors = build_connectors(env_config)
     

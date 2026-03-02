@@ -5,7 +5,7 @@ import time
 from job_plat.utils.storage import Storage
 from job_plat.config.logconfig import ContextLogger
 from job_plat.bronze.ingestion.metadata import StageExecutionContext, IngestionRun
-from typing import Dict
+from typing import Iterator, Dict
 
 
 class BaseSourceStage(ABC):
@@ -63,8 +63,12 @@ class BaseSourceStage(ABC):
     def validate_config(self) -> None:
         pass
     
+    # @abstractmethod
+    # def _enrich_with_ingestion_metadata(self, records: Dict, run: IngestionRun) -> int:
+        # pass
+    
     @abstractmethod
-    def _enrich_with_ingestion_metadata(self records: Dict, run: IngestionRun) -> int:
+    def _enrich_with_ingestion_metadata(self, records: Iterator[Dict], run: IngestionRun) -> Iterator[Dict]:
         pass
         
     @abstractmethod

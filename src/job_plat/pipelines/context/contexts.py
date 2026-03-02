@@ -10,7 +10,7 @@ from typing import List
 class BronzeContext:
     data_date: date
     base_path: Path
-    query: str,
+    query: str
     location: str
     
     @property
@@ -71,6 +71,10 @@ class GoldV2Context:
     @property
     def job_cluster_path(self) -> Path:
         return self.base_path / f"job_cluster"
+
+    @property
+    def job_centroids_path(self) -> Path:
+        return self.base_path / f"job_centroids"
 
     @property
     def cluster_metadata_path(self) -> Path:

@@ -4,7 +4,7 @@ from pyspark.sql.functions import (
 )
 
 from job_plat.utils.helpers import create_spark
-from job_plat.processing.spark_ops import (
+from job_plat.silver.enrichment.spark_ops import (
     extract_skills_udf,
     normalize_skills_udf,
     skill_confidence_udf,
