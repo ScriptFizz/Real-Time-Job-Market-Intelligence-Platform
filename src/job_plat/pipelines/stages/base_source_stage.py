@@ -18,14 +18,20 @@ class BaseSourceStage(ABC):
         
     def execute(self) -> None:
         
+        self.validate_config()
+        
+        print("_QUERY: ", self.bronze_ctx.query) 
+        print("_LOCATION: ", self.bronze_ctx.location) 
+        print("_SOURCE: ", self.connector.name) 
+        
         run_context = self.create_context()
         
         # Bind logger to execution
         logger = ContextLogger(
             self._base_logger,
             {
-                "run_id": context.run_id,
-                "stage": context.stage,
+                "run_id": run_context.run_id,
+                "stage": run_context.stage,
             },
         )
         
@@ -33,7 +39,7 @@ class BaseSourceStage(ABC):
         logger.info("stage_started")
         
         try:
-            self.validate_config()
+            #self.validate_config()
             count = self.produce(
                 run=run_context,
                 logger=logger
@@ -71,8 +77,12 @@ class BaseSourceStage(ABC):
     def _enrich_with_ingestion_metadata(self, records: Iterator[Dict], run: IngestionRun) -> Iterator[Dict]:
         pass
         
+    # @abstractmethod
+    # def produce(self, context: StageExecutionContext, logger: logging.Logger) -> int:
+        # pass
+    
     @abstractmethod
-    def produce(self, context: StageExecutionContext, logger: logging.Logger) -> int:
+    def produce(self, run: IngestionRun, logger: logging.Logger) -> int:
         pass
     
     @abstractmethod

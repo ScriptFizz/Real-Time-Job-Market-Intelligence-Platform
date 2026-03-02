@@ -14,8 +14,8 @@ class BronzeContext:
     location: str
     
     @property
-    def bronze_root(self) -> str:
-        return str(self.base_path)
+    def bronze_root(self) -> Path:
+        return self.base_path
         
 
 # SILVER CONTEXT
