@@ -52,7 +52,7 @@ class PaginatedAPIConnector(JobConnector):
         now = time.time()
         
         if self._last_request_ts is not None:
-            elapsed = now - self.last_request_ts
+            elapsed = now - self._last_request_ts
             remaining = self.min_interval_seconds - elapsed
             if remaining > 0:
                 time.sleep(remaining)
@@ -290,133 +290,15 @@ class ADZunaConnector(PaginatedAPIConnector):
 
 def build_connectors(config: EnvironmentConfig) -> list[JobConnector]:
     return [
-        # USAJobConnector(
-            # api_key=os.getenv("USAJOBS_API_KEY"),
-            # max_pages=config.bronze.max_pages,
-        # ),
+        USAJobConnector(
+            api_key=os.getenv("USAJOBS_API_KEY"),
+            max_pages=config.bronze.max_pages,
+            min_interval_seconds = config.bronze.min_interval_seconds
+        ),
         ADZunaConnector(
             api_key=os.getenv("ADZUNA_API_KEY"),
             app_id=os.getenv("ADZUNA_APP_ID"),
             max_pages=config.bronze.max_pages,
+            min_interval_seconds = config.bronze.min_interval_seconds
         )
     ]
-
-    # def normalize(self, raw_job: dict) -> dict:
-        # desc = raw_job["MatchedObjectDescriptor"]
-        
-        # return {
-            # "source": self.name,
-            # "source_job_id": desc["id"],
-            # "job_title_raw": desc["title"],
-            # "company_raw": desc[""],
-            # "location_raw": desc["location.display_name"],
-            # "description_raw": desc.get("UserArea", {}).get("Details", {}).get("description"),
-            # "employment_type_raw": desc.get("PositionSchedule", [{}])[0].get("Name"),
-            # "salary_min_raw": desc.get("PositionRemuneration", [{}])[0].get("MinimumRange"),
-            # "salary_max_raw": desc.get("PositionRemuneration", [{}])[0].get("MaximumRange"),
-            # "currency_raw": "USD",
-            # "posted_at": desc.get("PublicationStartDate")
-        # }
-
-
-# @dataclass
-# class JobSource(ABC):
-    # name: str
-    # base_url: str
-    # search_url: str
-    # ready_selector: str
-    # #job_card_selector: str
-    
-    # @abstractmethod
-    # def parse(self, soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
-        # """
-        # Parse the soup for job postings.
-        # """
-        # pass
-
-
-# @dataclass
-# class IndeedJobSource(JobSource):
-    # job_card_selector: str = '[data-testid="job-card"]'
-
-    # def parse(soup: BeautifulSoup) -> Iterator[Dict[str, Any]]:
-        # """
-        # Parse job cards from an Indeed search results page.
-        
-        # Args:
-            # soup (BeautfulSoup): Parsed HTML containing job cards.
-        
-        # Yields: 
-            # Dict[str, Any]: Parsed raw job data (Bronze layer).
-        # """
-        # jobs = []
-        
-        # job_cards = soup.select(self.job_card_selector) #soup.find_all("div", job_card_selector)
-        
-        # if not job_cards:
-            # raise ValueError("No job cards found - selector likely broken")
-        
-        # for card in job_cards:
-            # job = {
-                # "source": self.name,
-                # "job_id": card.get("data-jk"),
-                # "job_title_raw": None,
-                # "company_raw": None,
-                # "location_raw": None,
-                # "description_raw": None,
-                # "url": None,
-                # "scraped_at": datetime.now(timezone.utc).isoformat(),
-            # }
-            
-            # title_tag = card.select_one("h2.title a")
-            # if title_tag and title_tag.a:
-                # job["job_title_raw"] = title_tag.a.get_text(strip=True)
-                # job["url"] = self.base_url + title_tag.a["href"]
-            
-            # company_tag = card.find("span", class_="company")
-            # if company_tag:
-                # job["company_raw"] =  company_tag.get_text(strip=True)
-            
-            # location_tag = card.find("div", class_="recJobLoc")
-            # if location_tag:
-                # job["location_raw"] = location_tag.get("data-rc-loc")
-                
-            # summary_tag = card.find("div", class_="summary")
-            # if summary_tag:
-                # job["description_raw"] = summary_tag.get_text(" ", strip=True)
-            
-            # yield job
-
-
-# @dataclass
-# class LinkedInJobSource(JobSource):
-
-    # def parse(self, soup: BeautifulSoup) -> Iterator[Dict[str, any]]:
-        # job_cards = soup.find_all("div", class_="base-card")
-        # if not job_cards:
-            # raise ValueError("No LinkedIn job cards found - selector likely broken")
-        # for card in job_cards:
-            # job = {
-                # "source": self.name,
-                # "job_id": None,
-                # "job_title_raw": None,
-                # "company_raw": None,
-                # "location_raw": None,
-                # "description_raw": None,
-                # "url": None,
-                # "scraped_at": datetime.now(timezone.utc).isoformat(),
-            # }
-            # link_tag = card.select_one("a.base-card__full-link")
-            # if link_tag:
-                # job["url"] = link_tag.get("href")
-                # job["job_id"] = extract_linkedin_job_id(job["url"])
-            # title_tag = card.select_one("h3")
-            # if title_tag:
-                # job["job_title_raw"] = title_tag.get_text(strip=True)
-            # company_tag = card.select_one("h4")
-            # if company_tag:
-                # job["company_raw"] = company_tag.get_text(strip=True)
-            # location_tag = card.select_one(".job-search-card__location")
-            # if location_tag:
-                # job["location_raw"] = location_tag.get_text(strip=True)
-            # yield job
