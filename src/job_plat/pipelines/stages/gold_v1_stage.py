@@ -108,6 +108,64 @@ class GoldV1Stage(BaseStage):
             "dim_skills": dim_skills_df,
             "fact_job_skills": fact_df
         }
+        
+    def compute_metrics(self, outputs: dict) -> dict:
+        
+        dim_jobs_df = outputs["dim_jobs"]
+        #dim_skills_df = outputs["dim_skills"]
+        fact_df = outputs["fact_job_skills"]
+        
+        dim_jobs_df.cache()
+        dim_skills_df.cache()
+        fact_df.cache()
+        
+        jobs = dim_jobs_df.count()
+        skills =  dim_skills_df.count()
+        fact_rows = fact_df.count()
+        orphan_facts_detected = (
+                fact_df
+                .join(dim_jobs_df.select("job_id"), "job_id", "left_anti")
+                .limit(1)
+                .count()
+            ) > 0
+        
+        dim_jobs_df.unpersist()
+        dim_skills_df.unpersist()
+        fact_df.unpersist()
+        
+        return {
+            "jobs": jobs,
+            "skills": skills,
+            "fact_rows": fact_rows,
+            "fact_per_job_ratio": round(
+                fact_rows / jobs, 2
+            ) if jobs else 0,
+            "orphan_facts_detected": orphan_facts_detected
+        }
+    
+    def evaluate_metrics(self, metrics: dict) -> None:
+        
+        if metrics["orphan_facts_detected"]:
+            self.logger.warning(
+                "data_quality_issue",
+                extra={"issue": "orphan_facts_detected"}
+            )
+        
+        if metrics["fact_per_job_ratio"] > self.gold_v1_ctx.fact_per_job_ratio_threshold:
+            self.logger.warning(
+                "data_anomaly_detected",
+                extra={
+                    "issue": "fact_per_job_ratio_high",
+                    "value": metrics["fact_per_job_ratio"],
+                    "threshold": self.gold_v1_ctx.fact_per_job_ratio_threshold,
+                }
+            )
+        
+        if metrics["jobs"] == 0:
+            self.logger.error(
+                "data_quality_issue",
+                extra={"issue": "no_jobs_generated"}
+            )
     
     def write(self, outputs: dict) -> None:
         

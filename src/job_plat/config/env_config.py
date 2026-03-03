@@ -22,6 +22,13 @@ class BronzeConfig(BaseModel):
     max_pages: Optional[int] = Field(default=None, gt=0)
     min_interval_seconds: Optional[float] = Field(default=None, gt=0)
 
+class GoldV1Config(BaseModel):
+    fact_per_job_ratio_threshold: int
+
+class GoldV2Config(BaseModel):
+    min_clusters: int
+    min_silhouette: float
+
 
 class EnvironmentConfig(BaseModel):
     env: str
