@@ -20,6 +20,7 @@ class BronzeConfig(BaseModel):
     query: Optional[str] = None
     location: Optional[str] = None
     max_pages: Optional[int] = Field(default=None, gt=0)
+    min_interval_seconds: Optional[float] = Field(default=None, gt=0)
 
 
 class EnvironmentConfig(BaseModel):
@@ -30,23 +31,3 @@ class EnvironmentConfig(BaseModel):
     bronze: BronzeConfig
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
-# @dataclass
-# class PathsConfig:
-    # bronze: str
-    # silver:str
-    # gold_v1: str
-    # gold_v2: str
-    
-# @dataclass(frozen=True)
-# class BronzeConfig:
-    # query: str
-    # location: str
-    # max_pages: int | None
-
-# @dataclass
-# class EnvironmentConfig:
-    # env: str
-    # paths: PathsConfig
-    # logging_level: str
-    # storage_type: str
-    # bronze: BronzeConfig

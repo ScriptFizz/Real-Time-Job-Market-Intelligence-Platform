@@ -15,7 +15,8 @@ environments:
     bronze:
       query: "data engineer"
       location: "Berlin"
-      max_pages: 5
+      max_pages: 10
+      min_interval_seconds: 2.5
     logging_level: "DEBUG"
 
   prod:
