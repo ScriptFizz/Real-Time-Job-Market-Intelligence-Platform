@@ -1,5 +1,6 @@
 from datetime import date
 from pathlib import Path
+import logging
 from pyspark.sql import DataFrame
 from job_plat.pipelines.context.contexts import BronzeContext, SilverContext, PipelineContext
 from job_plat.pipelines.stages.base_stage import BaseStage
@@ -25,15 +26,10 @@ class SilverStage(BaseStage):
         
     def validate_inputs(self) -> None:
         
-        missing = []
-        
-        for path in self.bronze_ctx.jobs_path_list:
-            if not self._path_exists(path):
-                missing.append(str(path))
-        
-        if missing:
+        bronze_root = self.bronze_ctx.bronze_root()
+        if not self._path_exists(bronze_root):
             raise FileNotFoundError(
-                f"Missing input datasets: {', '.join(missing)}"
+                f"Missing input dataset directory: {bronze_root}"
             )
     
     def read(self) -> dict:
@@ -43,28 +39,46 @@ class SilverStage(BaseStage):
             self.spark.read
             .option("recursiveFileLookup", "true")
             .json(bronze_root)
-            .where(col("ingestion_date") == str(silver_ctx.data_date))
+            .where(col("ingestion_date") == str(self.silver_ctx.data_date))
             )
         return {"job_bronze_df": df}
     
     def transform(
         self, 
-        job_bronze_df: DataFrame,
+        inputs: dict
         ) -> dict:
         
-        
+        job_bronze_df = inputs["job_bronze_df"]
         df_normalized = normalize_jobs(df=job_bronze_df)
         
-        ########### TO LOG!!!!!!!!!!! #########
+        # quality_metrics = (
+            # df_normalized
+            # .select(
+                # count("*").alias("total"),
+                # sum(when(col("job_title_raw").isNull(), 1).otherwise(0)).alias("null_titles"),
+                # sum(when(col("description_raw").isNull(), 1).otherwise(0)).alias("null_descriptions"),
+            # )
+            # .first()
+        # )
+        
         quality_metrics = (
             df_normalized
-            .select(
+            .agg(
                 count("*").alias("total"),
                 sum(when(col("job_title_raw").isNull(), 1).otherwise(0)).alias("null_titles"),
                 sum(when(col("description_raw").isNull(), 1).otherwise(0)).alias("null_descriptions"),
             )
-            .collect()[0]
+            .first()
         )
+        
+        self.logger.info(
+            "bronze_stats", 
+            extra={
+                "total": quality_metrics["total"], 
+                "null_titles": quality_metrics["null_titles"], 
+                "null_descriptions": quality_metrics["null_descriptions"]
+                }
+            )
         
         df_clean = clean_jobs(df=df_normalized)
     
@@ -100,6 +114,43 @@ class SilverStage(BaseStage):
                 partition_cols=["data_date"]
                 )
 
+#################
+
+# def transform(
+        # self, 
+        # job_bronze_df: DataFrame,
+        # logger: logging.Logger
+        # ) -> dict:
+        
+        
+        # df_normalized = normalize_jobs(df=job_bronze_df)
+        
+        # ########### TO LOG!!!!!!!!!!! #########
+        # quality_metrics = (
+            # df_normalized
+            # .select(
+                # count("*").alias("total"),
+                # sum(when(col("job_title_raw").isNull(), 1).otherwise(0)).alias("null_titles"),
+                # sum(when(col("description_raw").isNull(), 1).otherwise(0)).alias("null_descriptions"),
+            # )
+            # .first()
+        # )
+        
+        # df_clean = clean_jobs(df=df_normalized)
+    
+        # jobs_silver_df = deduplicate_jobs(df_clean)
+        
+        # job_skills_silver_df = run_job_skills(jobs_silver_df = jobs_silver_df)
+        
+        # data_date = self.silver_ctx.data_date
+        # jobs_silver_df = jobs_silver_df.withColumn("data_date", lit(data_date))
+        # job_skills_silver_df = job_skills_silver_df.withColumn("data_date", lit(data_date))
+        
+        # return {
+            # "jobs_silver": jobs_silver_df,
+            # "job_skills_silver": job_skills_silver_df
+        # }
+###################
 
 
 # class SilverStage(BaseStage):
