@@ -51,16 +51,28 @@ class SilverStage(BaseStage):
         job_bronze_df = inputs["job_bronze_df"]
         df_normalized = normalize_jobs(df=job_bronze_df)
         
-        # quality_metrics = (
-            # df_normalized
-            # .select(
-                # count("*").alias("total"),
-                # sum(when(col("job_title_raw").isNull(), 1).otherwise(0)).alias("null_titles"),
-                # sum(when(col("description_raw").isNull(), 1).otherwise(0)).alias("null_descriptions"),
-            # )
-            # .first()
-        # )
+        self.logger.info("building_df_clean")
+        df_clean = clean_jobs(df=df_normalized)
         
+        self.logger.info("building_jobs_silver")
+        jobs_silver_df = deduplicate_jobs(df_clean)
+        
+        self.logger.info("building_job_skills_silver")
+        job_skills_silver_df = run_job_skills(jobs_silver_df = jobs_silver_df)
+        
+        data_date = self.silver_ctx.data_date
+        jobs_silver_df = jobs_silver_df.withColumn("data_date", lit(data_date))
+        job_skills_silver_df = job_skills_silver_df.withColumn("data_date", lit(data_date))
+        
+        return {
+            "jobs_normalized": df_normalized,
+            "jobs_silver": jobs_silver_df,
+            "job_skills_silver": job_skills_silver_df
+        }
+    
+    def compute_metrics(self, outputs: dict) -> dict:
+        
+        df_normalized = outputs["jobs_normalized"]
         quality_metrics = (
             df_normalized
             .agg(
@@ -70,30 +82,11 @@ class SilverStage(BaseStage):
             )
             .first()
         )
-        
-        self.logger.info(
-            "bronze_stats", 
-            extra={
+        return {
                 "total": quality_metrics["total"], 
                 "null_titles": quality_metrics["null_titles"], 
                 "null_descriptions": quality_metrics["null_descriptions"]
                 }
-            )
-        
-        df_clean = clean_jobs(df=df_normalized)
-    
-        jobs_silver_df = deduplicate_jobs(df_clean)
-        
-        job_skills_silver_df = run_job_skills(jobs_silver_df = jobs_silver_df)
-        
-        data_date = self.silver_ctx.data_date
-        jobs_silver_df = jobs_silver_df.withColumn("data_date", lit(data_date))
-        job_skills_silver_df = job_skills_silver_df.withColumn("data_date", lit(data_date))
-        
-        return {
-            "jobs_silver": jobs_silver_df,
-            "job_skills_silver": job_skills_silver_df
-        }
     
     def write(self, outputs: dict) -> None:
         

@@ -14,9 +14,14 @@ environments:
       gold_v2: ./data/gold_v2
     bronze:
       query: "data engineer"
-      location: "Berlin"
+      location: "London"
       max_pages: 10
       min_interval_seconds: 2.5
+    gold_v1:
+      fact_per_job_ratio_threshold: 20
+    gold_v2:
+      min_clusters: 3
+      min_silhouette: 0.2
     logging_level: "DEBUG"
 
   prod:
@@ -33,5 +38,10 @@ environments:
       gold: gs://job-pipeline/gold
     bronze:
       query: "data engineer"
-      location: "Berlin"
+      location: "London"
+    gold_v1:
+      fact_per_job_ratio_threshold: 20
+    gold_v2:
+      min_clusters: 3
+      min_silhouette: 0.2
     logging_level: "INFO"

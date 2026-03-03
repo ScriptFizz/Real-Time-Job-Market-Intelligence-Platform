@@ -40,7 +40,8 @@ class BaseStage(ABC):
             self.validate_outputs(outputs)
             metrics = self.compute_metrics(outputs=outputs)
             if metrics:
-                self.logger.info(f"{run_context.stage}_metrics", extra=metrics)
+                self.logger.info(f"stage_metrics", extra={"stage": run_context.stage, **metrics})
+                self.evaluate_metrics(metrics=metrics)
             self.write(outputs)
             
             duration = round(time.time() - start, 2)
@@ -75,10 +76,6 @@ class BaseStage(ABC):
     def transform(self, inputs: dict) -> dict:
         pass
     
-    # @abstractmethod
-    # def transform(self, logger: logging.Logger, **kwargs) -> dict:
-        # pass
-    
     def validate_outputs(self, outputs: dict) -> None:
         for name, df in outputs.items():
             #if df.rdd.isEmpty():
@@ -86,7 +83,11 @@ class BaseStage(ABC):
                 raise ValueError(f"{name} is empty!")
     
     def compute_metrics(self, outputs: dict) -> dict:
-        return metrics
+        return {}
+    
+    @abstractmethod
+    def evaluate_metrics(self, metrics: dict) -> None:
+        pass
 
     @abstractmethod
     def create_context(self) -> StageExecutionContext:

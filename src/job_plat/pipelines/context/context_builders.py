@@ -36,12 +36,15 @@ def build_pipeline_context(
     gold_v1_ctx = GoldV1Context(
         data_date = data_date,
         base_path = config.paths.gold_v1,
+        fact_per_job_ratio_threshold = config.gold_v1.fact_per_job_ratio_threshold,
         spark = spark
     )
     
     gold_v2_ctx = GoldV2Context(
         data_date = data_date,
         base_path = config.paths.gold_v2,
+        min_clusters = config.gold_v2.min_clusters,
+        min_silhouette = config.gold_v2.min_silhouette,
         spark = spark
     )
     

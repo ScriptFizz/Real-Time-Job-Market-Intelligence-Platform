@@ -5,7 +5,7 @@ from datetime import datetime
 from job_plat.config.config_loader import ConfigLoader
 from job_plat.bronze.ingestion.connectors import build_connectors
 from job_plat.pipelines.context.context_builders import build_pipeline_context, build_bronze_context
-from job_plat.pipelines.pipeline_stages import run_bronze_pipeline, run_full_pipeline
+from job_plat.pipelines.pipeline_stages import run_bronze_pipeline, run_silver_pipeline, run_full_pipeline
 from job_plat.config.logconfig import setup_logging
 from job_plat.utils.storage import get_storage
 from job_plat.utils.helpers import create_spark
@@ -52,8 +52,6 @@ def bronze(
         location = location
     )
     
-    print("cli_QUERY: ", bronze_ctx.query) 
-    print("cli_LOCATION: ", bronze_ctx.location) 
     
     storage = get_storage(env_config.storage.type)
     
@@ -65,6 +63,124 @@ def bronze(
             storage=storage,
             connector=connector
         )
+
+
+@app.command()
+def silver(
+    env: str = typer.Option("dev", help="Environment (dev or prod)"),
+    date: str = typer.Option(None, help="Data date (YYYY-MM-DD)"),
+    config: str = typer.Option("settings.yaml", help="Config file path"),
+):
+    """
+    Run silver stage.
+    """
+    
+    config_loader = ConfigLoader(config_path=config, env=env)
+    env_config = config_loader.load_env()
+    
+    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
+    setup_logging(log_level=log_level)
+    
+    data_date = (
+        datetime.strptime(date, "%Y-%m-%d").date()
+        if date
+        else datetime.utcnow().date()
+    )
+    
+    spark = create_spark(env_config.spark)
+    
+    pipeline_ctx = build_pipeline_context(
+        data_date=data_date, 
+        config=env_config,
+        spark=spark
+        )
+        
+    
+    storage = get_storage(env_config.storage.type)
+    
+    run_silver_pipeline(
+        ctx=pipeline_ctx,
+        storage=storage,
+    )
+    
+
+@app.command()
+def gold_v1(
+    env: str = typer.Option("dev", help="Environment (dev or prod)"),
+    date: str = typer.Option(None, help="Data date (YYYY-MM-DD)"),
+    config: str = typer.Option("settings.yaml", help="Config file path"),
+):
+    """
+    Run gold_v1 stage.
+    """
+    
+    config_loader = ConfigLoader(config_path=config, env=env)
+    env_config = config_loader.load_env()
+    
+    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
+    setup_logging(log_level=log_level)
+    
+    data_date = (
+        datetime.strptime(date, "%Y-%m-%d").date()
+        if date
+        else datetime.utcnow().date()
+    )
+    
+    spark = create_spark(env_config.spark)
+    
+    pipeline_ctx = build_pipeline_context(
+        data_date=data_date, 
+        config=env_config,
+        spark=spark
+        )
+        
+    
+    storage = get_storage(env_config.storage.type)
+    
+    run_gold_v1_pipeline(
+        ctx=pipeline_ctx,
+        storage=storage,
+    )
+
+
+@app.command()
+def gold_v2(
+    env: str = typer.Option("dev", help="Environment (dev or prod)"),
+    date: str = typer.Option(None, help="Data date (YYYY-MM-DD)"),
+    config: str = typer.Option("settings.yaml", help="Config file path"),
+):
+    """
+    Run gold_v1 stage.
+    """
+    
+    config_loader = ConfigLoader(config_path=config, env=env)
+    env_config = config_loader.load_env()
+    
+    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
+    setup_logging(log_level=log_level)
+    
+    data_date = (
+        datetime.strptime(date, "%Y-%m-%d").date()
+        if date
+        else datetime.utcnow().date()
+    )
+    
+    spark = create_spark(env_config.spark)
+    
+    pipeline_ctx = build_pipeline_context(
+        data_date=data_date, 
+        config=env_config,
+        spark=spark
+        )
+        
+    
+    storage = get_storage(env_config.storage.type)
+    
+    run_gold_v2_pipeline(
+        ctx=pipeline_ctx,
+        storage=storage,
+    )
+
 
 @app.command()
 def full(

@@ -117,10 +117,8 @@ class GoldV2Stage(BaseStage):
                 partition_cols=["data_date"]
             )
     
-    def compute_metrics(outputs: dict) -> dict:
-        
-        self.logger.info("computing_gold_v2_metrics")
-        
+    def compute_metrics(self, outputs: dict) -> dict:
+
         skill_embeddings_df = outputs["skill_embeddings"]
         job_embeddings_df = outputs["job_embeddings"]
         job_clusters_df = outputs["job_clusters"]
@@ -132,8 +130,60 @@ class GoldV2Stage(BaseStage):
         job_clusters_df.cache()
         
         # Counts
-
-
+        skills_embedded = skill_embeddings_df.count()
+        jobs_embedded = job_embeddings_df.count()
+        
+        # Cluster metrics
+        cluster_stats = (
+            job_membership_df
+            .groupBy()
+            .agg(
+                countDistinct("cluster_id").alias("num_clusters"),
+                avg("distance_to_centroid").alias("avg_distance")
+            )
+            .first()
+        )
+        
+        # Silhouette score from metadata
+        silhouette_row = job_metadata_df.select("silhouette_score").first()
+        silhouette = silhouette_row["silhouette_score"] is silhouette_row else None
+        
+        job_membership_df.unpersist()
+        job_clusters_df.unpersist()
+        
+        return {
+            "skills_embedded": skills_embedded,
+            "jobs_embedded": jobs_embedded,
+            "num_clusters": cluster_stats["num_clusters"],
+            "avg_distance_to_centroid": cluster_stats["avg_distance"],
+            "silhouette_score": silhouette,
+            }
+    
+    def evaluate_metrics(self, metrics: dict) -> None:
+        
+        if metrics["num_clusters"] < self.gold_v2_ctx.min_clusters:
+            self.logger.warning(
+                "model_issue",
+                extra={
+                    "issue": "too_few_clusters",
+                    "num_clusters": metrics["num_clusters"],
+                },
+            )
+        
+        if metrics["silhouette_score"] is not None and metrics["silhouette_score"] < self.gold_v2_ctx.min_silhouette:
+            self.logger.warning(
+                "model_quality_degraded",
+                extra={
+                    "silhouette_score": metrics["silhouette_score"],
+                    "threshold": self.gold_v2_ctx.min_silhouette,
+                },
+            )
+        
+        if metrics["jobs_embedded"] == 0:
+            self.logger.error(
+                "embedding_failure",
+                extra={"issue": "no_jobs_embedded"}
+            )
 ##############
 
 # class GoldV2Stage(BaseStage):
