@@ -36,5 +36,7 @@ class EnvironmentConfig(BaseModel):
     spark: SparkConfig
     storage: StorageConfig
     bronze: BronzeConfig
+    gold_v1: GoldV1Config
+    gold_v2: GoldV2Config
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 

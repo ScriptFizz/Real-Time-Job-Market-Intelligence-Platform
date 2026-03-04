@@ -3,6 +3,11 @@ from pyspark.sql import SparkSession, DataFrame
 from pathlib import Path
 from urllib.parse import urlencode
 from job_plat.config.env_config import SparkConfig
+from datetime import datetime
+
+
+def parse_date(d: str | None):
+    return datetime.strptime(d, "%Y-%m-%d").date() if d else None
 
 
 def create_spark(

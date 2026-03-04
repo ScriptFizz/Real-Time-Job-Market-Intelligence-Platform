@@ -85,7 +85,7 @@ class BaseStage(ABC):
     def compute_metrics(self, outputs: dict) -> dict:
         return {}
     
-    @abstractmethod
+    #@abstractmethod
     def evaluate_metrics(self, metrics: dict) -> None:
         pass
 

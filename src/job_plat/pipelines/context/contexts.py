@@ -2,16 +2,42 @@ from dataclasses import dataclass
 from pathlib import Path
 from datetime import date
 from pyspark.sql import SparkSession
-from typing import List
+from typing import List, Optional
+
+
+# DATE RANGE
+
+@dataclass
+class DateRange:
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    
+    def is_full_load(self) -> bool:
+        return self.start_date is None and self.end_date is None
+    
+    def is_single_day(self) -> bool:
+        return (
+            self.start_date is not None and
+            self.end_date is not None and
+            self.start_date == self.end_date
+        )
+
+
+#  EXECUTION PARAMS
+
+@dataclass
+class ExecutionParams:
+    query: str | None = None
+    location: str | None = None
+    date_range: DateRange | None = None
 
 # BRONZE CONTEXT
 
 @dataclass
 class BronzeContext:
-    data_date: date
     base_path: Path
-    query: str
-    location: str
+    query: str | None = None
+    location: str | None = None
     
     @property
     def bronze_root(self) -> Path:
@@ -22,7 +48,7 @@ class BronzeContext:
 
 @dataclass
 class SilverContext:
-    data_date: date
+    date_range: DateRange | None
     base_path: Path
     spark: SparkSession
     
@@ -39,8 +65,9 @@ class SilverContext:
 
 @dataclass
 class GoldV1Context:
-    data_date: date
+    date_range: DateRange | None
     base_path: Path
+    fact_per_job_ratio_threshold: int
     spark: SparkSession
     
     @property
@@ -60,8 +87,10 @@ class GoldV1Context:
 
 @dataclass
 class GoldV2Context:
-    data_date: date
+    date_range: DateRange | None
     base_path: Path
+    min_clusters: int
+    min_silhouette: float
     spark: SparkSession
     
     @property
@@ -93,7 +122,7 @@ class GoldV2Context:
 
 @dataclass
 class PipelineContext:
-    data_date: date
+    #date_range: DateRange | None
     env: str
     spark: SparkSession
     bronze: BronzeContext

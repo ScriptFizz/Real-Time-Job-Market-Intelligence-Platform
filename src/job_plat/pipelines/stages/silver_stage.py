@@ -11,6 +11,7 @@ from job_plat.silver.cleaning.clean_jobs import normalize_jobs, clean_jobs, dedu
 from job_plat.silver.validation.quality_checks import run_quality_checks
 from typing import List
 from job_plat.utils.storage import Storage
+from job_plat.bronze.ingestion.metadata import StageExecutionContext
 
 
 class SilverStage(BaseStage):
@@ -26,22 +27,46 @@ class SilverStage(BaseStage):
         
     def validate_inputs(self) -> None:
         
-        bronze_root = self.bronze_ctx.bronze_root()
-        if not self._path_exists(bronze_root):
+        bronze_root = self.bronze_ctx.bronze_root
+        if not bronze_root.exists():
             raise FileNotFoundError(
                 f"Missing input dataset directory: {bronze_root}"
             )
     
     def read(self) -> dict:
-        bronze_root = self.bronze_ctx.bronze_root()
+        bronze_root = str(self.bronze_ctx.bronze_root)
         
-        df = (
-            self.spark.read
-            .option("recursiveFileLookup", "true")
-            .json(bronze_root)
-            .where(col("ingestion_date") == str(self.silver_ctx.data_date))
+        df = self.spark.read.json(bronze_root)
+        
+        date_range = self.silver_ctx.date_range
+        
+        # Read all data
+        if date_range.is_full_load():
+            return {"job_bronze_df": df}
+        
+        # Read a date range
+        if date_range.start_date and date_range.end_date:
+            df = df.where(
+                col("ingestion_date").between(
+                    str(date_range.start_date),
+                    str(date_range.end_date)
+                )
             )
+        elif date_rage.start_date:
+            df = df.where(
+                col("ingestion_date") == str(date_range.start_date)
+            )
+        else:
+            raise ValueError("Invalid DateRage configuration.")
+        
         return {"job_bronze_df": df}
+    
+    def create_context(self) -> StageExecutionContext:
+        run_context = StageExecutionContext(
+            stage="silver",
+            pipeline_version="1.0.0"
+        )
+        return run_context
     
     def transform(
         self, 
