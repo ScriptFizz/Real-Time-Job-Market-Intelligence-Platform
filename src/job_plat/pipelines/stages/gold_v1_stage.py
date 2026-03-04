@@ -5,6 +5,7 @@ from job_plat.gold.v1_analytics.build_dimensions import build_dim_jobs, build_di
 from job_plat.gold.v1_analytics.fact_job_skills import build_fact_job_skills
 from job_plat.utils.storage import Storage
 from pathlib import Path
+from job_plat.bronze.ingestion.metadata import StageExecutionContext
 
 class GoldV1Stage(BaseStage):
     
@@ -25,7 +26,7 @@ class GoldV1Stage(BaseStage):
             self.silver_ctx.jobs_path,
             self.silver_ctx.job_skills_path
         ]:
-            if not self._path_exists(path):
+            if not path.exists():#self._path_exists(path):
                 missing.append(str(path))
         
         if missing:
@@ -36,11 +37,22 @@ class GoldV1Stage(BaseStage):
     def read(self) -> dict:
         return {
             "job_silver_df":
-                self.spark.read.parquet(self.silver_ctx.jobs_path),
+                self.spark.read.parquet(
+                    str(self.silver_ctx.jobs_path)
+                    ),
             
             "job_skills_silver_df":
-                self.spark.read.parquet(self.silver_ctx.job_skills_path)
+                self.spark.read.parquet(
+                    str(self.silver_ctx.job_skills_path)
+                    )
         }
+    
+    def create_context(self) -> StageExecutionContext:
+        run_context = StageExecutionContext(
+            stage="gold_v1",
+            pipeline_version="1.0.0"
+        )
+        return run_context
     
     def transform(
         self, 

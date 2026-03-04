@@ -5,6 +5,7 @@ from job_plat.gold.v2_intelligence.embeddings.build_job_embeddings import build_
 from job_plat.gold.v2_intelligence.clusters.build_job_clusters import build_job_clusters
 from job_plat.utils.storage import Storage
 from pyspark.sql import DataFrame
+from job_plat.bronze.ingestion.metadata import StageExecutionContext
 
 class GoldV2Stage(BaseStage):
     
@@ -25,7 +26,7 @@ class GoldV2Stage(BaseStage):
             self.gold_v1_ctx.dim_skills_path,
             self.gold_v1_ctx.fact_job_skill_path
         ]:
-            if not self._path_exists(path):
+            if not path.exists():#self._path_exists(path):
                 missing.append(str(path))
         
         if missing:
@@ -36,11 +37,22 @@ class GoldV2Stage(BaseStage):
     def read(self) -> dict:
         return {
             "dim_skills_df":
-                self.spark.read.parquet(self.gold_v1_ctx.dim_skills_path),
+                self.spark.read.parquet(
+                    str(self.gold_v1_ctx.dim_skills_path)
+                    ),
             
             "fact_job_skill_df":
-                self.spark.read.parquet(self.gold_v1_ctx.fact_job_skill_path)
+                self.spark.read.parquet(
+                    str(self.gold_v1_ctx.fact_job_skill_path)
+                    )
         }
+    
+    def create_context(self) -> StageExecutionContext:
+        run_context = StageExecutionContext(
+            stage="gold_v2",
+            pipeline_version="1.0.0"
+        )
+        return run_context
     
     def transform(
         self, 
@@ -146,7 +158,7 @@ class GoldV2Stage(BaseStage):
         
         # Silhouette score from metadata
         silhouette_row = job_metadata_df.select("silhouette_score").first()
-        silhouette = silhouette_row["silhouette_score"] is silhouette_row else None
+        silhouette = silhouette_row["silhouette_score"] if silhouette_row else None
         
         job_membership_df.unpersist()
         job_clusters_df.unpersist()
