@@ -2,7 +2,7 @@ from job_plat.utils.io import load_params
 from job_plat.utils.helpers import create_spark
 from job_plat.pipelines.context.contexts import (
     DateRange,
-    ExcecutionParams,
+    ExecutionParams,
     BronzeContext, 
     SilverContext, 
     GoldV1Context, 

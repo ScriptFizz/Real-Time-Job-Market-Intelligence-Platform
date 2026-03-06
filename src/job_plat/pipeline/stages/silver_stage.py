@@ -20,46 +20,35 @@ class SilverStage(BaseStage):
         self, 
         silver_ctx: SilverContext, 
         bronze_ctx: BronzeContext,
+        datasets: Datasets,
+        partition_manager: PartitionManager,
         storage: Storage):
-        super().__init__(spark=silver_ctx.spark, storage=storage)
+        self.STAGE_NAME = "silver_jobs"
+        super().__init__(spark=silver_ctx.spark, storage=storage, datasets=datasets, partition_manager=partition_manager)
         self.silver_ctx = silver_ctx
         self.bronze_ctx = bronze_ctx
         
     def validate_inputs(self) -> None:
         
-        bronze_root = self.bronze_ctx.bronze_root
-        if not bronze_root.exists():
+        bronze_path = self.datasets.bronze_jobs.path
+        if not bronze_path.exists():
             raise FileNotFoundError(
-                f"Missing input dataset directory: {bronze_root}"
+                f"Missing input dataset directory: {bronze_path}"
             )
     
     def read(self) -> dict:
-        bronze_root = str(self.bronze_ctx.bronze_root)
         
-        df = self.spark.read.json(bronze_root)
+        dataset = self.datasets.bronze_jobs
         
-        date_range = self.silver_ctx.date_range
+        # available = dataset.list_partitions()
+        # processed = self.partition_manager.get_processed(stage_name=self.STAGE_NAME)
+        # partitions = sorted(set(available) - set(processed))
+        partitions = dataset.get_available_partitions(partition_manager=self.partition_manager, stage_name=self.STAGE_NAME)
         
-        # Read all data
-        if date_range.is_full_load():
-            return {"job_bronze_df": df}
+        #df = dataset.read_partitions(spark=self.spark, dataset_path=dataset.path, partitions=partitions)
+        df = dataset.read_partitions(spark=self.spark, partitions=partitions)
         
-        # Read a date range
-        if date_range.start_date and date_range.end_date:
-            df = df.where(
-                col("ingestion_date").between(
-                    str(date_range.start_date),
-                    str(date_range.end_date)
-                )
-            )
-        elif date_rage.start_date:
-            df = df.where(
-                col("ingestion_date") == str(date_range.start_date)
-            )
-        else:
-            raise ValueError("Invalid DateRage configuration.")
-        
-        return {"job_bronze_df": df}
+        return {"job_bronze_df": df, "partitons": partitions}
     
     def create_context(self) -> StageExecutionContext:
         run_context = StageExecutionContext(
@@ -74,7 +63,12 @@ class SilverStage(BaseStage):
         ) -> dict:
         
         job_bronze_df = inputs["job_bronze_df"]
-        df_normalized = normalize_jobs(df=job_bronze_df)
+        df_normalized = job_bronze_df.select(
+            col("run_id"),
+            col("ingestion_date"),
+            col("payload.*"), 
+            col("ingestion_metadata.started_at").alias("ingested_at")
+        )
         
         self.logger.info("building_df_clean")
         df_clean = clean_jobs(df=df_normalized)
@@ -85,14 +79,15 @@ class SilverStage(BaseStage):
         self.logger.info("building_job_skills_silver")
         job_skills_silver_df = run_job_skills(jobs_silver_df = jobs_silver_df)
         
-        data_date = self.silver_ctx.data_date
-        jobs_silver_df = jobs_silver_df.withColumn("data_date", lit(data_date))
-        job_skills_silver_df = job_skills_silver_df.withColumn("data_date", lit(data_date))
+        # data_date = self.silver_ctx.data_date
+        # jobs_silver_df = jobs_silver_df.withColumn("data_date", lit(data_date))
+        # job_skills_silver_df = job_skills_silver_df.withColumn("data_date", lit(data_date))
         
         return {
             "jobs_normalized": df_normalized,
             "jobs_silver": jobs_silver_df,
-            "job_skills_silver": job_skills_silver_df
+            "job_skills_silver": job_skills_silver_df,
+            "partitions": inputs["partitions"]
         }
     
     def compute_metrics(self, outputs: dict) -> dict:
@@ -120,17 +115,146 @@ class SilverStage(BaseStage):
             "dynamic"
         )
         
-        for name, mode, path in [
-            ("jobs_silver", "overwrite", self.silver_ctx.jobs_path),
-            ("job_skills_silver", "overwrite", self.silver_ctx.job_skills_path)
+        for name, mode, dataset in [
+            ("jobs_silver", "overwrite", self.datasets.silver_jobs),
+            ("job_skills_silver", "overwrite", self.datasets.silver_job_skills)
         ]:
             
-            self.storage.write_dataframe(
-                df=outputs[name],
-                path=path,
-                mode=mode,
-                partition_cols=["data_date"]
-                )
+            dataset.write(df = outputs[name], mode=mode)
+            
+            partitions = outputs["partitions"]
+            
+            self.partition_manager.mark_processed(
+                stage_name=self.STAGE_NAME,
+                partitions=partitions
+            )
+#####################
+
+# class SilverStage(BaseStage):
+    
+    # def __init__(
+        # self, 
+        # silver_ctx: SilverContext, 
+        # bronze_ctx: BronzeContext,
+        # storage: Storage):
+        # super().__init__(spark=silver_ctx.spark, storage=storage)
+        # self.silver_ctx = silver_ctx
+        # self.bronze_ctx = bronze_ctx
+        
+    # def validate_inputs(self) -> None:
+        
+        # bronze_root = self.bronze_ctx.bronze_root
+        # if not bronze_root.exists():
+            # raise FileNotFoundError(
+                # f"Missing input dataset directory: {bronze_root}"
+            # )
+    
+    # def read(self) -> dict:
+        # bronze_root = str(self.bronze_ctx.bronze_root)
+        
+        # df = self.spark.read.json(bronze_root)
+        
+        # date_range = self.silver_ctx.date_range
+        
+        # # Read all data
+        # if date_range.is_full_load():
+            # return {"job_bronze_df": df}
+        
+        # # Read a date range
+        # if date_range.start_date and date_range.end_date:
+            # df = df.where(
+                # col("ingestion_date").between(
+                    # str(date_range.start_date),
+                    # str(date_range.end_date)
+                # )
+            # )
+        # elif date_range.start_date:
+            # df = df.where(
+                # col("ingestion_date") == str(date_range.start_date)
+            # )
+        # else:
+            # raise ValueError("Invalid DateRange configuration.")
+        
+        # return {"job_bronze_df": df}
+    
+    # def create_context(self) -> StageExecutionContext:
+        # run_context = StageExecutionContext(
+            # stage="silver",
+            # pipeline_version="1.0.0"
+        # )
+        # return run_context
+    
+    # def transform(
+        # self, 
+        # inputs: dict
+        # ) -> dict:
+        
+        # job_bronze_df = inputs["job_bronze_df"]
+        # df_normalized = job_bronze_df.select(
+            # col("run_id"),
+            # col("ingestion_date"),
+            # col("payload.*"), 
+            # col("ingestion_metadata.started_at").alias("ingested_at")
+        # )
+        
+        # self.logger.info("building_df_clean")
+        # df_clean = clean_jobs(df=df_normalized)
+        
+        # self.logger.info("building_jobs_silver")
+        # jobs_silver_df = deduplicate_jobs(df_clean)
+        
+        # self.logger.info("building_job_skills_silver")
+        # job_skills_silver_df = run_job_skills(jobs_silver_df = jobs_silver_df)
+        
+        # # data_date = self.silver_ctx.data_date
+        # # jobs_silver_df = jobs_silver_df.withColumn("data_date", lit(data_date))
+        # # job_skills_silver_df = job_skills_silver_df.withColumn("data_date", lit(data_date))
+        
+        # return {
+            # "jobs_normalized": df_normalized,
+            # "jobs_silver": jobs_silver_df,
+            # "job_skills_silver": job_skills_silver_df
+        # }
+    
+    # def compute_metrics(self, outputs: dict) -> dict:
+        
+        # df_normalized = outputs["jobs_normalized"]
+        # quality_metrics = (
+            # df_normalized
+            # .agg(
+                # count("*").alias("total"),
+                # sum(when(col("job_title_raw").isNull(), 1).otherwise(0)).alias("null_titles"),
+                # sum(when(col("description_raw").isNull(), 1).otherwise(0)).alias("null_descriptions"),
+            # )
+            # .first()
+        # )
+        # return {
+                # "total": quality_metrics["total"], 
+                # "null_titles": quality_metrics["null_titles"], 
+                # "null_descriptions": quality_metrics["null_descriptions"]
+                # }
+    
+    # def write(self, outputs: dict) -> None:
+        
+        # self.spark.conf.set(
+            # "spark.sql.sources.partitionOverWriteMode",
+            # "dynamic"
+        # )
+        
+        # for name, mode, path in [
+            # ("jobs_silver", "overwrite", self.silver_ctx.jobs_path),
+            # ("job_skills_silver", "overwrite", self.silver_ctx.job_skills_path)
+        # ]:
+            
+            # self.storage.write_dataframe(
+                # df=outputs[name],
+                # path=path,
+                # mode=mode,
+                # partition_cols=["ingestion_date"]
+                # )
+
+
+
 
 #################
 

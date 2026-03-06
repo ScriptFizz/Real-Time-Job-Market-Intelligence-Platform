@@ -5,14 +5,18 @@ import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import shutil
-
+from pyspark.sql import SparkSession, DataFrame
 
 class Storage(ABC):
     
     @abstractmethod
-    def write_dataframe(
+    def read_parquet(self, spark: SparkSession, paths: List[str]) -> DataFrame:
+        pass
+    
+    @abstractmethod
+    def write_parquet(
         self,
-        df,
+        df: DataFrame,
         path: str,
         mode: str,
         partition_cols: list[str] | None = None
@@ -27,10 +31,16 @@ class Storage(ABC):
     ) -> int:
         pass
 
+    @abstractmethod
+    def list_dirs(self, path: str | Path, pattern: str) -> List:
+        pass
 
 class LocalStorage(Storage):
     
-    def write_dataframe(self, df, path, mode, partition_cols=None):
+    def read_parquet(self, spark: SparkSession, paths: List[str]) -> DataFrame:
+        return spark.read.parquet(*paths)
+    
+    def write_parquet(self, df, path, mode, partition_cols=None):
         writer = df.write.mode(mode)
         if partition_cols:
             writer = writer.partitionBy(*partition_cols)
@@ -52,6 +62,9 @@ class LocalStorage(Storage):
         shutil.move(str(tmp_path), str(path))
          
         return count
+    
+    def list_dirs(self, path: str | Path, pattern: str) -> List:
+        return Path(path).glob(pattern)
 
 def get_storage(storage_type: str | None) -> Storage:
     
