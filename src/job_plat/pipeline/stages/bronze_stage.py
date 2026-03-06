@@ -83,10 +83,17 @@ class BronzeStage(BaseSourceStage):
             )
     
         # Build partitioned bronze path
+        # base_path = (
+            # self.bronze_ctx.base_path
+            # / f"source={run.source}"
+            # / f"ingestion_date={run.started_at.date()}"
+            # / f"run_id={run.run_id}"
+        # )
         base_path = (
             self.bronze_ctx.base_path
-            / f"source={run.source}"
+            / "jobs"
             / f"ingestion_date={run.started_at.date()}"
+            / f"source={run.source}"
             / f"run_id={run.run_id}"
         )
     

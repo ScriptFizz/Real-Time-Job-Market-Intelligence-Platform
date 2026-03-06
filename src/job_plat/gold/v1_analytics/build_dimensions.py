@@ -14,7 +14,7 @@ def build_dim_jobs(
 ) -> DataFrame:
     return (
         job_silver_df
-        .withColumn("scraped_date", to_date(col("scraped_at")))
+        #.withColumn("ingested_date", to_date(col("ingested_at")))
         .withColumn("description_length", length(col("description")))
         .select(
             "job_id",
@@ -22,7 +22,7 @@ def build_dim_jobs(
             col("job_title").alias("job_title_clean"),
             "company",
             "location",
-            "scraped_date",
+            "ingested_date",
             "description_length"
         )
     )

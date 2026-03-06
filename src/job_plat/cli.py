@@ -38,22 +38,27 @@ def bronze(
     )
     
     spark = create_spark(env_config.spark)
+    
+    try:
         
-    bronze_ctx = build_bronze_context(
-        config = env_config,
-        execution = execution
-    )
-    
-    storage = get_storage(env_config.storage.type)
-    
-    connectors = build_connectors(env_config)
-    
-    for connector in connectors:
-        run_bronze_pipeline(
-            ctx=bronze_ctx,
-            storage=storage,
-            connector=connector
+        bronze_ctx = build_bronze_context(
+            config = env_config,
+            execution = execution
         )
+        
+        storage = get_storage(env_config.storage.type)
+        
+        connectors = build_connectors(env_config)
+        
+        for connector in connectors:
+            run_bronze_pipeline(
+                ctx=bronze_ctx,
+                storage=storage,
+                connector=connector
+            )
+    
+    finally:
+        spark.stop()
 
 
 @app.command()
@@ -82,18 +87,23 @@ def silver(
     
     spark = create_spark(env_config.spark)
     
-    pipeline_ctx = build_pipeline_context(
-        date_range = date_range, 
-        config=env_config,
-        spark=spark
-        )
-        
-    storage = get_storage(env_config.storage.type)
+    try:
     
-    run_silver_pipeline(
-        ctx=pipeline_ctx,
-        storage=storage,
-    )
+        pipeline_ctx = build_pipeline_context(
+            execution=execution, 
+            config=env_config,
+            spark=spark
+            )
+            
+        storage = get_storage(env_config.storage.type)
+        
+        run_silver_pipeline(
+            ctx=pipeline_ctx,
+            storage=storage,
+        )
+    
+    finally:
+        spark.stop()
     
 
 @app.command()
