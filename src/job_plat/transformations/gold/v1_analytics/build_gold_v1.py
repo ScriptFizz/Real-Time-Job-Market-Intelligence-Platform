@@ -1,8 +1,8 @@
 from pyspark.sql import SparkSession
 from pathlib import Path
-from job_plat.gold.v1_analytics.build_dimensions import build_dim_jobs, build_dim_skills
+from job_plat.transformations.gold.v1_analytics.build_dimensions import build_dim_jobs, build_dim_skills
 from job_plat.utils.helpers import path_exists
-from job_plat.config.context import SilverContext, GoldV1Context
+from job_plat.context.contexts import SilverContext, GoldV1Context
 
 def run_gold_v1(
     silver_ctx: SilverContext,
