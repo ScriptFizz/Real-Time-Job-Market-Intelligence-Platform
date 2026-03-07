@@ -1,11 +1,11 @@
-from job_plat.pipelines.stages.base_stage import BaseStage
+from job_plat.pipeline.core.base_stage import BaseStage
 from pyspark.sql import DataFrame
-from job_plat.pipelines.context.contexts import SilverContext, GoldV1Context
-from job_plat.gold.v1_analytics.build_dimensions import build_dim_jobs, build_dim_skills
-from job_plat.gold.v1_analytics.fact_job_skills import build_fact_job_skills
-from job_plat.utils.storage import Storage
+from job_plat.context.contexts import SilverContext, GoldV1Context
+from job_plat.transformations.gold.v1_analytics.build_dimensions import build_dim_jobs, build_dim_skills
+from job_plat.transformations.gold.v1_analytics.fact_job_skills import build_fact_job_skills
+from job_plat.storage.storages import Storage
 from pathlib import Path
-from job_plat.bronze.ingestion.metadata import StageExecutionContext
+from job_plat.ingestion.metadata import StageExecutionContext
 
 class GoldV1Stage(BaseStage):
     

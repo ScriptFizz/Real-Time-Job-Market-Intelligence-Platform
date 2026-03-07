@@ -8,8 +8,8 @@ from urllib.parse import urlencode
 import requests
 import time
 import logging
-from job_plat.bronze.ingestion.job_schema import CanonicalJobV1
-from job_plat.bronze.ingestion.search_criteria import JobSearchCriteria
+from job_plat.ingestion.job_schema import CanonicalJobV1
+from job_plat.ingestion.search_criteria import JobSearchCriteria
 from job_plat.config.env_config import EnvironmentConfig
 
 logger = logging.getLogger(__name__)

@@ -2,16 +2,15 @@ from datetime import date
 from pathlib import Path
 import logging
 from pyspark.sql import DataFrame
-from job_plat.pipelines.context.contexts import BronzeContext, SilverContext, PipelineContext
-from job_plat.pipelines.stages.base_stage import BaseStage
-#from job_plat.silver.cleaning.clean_jobs import run_clean
-from job_plat.silver.enrichment.build_job_skills import run_job_skills
+from job_plat.context.contexts import BronzeContext, SilverContext, PipelineContext
+from job_plat.pipeline.core.base_stage import BaseStage
+from job_plat.transformations.silver.enrichment.build_job_skills import run_job_skills
 from job_plat.utils.helpers import union_all
-from job_plat.silver.cleaning.clean_jobs import normalize_jobs, clean_jobs, deduplicate_jobs
-from job_plat.silver.validation.quality_checks import run_quality_checks
+from job_plat.transformations.silver.cleaning.clean_jobs import normalize_jobs, clean_jobs, deduplicate_jobs
+from job_plat.transformations.silver.validation.quality_checks import run_quality_checks
 from typing import List
-from job_plat.utils.storage import Storage
-from job_plat.bronze.ingestion.metadata import StageExecutionContext
+from job_plat.storage.storages import Storage
+from job_plat.ingestion.metadata import StageExecutionContext
 
 
 class SilverStage(BaseStage):

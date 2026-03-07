@@ -1,16 +1,18 @@
-from job_plat.pipelines.context.contexts import (
+from job_plat.context.contexts import (
     BronzeContext, 
     SilverContext,
     GoldV1Context,
     GoldV2Context,
     PipelineContext
     )
-from job_plat.pipelines.stages.bronze_stage import BronzeStage
-from job_plat.pipelines.stages.silver_stage import SilverStage
-from job_plat.pipelines.stages.gold_v1_stage import GoldV1Stage
-from job_plat.pipelines.stages.gold_v2_stage import GoldV2Stage
-from job_plat.utils.storage import Storage
-from job_plat.bronze.ingestion.connectors import JobConnector
+from job_plat.pipeline.stages.bronze_stage import BronzeStage
+from job_plat.pipeline.stages.silver_stage import SilverStage
+from job_plat.pipeline.stages.gold_v1_stage import GoldV1Stage
+from job_plat.pipeline.stages.gold_v2_stage import GoldV2Stage
+from job_plat.storage.storages import Storage
+from job_plat.ingestion.connectors import JobConnector
+from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.pipeline.dataset_registry import DatasetRegistry
 from typing import List
 
 
@@ -19,6 +21,8 @@ from typing import List
 def run_bronze_pipeline(
     ctx: BronzeContext,
     storage: Storage,
+    datasets: DatasetRegistry,
+    partition_manager: PartitionManager,
     connector: JobConnector
     ) -> None:
     stage = BronzeStage(
@@ -33,7 +37,9 @@ def run_bronze_pipeline(
 
 def run_silver_pipeline(
     ctx: PipelineContext,
-    storage: Storage
+    storage: Storage,
+    datasets: DatasetRegistry,
+    partition_manager: PartitionManager
 ) -> None:
     stage = SilverStage(
         silver_ctx = ctx.silver,
@@ -48,7 +54,9 @@ def run_silver_pipeline(
 
 def run_gold_v1_pipeline(
     ctx: PipelineContext,
-    storage: Storage
+    storage: Storage,
+    datasets: DatasetRegistry,
+    partition_manager: PartitionManager
 ) -> None:
     
     stage = GoldV1Stage(
@@ -64,7 +72,9 @@ def run_gold_v1_pipeline(
 
 def run_gold_v2_pipeline(
     ctx: PipelineContext,
-    storage: Storage
+    storage: Storage,
+    datasets: DatasetRegistry,
+    partition_manager: PartitionManager
 ) -> None:
     stage = GoldV2Stage(
         gold_v1_ctx = ctx.gold_v1,
@@ -80,19 +90,21 @@ def run_gold_v2_pipeline(
 def run_full_pipeline(
     ctx: PipelineContext,
     storage: Storage,
+    datasets: DatasetRegistry,
+    partition_manager: PartitionManager,
     connectors: List[JobConnector],
 ) -> None:
     
     for connector in connectors:
         run_bronze_pipeline(
-            ctx=bronze_ctx,
+            ctx=ctx.bronze,
             storage=storage,
             connector=connector
         )
         
-    silver_pipeline(ctx=pipeline_ctx, storage=storage)
-    gold_v1_pipeline(ctx=pipeline_ctx, storage=storage)
-    gold_v2_pipeline(ctx=pipeline_ctx, storage=storage)
+    silver_pipeline(ctx=ctx, storage=storage, datasets=datasets, partition_manager=partition_manager)
+    gold_v1_pipeline(ctx=ctx, storage=storage, datasets=datasets, partition_manager=partition_manager)
+    gold_v2_pipeline(ctx=ctx, storage=storage, datasets=datasets, partition_manager=partition_manager)
 
 ##############
 

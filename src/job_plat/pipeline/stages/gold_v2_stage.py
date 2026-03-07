@@ -1,11 +1,11 @@
-from job_plat.pipelines.stages.base_stage import BaseStage
-from job_plat.pipelines.context.contexts import GoldV1Context, GoldV2Context
-from job_plat.gold.v2_intelligence.embeddings.build_skill_embeddings import build_skill_embeddings
-from job_plat.gold.v2_intelligence.embeddings.build_job_embeddings import build_job_embeddings
-from job_plat.gold.v2_intelligence.clusters.build_job_clusters import build_job_clusters
-from job_plat.utils.storage import Storage
+from job_plat.pipelines.core.base_stage import BaseStage
+from job_plat.context.contexts import GoldV1Context, GoldV2Context
+from job_plat.transformations.gold.v2_intelligence.embeddings.build_skill_embeddings import build_skill_embeddings
+from job_plat.transformations.gold.v2_intelligence.embeddings.build_job_embeddings import build_job_embeddings
+from job_plat.transformations.gold.v2_intelligence.clusters.build_job_clusters import build_job_clusters
+from job_plat.storage.storages import Storage
 from pyspark.sql import DataFrame
-from job_plat.bronze.ingestion.metadata import StageExecutionContext
+from job_plat.ingestion.metadata import StageExecutionContext
 from pyspark.sql.functions import countDistinct, avg
 
 class GoldV2Stage(BaseStage):
