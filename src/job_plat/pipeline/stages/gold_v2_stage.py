@@ -6,12 +6,13 @@ from job_plat.gold.v2_intelligence.clusters.build_job_clusters import build_job_
 from job_plat.utils.storage import Storage
 from pyspark.sql import DataFrame
 from job_plat.bronze.ingestion.metadata import StageExecutionContext
+from pyspark.sql.functions import countDistinct, avg
 
 class GoldV2Stage(BaseStage):
     
     STAGE_NAME="gold_v2"
-    INPUT_DATASETS = ["gold_v1_dim_jobs", "gold_v1_dim_skills", "gold_v1_fact_job_skills"]
-    OUTPUT_DATASETS = ["gold_v2_skill_embeddings", "gold_v2_job_embeddings", "gold_v2_job_clusters", "gold_v2_job_membership", "gold_v2_job_centroids", "gold_v2_job_cluster_metadata"]
+    INPUT_MAP = {"dim_jobs_df": GoldV1DimJobs,"dim_skills_df": GoldV1DimSkills, "fact_job_skill_df": GoldV1FactJobSkills}
+    OUTPUT_TYPE = GoldV2Outputs
     
     def __init__(
         self, 
@@ -20,24 +21,22 @@ class GoldV2Stage(BaseStage):
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,):
         super().__init__(spark=gold_v2_ctx.spark, datasets=datasets, partition_manager=partition_manager)
-        STAGE_NAME="gold_v2"
         self.gold_v1_ctx = gold_v1_ctx
         self.gold_v2_ctx = gold_v2_ctx
         
     def create_context(self) -> StageExecutionContext:
         run_context = StageExecutionContext(
-            stage="gold_v2",
+            stage=self.STAGE_NAME,
             pipeline_version="1.0.0"
         )
         return run_context
     
     def transform(
         self, 
-        inputs: dict,
-        ) -> dict:
-        
-        dim_skills_df = inputs["gold_v1_dim_skills"]["df"]
-        fact_job_skill_df = inputs["gold_v1_fact_job_skills"]["df"]
+        dim_jobs_df: DataFrame,
+        dim_skills_df: DataFrame,
+        fact_job_skill_df: DataFrame,
+        ) -> GoldV2Outputs:
         
         self.logger.info("building_skill_embeddings")
         skill_embeddings_df = build_skill_embeddings(dim_skills_df=dim_skills_df, spark=self.gold_v2_ctx.spark)
@@ -46,25 +45,23 @@ class GoldV2Stage(BaseStage):
         self.logger.info("building_clusters_data")
         job_membership_df, job_clusters_df, job_centroids_df, job_metadata_df = build_job_clusters(spark=self.gold_v2_ctx.spark, job_embeddings_df=job_embeddings_df)
         
-        return {
-            "gold_v2_skill_embeddings": skill_embeddings_df,
-            "gold_v2_job_embeddings": job_embeddings_df,
-            "gold_v2_job_clusters": job_clusters_df,
-            "gold_v2_job_membership": job_membership_df,
-            "gold_v2_job_centroids": job_centroids_df,
-            "gold_v2_job_cluster_metadata": job_metadata_df
-        }
-    
+        return GoldV2Outputs(
+            skill_embeddings=skill_embeddings_df,
+            job_embeddings=job_embeddings_df,
+            job_clusters=job_clusters_df,
+            job_membership=job_membership_df,
+            job_centroids=job_centroids_df,
+            job_cluster_metadata=job_metadata_df
+        )
 
-    
-    def compute_metrics(self, outputs: dict) -> dict:
+    def compute_metrics(self, outputs: GoldV2Outputs) -> dict:
         if not outputs:
             return {}
-        skill_embeddings_df = outputs.get("gold_v2_skill_embeddings")
-        job_embeddings_df = outputs.get("gold_v2_job_embeddings")
-        job_clusters_df = outputs.get("gold_v2_job_clusters")
-        job_membership_df = outputs.get("gold_v2_job_membership")
-        job_metadata_df = outputs.get("gold_v2_job_cluster_metadata")
+        skill_embeddings_df = outputs.skill_embeddings
+        job_embeddings_df = outputs.job_embeddings
+        job_clusters_df = outputs.job_clusters
+        job_membership_df = outputs.job_membership
+        job_metadata_df = outputs.job_cluster_metadata
         
         # Cache 
         job_membership_df.cache()
@@ -125,7 +122,128 @@ class GoldV2Stage(BaseStage):
                 "embedding_failure",
                 extra={"issue": "no_jobs_embedded"}
             )
+
+
+################################ 06-03
+
+# class GoldV2Stage(BaseStage):
+    
+    # STAGE_NAME="gold_v2"
+    # INPUT_DATASETS = [GoldV1DimJobs, GoldV1DimSkills, GoldV1FactJobSkills]
+    # OUTPUT_DATASETS = [GoldV2SkillEmbeddings, GoldV2JobEmbeddings, GoldV2JobClusters, GoldV2JobMembership, GoldV2JobCentroids, GoldV2JobClusterMetadata]
+    
+    # def __init__(
+        # self, 
+        # gold_v1_ctx: GoldV1Context, 
+        # gold_v2_ctx: GoldV2Context,
+        # datasets: DatasetRegistry,
+        # partition_manager: PartitionManager,):
+        # super().__init__(spark=gold_v2_ctx.spark, datasets=datasets, partition_manager=partition_manager)
+        # STAGE_NAME="gold_v2"
+        # self.gold_v1_ctx = gold_v1_ctx
+        # self.gold_v2_ctx = gold_v2_ctx
         
+    # def create_context(self) -> StageExecutionContext:
+        # run_context = StageExecutionContext(
+            # stage="gold_v2",
+            # pipeline_version="1.0.0"
+        # )
+        # return run_context
+    
+    # def transform(
+        # self, 
+        # inputs: dict[type, dict],
+        # ) -> dict[type, DataFrame]:
+        
+        # dim_skills_df = inputs[GoldV1DimSkills]["df"]
+        # fact_job_skill_df = inputs[GoldV1FactJobSkills]["df"]
+        
+        # self.logger.info("building_skill_embeddings")
+        # skill_embeddings_df = build_skill_embeddings(dim_skills_df=dim_skills_df, spark=self.gold_v2_ctx.spark)
+        # self.logger.info("building_job_embeddings")
+        # job_embeddings_df = build_job_embeddings(fact_job_skill_df=fact_job_skill_df, skill_embeddings_df=skill_embeddings_df)
+        # self.logger.info("building_clusters_data")
+        # job_membership_df, job_clusters_df, job_centroids_df, job_metadata_df = build_job_clusters(spark=self.gold_v2_ctx.spark, job_embeddings_df=job_embeddings_df)
+        
+        # return {
+           # GoldV2SkillEmbeddings: skill_embeddings_df,
+            # GoldV2JobEmbeddings: job_embeddings_df,
+            # GoldV2JobClusters: job_clusters_df,
+            # GoldV2JobMembership: job_membership_df,
+            # GoldV2JobCentroids: job_centroids_df,
+            # GoldV2JobClusterMetadata: job_metadata_df
+        # }
+    
+
+    
+    # def compute_metrics(self, outputs: dict) -> dict:
+        # if not outputs:
+            # return {}
+        # skill_embeddings_df = outputs.get(GoldV2SkillEmbeddings)
+        # job_embeddings_df = outputs.get(GoldV2JobEmbeddings)
+        # job_clusters_df = outputs.get(GoldV2JobClusters)
+        # job_membership_df = outputs.get(GoldV2JobMembership)
+        # job_metadata_df = outputs.get(GoldV2JobClusterMetadata)
+        
+        # # Cache 
+        # job_membership_df.cache()
+        # job_clusters_df.cache()
+        
+        # # Counts
+        # skills_embedded = skill_embeddings_df.count()
+        # jobs_embedded = job_embeddings_df.count()
+        
+        # # Cluster metrics
+        # cluster_stats = (
+            # job_membership_df
+            # .groupBy()
+            # .agg(
+                # countDistinct("cluster_id").alias("num_clusters"),
+                # avg("distance_to_centroid").alias("avg_distance")
+            # )
+            # .first()
+        # )
+        
+        # # Silhouette score from metadata
+        # silhouette_row = job_metadata_df.select("silhouette_score").first()
+        # silhouette = silhouette_row["silhouette_score"] if silhouette_row else None
+        
+        # job_membership_df.unpersist()
+        # job_clusters_df.unpersist()
+        
+        # return {
+            # "skills_embedded": skills_embedded,
+            # "jobs_embedded": jobs_embedded,
+            # "num_clusters": cluster_stats["num_clusters"],
+            # "avg_distance_to_centroid": cluster_stats["avg_distance"],
+            # "silhouette_score": silhouette,
+            # }
+    
+    # def evaluate_metrics(self, metrics: dict) -> None:
+        
+        # if metrics["num_clusters"] < self.gold_v2_ctx.min_clusters:
+            # self.logger.warning(
+                # "model_issue",
+                # extra={
+                    # "issue": "too_few_clusters",
+                    # "num_clusters": metrics["num_clusters"],
+                # },
+            # )
+        
+        # if metrics["silhouette_score"] is not None and metrics["silhouette_score"] < self.gold_v2_ctx.min_silhouette:
+            # self.logger.warning(
+                # "model_quality_degraded",
+                # extra={
+                    # "silhouette_score": metrics["silhouette_score"],
+                    # "threshold": self.gold_v2_ctx.min_silhouette,
+                # },
+            # )
+        
+        # if metrics["jobs_embedded"] == 0:
+            # self.logger.error(
+                # "embedding_failure",
+                # extra={"issue": "no_jobs_embedded"}
+            # )       
 
 ################################
 
