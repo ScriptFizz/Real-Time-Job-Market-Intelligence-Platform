@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from datetime import date
-from typing import List
+from typing import List, Literal, Optional
 from pyspark.sql import SparkSession, DataFrame
 
 
@@ -11,6 +11,7 @@ class Dataset:
     path: Path
     storage: Storage
     partition_column: str = "ingestion_date"
+    write_mode: Literal["append", "overwrite"] = "append"
     
     def list_partitions(self) -> List[date]:
         pattern = f"{self.partition_column}=*"
@@ -36,12 +37,13 @@ class Dataset:
         return self.storage.read_parquet(spark=spark, paths=paths)
     
     
-    def write(self, df: DataFrame, mode="append") -> None:
+    def write(self, df: DataFrame, mode: Optional[str] = None) -> None:
+        actual_mode = mode or self.write_mode
         self.storage.write_parquet(
             df=df,
             path=str(self.path),
             partition_cols=[self.partition_column],
-            mode=mode
+            mode=actual_mode
         )
 
     def get_unprocessed_partitions(self, partition_manager: PartitionManager, stage_name: str) -> Lisrt[date]:

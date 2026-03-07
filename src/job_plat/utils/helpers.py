@@ -5,6 +5,8 @@ from urllib.parse import urlencode
 from job_plat.config.env_config import SparkConfig
 from datetime import datetime
 
+class StageSkip(Exception):
+    pass
 
 def parse_date(d: str | None):
     return datetime.strptime(d, "%Y-%m-%d").date() if d else None

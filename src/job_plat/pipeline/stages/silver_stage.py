@@ -16,39 +16,22 @@ from job_plat.bronze.ingestion.metadata import StageExecutionContext
 
 class SilverStage(BaseStage):
     
+    STAGE_NAME = "silver_jobs"
+    INPUT_DATASETS = ["bronze_jobs"]
+    OUTPUT_DATASETS = ["silver_jobs", "silver_job_skills"]
+    
     def __init__(
         self, 
         silver_ctx: SilverContext, 
         bronze_ctx: BronzeContext,
-        datasets: Datasets,
+        datasets: DatasetRegistry,
         partition_manager: PartitionManager,
-        storage: Storage):
-        self.STAGE_NAME = "silver_jobs"
-        super().__init__(spark=silver_ctx.spark, storage=storage, datasets=datasets, partition_manager=partition_manager)
+        ):
+        
+        super().__init__(spark=silver_ctx.spark, datasets=datasets, partition_manager=partition_manager)
         self.silver_ctx = silver_ctx
         self.bronze_ctx = bronze_ctx
         
-    def validate_inputs(self) -> None:
-        
-        bronze_path = self.datasets.bronze_jobs.path
-        if not bronze_path.exists():
-            raise FileNotFoundError(
-                f"Missing input dataset directory: {bronze_path}"
-            )
-    
-    def read(self) -> dict:
-        
-        dataset = self.datasets.bronze_jobs
-        
-        # available = dataset.list_partitions()
-        # processed = self.partition_manager.get_processed(stage_name=self.STAGE_NAME)
-        # partitions = sorted(set(available) - set(processed))
-        partitions = dataset.get_available_partitions(partition_manager=self.partition_manager, stage_name=self.STAGE_NAME)
-        
-        #df = dataset.read_partitions(spark=self.spark, dataset_path=dataset.path, partitions=partitions)
-        df = dataset.read_partitions(spark=self.spark, partitions=partitions)
-        
-        return {"job_bronze_df": df, "partitons": partitions}
     
     def create_context(self) -> StageExecutionContext:
         run_context = StageExecutionContext(
@@ -108,26 +91,123 @@ class SilverStage(BaseStage):
                 "null_descriptions": quality_metrics["null_descriptions"]
                 }
     
-    def write(self, outputs: dict) -> None:
+
+###########################
+
+# class SilverStage(BaseStage):
+    
+    # def __init__(
+        # self, 
+        # silver_ctx: SilverContext, 
+        # bronze_ctx: BronzeContext,
+        # datasets: DatasetRegistry,
+        # partition_manager: PartitionManager,
+        # ):
+        # self.STAGE_NAME = "silver_jobs"
+        # super().__init__(spark=silver_ctx.spark, datasets=datasets, partition_manager=partition_manager)
+        # self.silver_ctx = silver_ctx
+        # self.bronze_ctx = bronze_ctx
         
-        self.spark.conf.set(
-            "spark.sql.sources.partitionOverWriteMode",
-            "dynamic"
-        )
+    # def validate_inputs(self) -> None:
         
-        for name, mode, dataset in [
-            ("jobs_silver", "overwrite", self.datasets.silver_jobs),
-            ("job_skills_silver", "overwrite", self.datasets.silver_job_skills)
-        ]:
+        # bronze_path = self.datasets.bronze_jobs.path
+        # if not bronze_path.exists():
+            # raise FileNotFoundError(
+                # f"Missing input dataset directory: {bronze_path}"
+            # )
+    
+    # def read(self) -> dict:
+        
+        # dataset = self.datasets.get("bronze_jobs")
+        
+        # # available = dataset.list_partitions()
+        # # processed = self.partition_manager.get_processed(stage_name=self.STAGE_NAME)
+        # # partitions = sorted(set(available) - set(processed))
+        # partitions = dataset.get_available_partitions(partition_manager=self.partition_manager, stage_name=self.STAGE_NAME)
+        
+        # #df = dataset.read_partitions(spark=self.spark, dataset_path=dataset.path, partitions=partitions)
+        # df = dataset.read_partitions(spark=self.spark, partitions=partitions)
+        
+        # return {"job_bronze_df": df, "partitions": partitions}
+    
+    # def create_context(self) -> StageExecutionContext:
+        # run_context = StageExecutionContext(
+            # stage="silver",
+            # pipeline_version="1.0.0"
+        # )
+        # return run_context
+    
+    # def transform(
+        # self, 
+        # inputs: dict
+        # ) -> dict:
+        
+        # job_bronze_df = inputs["job_bronze_df"]
+        # df_normalized = job_bronze_df.select(
+            # col("run_id"),
+            # col("ingestion_date"),
+            # col("payload.*"), 
+            # col("ingestion_metadata.started_at").alias("ingested_at")
+        # )
+        
+        # self.logger.info("building_df_clean")
+        # df_clean = clean_jobs(df=df_normalized)
+        
+        # self.logger.info("building_jobs_silver")
+        # jobs_silver_df = deduplicate_jobs(df_clean)
+        
+        # self.logger.info("building_job_skills_silver")
+        # job_skills_silver_df = run_job_skills(jobs_silver_df = jobs_silver_df)
+        
+        # # data_date = self.silver_ctx.data_date
+        # # jobs_silver_df = jobs_silver_df.withColumn("data_date", lit(data_date))
+        # # job_skills_silver_df = job_skills_silver_df.withColumn("data_date", lit(data_date))
+        
+        # return {
+            # "jobs_normalized": df_normalized,
+            # "jobs_silver": jobs_silver_df,
+            # "job_skills_silver": job_skills_silver_df,
+            # "partitions": inputs["partitions"]
+        # }
+    
+    # def compute_metrics(self, outputs: dict) -> dict:
+        
+        # df_normalized = outputs["jobs_normalized"]
+        # quality_metrics = (
+            # df_normalized
+            # .agg(
+                # count("*").alias("total"),
+                # sum(when(col("job_title_raw").isNull(), 1).otherwise(0)).alias("null_titles"),
+                # sum(when(col("description_raw").isNull(), 1).otherwise(0)).alias("null_descriptions"),
+            # )
+            # .first()
+        # )
+        # return {
+                # "total": quality_metrics["total"], 
+                # "null_titles": quality_metrics["null_titles"], 
+                # "null_descriptions": quality_metrics["null_descriptions"]
+                # }
+    
+    # def write(self, inputs: dict, outputs: dict) -> None:
+        # self.spark.conf.set(
+            # "spark.sql.sources.partitionOverWriteMode",
+            # "dynamic"
+        # )
+        
+        # for name, mode, dataset in [
+            # ("jobs_silver", "overwrite", self.datasets.silver_jobs),
+            # ("job_skills_silver", "overwrite", self.datasets.silver_job_skills)
+        # ]:
             
-            dataset.write(df = outputs[name], mode=mode)
+            # dataset.write(df = outputs[name], mode=mode)
             
-            partitions = outputs["partitions"]
+            # partitions = inputs["partitions"]
             
-            self.partition_manager.mark_processed(
-                stage_name=self.STAGE_NAME,
-                partitions=partitions
-            )
+            # self.partition_manager.mark_processed(
+                # stage_name=self.STAGE_NAME,
+                # partitions=partitions
+            # )
+
 #####################
 
 # class SilverStage(BaseStage):
