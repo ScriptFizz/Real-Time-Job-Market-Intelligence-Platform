@@ -14,6 +14,7 @@ class Dataset:
     storage: Storage
     partition_column: str = "ingestion_date"
     write_mode: Literal["append", "overwrite"] = "append"
+    file_format: Literal["parquet", "jsonl"] = "parquet"
     
     def list_partitions(self) -> List[date]:
         pattern = f"{self.partition_column}=*"
@@ -35,8 +36,17 @@ class Dataset:
             str(f"{self.path}/{self.partition_column}={p}")
             for p in partitions
         ]
+        base_path = str(self.path)
         
-        return self.storage.read_parquet(spark=spark, paths=paths)
+        if self.file_format == "parquet":
+            reader = self.storage.read_parquet
+        
+        elif self.file_format == "jsonl":
+            reader = self.storage.read_jsonl
+        else:
+            raise ValueError(f"Unsupported format {self.file_format}")
+        
+        return reader(spark=spark, base_path=base_path, paths=paths)
     
     
     def write(self, df: DataFrame, mode: Optional[str] = None) -> None:

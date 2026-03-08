@@ -20,13 +20,13 @@ class PartitionManager:
 
     def get_processed(self, stage_name: str) -> dict:
         
-        state =self._load()
-        values = states.get(stage_name, [])
+        state = self._load()
+        values = state.get(stage_name, [])
         return {date.fromisoformat(v) for v in values}
     
     def mark_processed(self, stage_name: str, partitions: List) -> None:
         
-        stage = self._load()
+        state = self._load()
         existing = set(state.get(stage_name, []))
         new_values = {p.isoformat() for p in partitions}
         state[stage_name] = sorted(existing.union(new_values))

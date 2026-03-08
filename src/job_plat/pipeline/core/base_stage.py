@@ -155,7 +155,7 @@ class BaseStage(ABC):
                 f"{self.STAGE_NAME}: expected output {self.OUTPUT_TYPE.__name__}, "
                 f"got {type(outputs).__name__}"
             )
-        for name, df in vars(ouputs).items():
+        for name, df in vars(outputs).items():
             if df is None:
                 raise ValueError(f"{self.STAGE_NAME}: output '{name}' is None")
             

@@ -110,7 +110,7 @@ def clean_jobs(df: DataFrame) -> DataFrame:
         # Unified schema
         .select(
             col("source"),
-            col("job_id"),
+            col("source_job_id").alias("job_id"),
             col("job_title"),
             col("company"),
             col("location"),

@@ -6,6 +6,7 @@ class DatasetDef:
     
     PARTITION_COLUMN: str = "ingestion_date"
     WRITE_MODE: Literal["overwrite", "append"] = "append"
+    FILE_FORMAT: Literal["parquet", "jsonl"] = "parquet"
 
 ##################
 #   BRONZE
@@ -14,6 +15,7 @@ class DatasetDef:
 class BronzeJobs(DatasetDef):
     NAME = "bronze_jobs"
     RELATIVE_PATH = "bronze/jobs"
+    FILE_FORMAT = "jsonl"
 
 ##################
 #   SILVER
