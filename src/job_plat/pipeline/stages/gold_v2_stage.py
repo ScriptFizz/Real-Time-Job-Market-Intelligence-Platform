@@ -1,4 +1,4 @@
-from job_plat.pipelines.core.base_stage import BaseStage
+from job_plat.pipeline.core.base_stage import BaseStage
 from job_plat.context.contexts import GoldV1Context, GoldV2Context
 from job_plat.transformations.gold.v2_intelligence.embeddings.build_skill_embeddings import build_skill_embeddings
 from job_plat.transformations.gold.v2_intelligence.embeddings.build_job_embeddings import build_job_embeddings
@@ -7,6 +7,11 @@ from job_plat.storage.storages import Storage
 from pyspark.sql import DataFrame
 from job_plat.ingestion.metadata import StageExecutionContext
 from pyspark.sql.functions import countDistinct, avg
+from job_plat.schemas.output_schemas import GoldV2Outputs
+from job_plat.pipeline.datasets.dataset_definitions import GoldV1DimJobs, GoldV1DimSkills, GoldV1FactJobSkills
+from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
+from job_plat.partitioning.partition_manager import PartitionManager
+
 
 class GoldV2Stage(BaseStage):
     

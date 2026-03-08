@@ -12,7 +12,7 @@ from job_plat.pipeline.stages.gold_v2_stage import GoldV2Stage
 from job_plat.storage.storages import Storage
 from job_plat.ingestion.connectors import JobConnector
 from job_plat.partitioning.partition_manager import PartitionManager
-from job_plat.pipeline.dataset_registry import DatasetRegistry
+from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from typing import List
 
 
@@ -21,8 +21,8 @@ from typing import List
 def run_bronze_pipeline(
     ctx: BronzeContext,
     storage: Storage,
-    datasets: DatasetRegistry,
-    partition_manager: PartitionManager,
+    #datasets: DatasetRegistry,
+    #partition_manager: PartitionManager,
     connector: JobConnector
     ) -> None:
     stage = BronzeStage(
@@ -37,14 +37,15 @@ def run_bronze_pipeline(
 
 def run_silver_pipeline(
     ctx: PipelineContext,
-    storage: Storage,
+    #storage: Storage,
     datasets: DatasetRegistry,
     partition_manager: PartitionManager
 ) -> None:
     stage = SilverStage(
         silver_ctx = ctx.silver,
         bronze_ctx = ctx.bronze,
-        storage = storage
+        datasets = datasets,
+        partition_manager = partition_manager
     )
     
     stage.execute()
@@ -54,7 +55,7 @@ def run_silver_pipeline(
 
 def run_gold_v1_pipeline(
     ctx: PipelineContext,
-    storage: Storage,
+    #storage: Storage,
     datasets: DatasetRegistry,
     partition_manager: PartitionManager
 ) -> None:
@@ -62,7 +63,8 @@ def run_gold_v1_pipeline(
     stage = GoldV1Stage(
         silver_ctx = ctx.silver,
         gold_v1_ctx = ctx.gold_v1,
-        storage = storage
+        datasets = datasets,
+        partition_manager = partition_manager
     )
     
     stage.execute()
@@ -79,7 +81,8 @@ def run_gold_v2_pipeline(
     stage = GoldV2Stage(
         gold_v1_ctx = ctx.gold_v1,
         gold_v2_ctx = ctx.gold_v2,
-        storage = storage
+        datasets = datasets,
+        partition_manager = partition_manager
     )
     
     stage.execute()
@@ -102,9 +105,9 @@ def run_full_pipeline(
             connector=connector
         )
         
-    silver_pipeline(ctx=ctx, storage=storage, datasets=datasets, partition_manager=partition_manager)
-    gold_v1_pipeline(ctx=ctx, storage=storage, datasets=datasets, partition_manager=partition_manager)
-    gold_v2_pipeline(ctx=ctx, storage=storage, datasets=datasets, partition_manager=partition_manager)
+    silver_pipeline(ctx=ctx, datasets=datasets, partition_manager=partition_manager)
+    gold_v1_pipeline(ctx=ctx, datasets=datasets, partition_manager=partition_manager)
+    gold_v2_pipeline(ctx=ctx, datasets=datasets, partition_manager=partition_manager)
 
 ##############
 

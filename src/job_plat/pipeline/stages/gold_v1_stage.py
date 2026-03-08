@@ -6,6 +6,10 @@ from job_plat.transformations.gold.v1_analytics.fact_job_skills import build_fac
 from job_plat.storage.storages import Storage
 from pathlib import Path
 from job_plat.ingestion.metadata import StageExecutionContext
+from job_plat.schemas.output_schemas import GoldV1Outputs
+from job_plat.pipeline.datasets.dataset_definitions import SilverJobSkills, SilverJobs
+from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
+from job_plat.partitioning.partition_manager import PartitionManager
 
 class GoldV1Stage(BaseStage):
     
