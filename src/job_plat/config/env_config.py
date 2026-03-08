@@ -3,6 +3,8 @@ from typing import Optional, Literal, Any
 
 
 class PathsConfig(BaseModel):
+    root: str
+    metadata: str
     bronze: str
     silver: str
     gold_v1: str

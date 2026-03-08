@@ -70,3 +70,18 @@ class GoldV2JobCentroids(DatasetDef):
 class GoldV2JobClusterMetadata(DatasetDef):
     NAME = "gold_v2_job_cluster_metadata"
     RELATIVE_PATH = "gold_v2/job_cluster_metadata"
+
+DATASET_DEFS = [
+    BronzeJobs,
+    SilverJobs,
+    SilverJobSkills,
+    GoldV1DimJobs,
+    GoldV1DimSkills,
+    GoldV1FactJobSkills,
+    GoldV2SkillEmbeddings,
+    GoldV2JobEmbeddings,
+    GoldV2JobClusters,
+    GoldV2JobMembership,
+    GoldV2JobCentroids,
+    GoldV2JobClusterMetadata
+]

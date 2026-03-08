@@ -8,6 +8,8 @@ environments:
     storage:
       type: "local"
     paths:
+      root: ./data
+      metadata: ./metadata
       bronze: ./data/bronze
       silver: ./data/silver
       gold_v1: ./data/gold_v1

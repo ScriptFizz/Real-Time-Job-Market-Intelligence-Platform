@@ -10,6 +10,7 @@ from job_plat.ingestion.metadata import StageExecutionContext
 from job_plat.schemas.output_schemas import StageOutput
 from job_plat.partitioning.partition_manager import PartitionManager
 from typing import Any
+from job_plat.utils.helpers import StageSkip
 
 
 class BaseStage(ABC):

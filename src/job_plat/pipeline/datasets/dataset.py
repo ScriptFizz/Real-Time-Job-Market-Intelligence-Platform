@@ -48,7 +48,7 @@ class Dataset:
             mode=actual_mode
         )
 
-    def get_unprocessed_partitions(self, partition_manager: PartitionManager, stage_name: str) -> List[date]:
+    def get_available_partitions(self, partition_manager: PartitionManager, stage_name: str) -> List[date]:
         available = self.list_partitions()
         processed = partition_manager.get_processed(stage_name=stage_name)
         return sorted(set(available) - set(processed))
