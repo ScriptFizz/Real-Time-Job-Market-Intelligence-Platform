@@ -46,16 +46,30 @@ def run_job_skills(
             )
     )
     
-    job_skills_df = df.select(
+    job_skills_df = (
+        df
+        .withColumn("skill", explode("skills_normalized"))
+        .select(
         "job_id",
         "ingestion_date",
-        explode("skills_normalized").alias("skills"),
-        element_at("skill_confidence", col("skills")).alias("skill_confidence"),
+        col("skill").alias("skills"),
+        element_at("skill_confidence", col("skill")).alias("skill_confidence"),
     ).withColumn(
         "extraction_method", lit("dictionary_v1")
     ).withColumn(
         "processed_at", current_timestamp()
-    )
+    ))
+    
+    # job_skills_df = df.select(
+        # "job_id",
+        # "ingestion_date",
+        # explode("skills_normalized").alias("skills"),
+        # element_at("skill_confidence", col("skills")).alias("skill_confidence"),
+    # ).withColumn(
+        # "extraction_method", lit("dictionary_v1")
+    # ).withColumn(
+        # "processed_at", current_timestamp()
+    # )
     
 
     return job_skills_df

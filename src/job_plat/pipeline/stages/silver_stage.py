@@ -2,6 +2,12 @@ from datetime import date
 from pathlib import Path
 import logging
 from pyspark.sql import DataFrame
+from pyspark.sql.functions import (
+    col,
+    when,
+    count, 
+    sum
+)
 from job_plat.context.contexts import BronzeContext, SilverContext, PipelineContext
 from job_plat.pipeline.core.base_stage import BaseStage
 from job_plat.transformations.silver.enrichment.build_job_skills import run_job_skills
@@ -83,8 +89,8 @@ class SilverStage(BaseStage):
         
         
         return SilverOutputs(
-            jobs=jobs_silver_df,
-            job_skills=job_skills_silver_df,
+            silver_jobs=jobs_silver_df,
+            silver_job_skills=job_skills_silver_df,
         )
     
     def compute_metrics(self, outputs: SilverOutputs) -> dict:
