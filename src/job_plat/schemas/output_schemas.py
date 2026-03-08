@@ -2,6 +2,16 @@ from dataclasses import dataclass, fields, field
 from pyspark.sql import DataFrame
 from job_plat.pipeline.datasets.dataset_definitions import (
     SilverJobs,
+    SilverJobSkills,
+    GoldV1DimJobs,
+    GoldV1DimSkills,
+    GoldV1FactJobSkills,
+    GoldV2SkillEmbeddings,
+    GoldV2JobEmbeddings,
+    GoldV2JobClusters,
+    GoldV2JobMembership,
+    GoldV2JobCentroids,
+    GoldV2JobClusterMetadata
 )
 
 @dataclass

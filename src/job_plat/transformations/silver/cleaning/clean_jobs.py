@@ -174,7 +174,7 @@ def robust_deduplicate_jobs(df: DataFrame) -> DataFrame:
                     "||",
                     lower(coalesce(col("source"), lit(""))),
                     lower(coalesce(col("job_title"), lit(""))),
-                    lower(coalesce(col("company"), lit("")),
+                    lower(coalesce(col("company"), lit(""))),
                     lower(coalesce(col("location"), lit(""))),
                     lower(coalesce(col("url"), lit("")))
                     

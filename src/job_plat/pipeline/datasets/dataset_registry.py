@@ -1,7 +1,8 @@
 from pathlib import Path
-
-class BronzeJobs(Dataset):
-    name = "bronze_job"
+from job_plat.storage.storages import Storage
+from job_plat.pipeline.datasets.dataset import Dataset
+# class BronzeJobs(Dataset):
+    # name = "bronze_job"
 
 class DatasetRegistry:
     
