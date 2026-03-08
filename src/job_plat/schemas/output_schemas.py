@@ -1,5 +1,8 @@
 from dataclasses import dataclass, fields, field
 from pyspark.sql import DataFrame
+from job_plat.pipeline.datasets.dataset_definitions import (
+    SilverJobs,
+)
 
 @dataclass
 class StageOutput:

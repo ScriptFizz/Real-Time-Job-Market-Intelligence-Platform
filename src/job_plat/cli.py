@@ -3,12 +3,12 @@ import logging
 from dotenv import load_dotenv
 from datetime import datetime
 from job_plat.config.config_loader import ConfigLoader
-from job_plat.bronze.ingestion.connectors import build_connectors
-from job_plat.pipelines.context.context_builders import build_pipeline_context, build_bronze_context
-from job_plat.pipelines.pipeline_stages import run_bronze_pipeline, run_silver_pipeline, run_full_pipeline
-from job_plat.pipelines.context.contexts import DateRange, ExecutionParams
+from job_plat.ingestion.connectors import build_connectors
+from job_plat.context.context_builders import build_pipeline_context, build_bronze_context
+from job_plat.orchestration.pipeline_stages import run_bronze_pipeline, run_silver_pipeline, run_full_pipeline
+from job_plat.context.contexts import DateRange, ExecutionParams
 from job_plat.config.logconfig import setup_logging
-from job_plat.utils.storage import get_storage
+from job_plat.storage.storages import get_storage
 from job_plat.utils.helpers import create_spark, parse_date
 
 load_dotenv()
