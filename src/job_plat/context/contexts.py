@@ -10,7 +10,6 @@ from typing import List, Optional
 class ExecutionParams:
     query: str | None = None
     location: str | None = None
-    date_range: DateRange | None = None
 
 @dataclass
 class BronzeContext:
