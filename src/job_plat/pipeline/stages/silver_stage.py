@@ -20,8 +20,8 @@ from job_plat.partitioning.partition_manager import PartitionManager
 class SilverStage(BaseStage):
     
     STAGE_NAME = "silver_jobs"
-    INPUT_MAPS = {"job_bronze_df": BronzeJobs}
-    OUTPUT_DATASETS = SilverOutputs
+    INPUT_MAP = {"job_bronze_df": BronzeJobs}
+    OUTPUT_TYPE = SilverOutputs
     
     def __init__(
         self, 

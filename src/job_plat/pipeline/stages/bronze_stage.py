@@ -87,7 +87,8 @@ class BronzeStage(BaseSourceStage):
             # / f"run_id={run.run_id}"
         # )
         base_path = (
-            self.bronze_ctx.base_path
+            Path(self.bronze_ctx.root_path)
+            / "bronze"
             / "jobs"
             / f"ingestion_date={run.started_at.date()}"
             / f"source={run.source}"
@@ -109,7 +110,7 @@ class BronzeStage(BaseSourceStage):
         
         # Save runs metadata in metadata registry
         
-        runs_dir = self.bronze_ctx.base_path /  "_runs"
+        runs_dir = Path(self.bronze_ctx.root_path) /  "_runs"
         
         runs_dir.mkdir(parents=True, exist_ok=True)
         write_metadata(

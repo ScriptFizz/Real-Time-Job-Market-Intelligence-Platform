@@ -22,7 +22,7 @@ class DatasetRegistry:
                 partition_column=getattr(ds, "PARTITION_COLUMN", "ingestion_date"),
                 write_mode=getattr(ds, "WRITE_MODE", "append")
             )
-            self._dataset[ds] = dataset
+            self._datasets[ds] = dataset
     
     def get(self, dataset_cls: type) -> Dataset:
         return self._datasets[dataset_cls]

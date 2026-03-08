@@ -11,6 +11,8 @@ from job_plat.config.logconfig import setup_logging
 from job_plat.storage.storages import get_storage
 from job_plat.utils.helpers import create_spark, parse_date
 from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
+from job_plat.pipeline.datasets.dataset_definitions import DATASET_DEFS
 
 load_dotenv()
 
@@ -51,6 +53,8 @@ def bronze(
         
         connectors = build_connectors(env_config)
         
+        partition_manager = PartitionManager
+        
         for connector in connectors:
             run_bronze_pipeline(
                 ctx=bronze_ctx,
@@ -71,7 +75,7 @@ def silver(
     Run silver stage.
     """
     
-    execution = ExecutionParams(date_range=date_range)
+    execution = ExecutionParams(query=None, location=None)
     
     config_loader = ConfigLoader(config_path=config, env=env)
     env_config = config_loader.load_env()
@@ -91,9 +95,18 @@ def silver(
             
         storage = get_storage(env_config.storage.type)
         
+        datasets = DatasetRegistry(
+            root=env_config.paths.root,
+            storage=storage,
+            dataset_defs=DATASET_DEFS
+        )
+        
+        partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
+        
         run_silver_pipeline(
             ctx=pipeline_ctx,
-            storage=storage,
+            datasets=datasets,
+            partition_manager=partition_manager
         )
     
     finally:

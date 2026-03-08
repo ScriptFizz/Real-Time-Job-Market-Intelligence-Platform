@@ -22,6 +22,7 @@ def build_bronze_context(
     
     final_query = execution.query or config.bronze.query
     final_location = execution.location or config.bronze.location
+    root_path = config.paths.root
     
     missing = []
     if not final_query:
@@ -32,6 +33,7 @@ def build_bronze_context(
         raise ValueError(", ".join(missing))
     
     return BronzeContext(
+        root_path = root_path,
         query = final_query,
         location = final_location
     )
@@ -45,15 +47,15 @@ def build_pipeline_context(
     
     final_query = execution.query or config.bronze.query
     final_location = execution.location or config.bronze.location
-
+    root_path = config.paths.root
     
     bronze_ctx = BronzeContext(
+        root_path = root_path,
         query = final_query,
         location = final_location
     )
     
     silver_ctx = SilverContext(
-        base_path = config.paths.silver,
         spark = spark
     )
     
