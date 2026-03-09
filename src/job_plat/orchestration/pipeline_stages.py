@@ -74,7 +74,7 @@ def run_gold_v1_pipeline(
 
 def run_gold_v2_pipeline(
     ctx: PipelineContext,
-    storage: Storage,
+    #storage: Storage,
     datasets: DatasetRegistry,
     partition_manager: PartitionManager
 ) -> None:

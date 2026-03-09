@@ -20,8 +20,8 @@ from pyspark.sql.types import DoubleType
 def build_job_clusters(
     spark: SparkSession,
     job_embeddings_df: DataFrame,
-    n_clusters: int,
-    model_version: str
+    n_clusters: int = 20,
+    model_version: str = "v1"
 ) -> Tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
     
     training_ts = datetime.utcnow()
@@ -72,7 +72,7 @@ def build_job_clusters(
     )
         
     # Membership table
-    membership_df (
+    membership_df = (
         predictions.select(
             "job_id",
             "cluster_id",
