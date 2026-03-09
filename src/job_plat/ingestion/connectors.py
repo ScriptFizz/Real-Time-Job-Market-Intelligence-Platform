@@ -1,4 +1,5 @@
 import os
+import math
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import Callable, Iterator, Dict, Any
@@ -14,6 +15,9 @@ from job_plat.config.env_config import EnvironmentConfig
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_COUNTRIES = {
+    "us", "gb", "de", "fr", "it", "nl", "ca", "au"
+}
 
 class JobConnector(ABC):
     name: str
@@ -120,6 +124,7 @@ class PaginatedAPIConnector(JobConnector):
         
         page = 1
         total_records = 0
+        api_max_pages = None
         
         while True:
             
@@ -140,7 +145,26 @@ class PaginatedAPIConnector(JobConnector):
             data = self._api_call(criteria=criteria, page=page)
             results = self._extract_results(data)
             
+            if page == 1:
+                total = data.get("count")
+                
+                if total and results:
+                    api_max_pages = math.ceil(total / len(results))
+                    
+                    logger.info(
+                        "connnector_total_results_detected",
+                        extra={
+                            "source": self.name,
+                            "total_results": total,
+                            "extimated_pages": api_max_pages,
+                        },
+                    )
+            
             if not results:
+                logger.info(
+                    "connector_empty_page",
+                    extra={"source": self.name, "page": page},
+                )
                 break
             
             logger.info(
@@ -157,6 +181,9 @@ class PaginatedAPIConnector(JobConnector):
                 yield item
                 
             page += 1
+            
+            if api_max_pages and page > api_max_pages:
+                break
         
         logger.info(
                 "connector_fetch_completed",
@@ -244,16 +271,23 @@ class ADZunaConnector(PaginatedAPIConnector):
             
             
         self.name = "adzuna"
-        self.base_url = "https://api.adzuna.com/v1/api/jobs/us/search"
+        self.base_url = "https://api.adzuna.com/v1/api/jobs"
         self.app_id = app_id
         self.api_key = api_key
             
     def _api_call(self, criteria: JobSearchCriteria, page: int) -> dict:
-        url = f"{self.base_url}/{page}"
+        
+        country = criteria.country.strip().lower()
+        if country not in SUPPORTED_COUNTRIES:
+            raise ValueError(f"Unsupported ADZuna country: {country}")
+        
+        url = f"{self.base_url}/{country}/search/{page}"
         params = {
             "app_id": self.app_id,
             "app_key": self.api_key,
             "what": criteria.query,
+            "results_per_page": 50,
+            "sort_by": "date",
         }
         
         if criteria.location:
@@ -302,3 +336,67 @@ def build_connectors(config: EnvironmentConfig) -> list[JobConnector]:
             min_interval_seconds = config.bronze.min_interval_seconds
         )
     ]
+
+
+###################################### 08-03
+
+# class ADZunaConnector(PaginatedAPIConnector):
+    
+    # def __init__(
+        # self, 
+        # api_key: str, 
+        # app_id: str,
+        # max_pages: int | None = None,
+        # min_interval_seconds: float | None = None,
+        # ):
+            
+        # super().__init__(
+            # max_pages=max_pages,
+            # min_interval_seconds=min_interval_seconds
+        # )
+            
+            
+        # self.name = "adzuna"
+        # self.base_url = "https://api.adzuna.com/v1/api/jobs/gb/search"
+        # self.app_id = app_id
+        # self.api_key = api_key
+            
+    # def _api_call(self, criteria: JobSearchCriteria, page: int) -> dict:
+        # url = f"{self.base_url}/{page}"
+        # params = {
+            # "app_id": self.app_id,
+            # "app_key": self.api_key,
+            # "what": criteria.query,
+            # "results_per_page": 50,
+            # "sort_by": "date",
+        # }
+        
+        # if criteria.location:
+            # params["where"] = criteria.location
+        
+        # meta = {"page": page}
+        # return self._api_get_response(
+        # url=url, 
+        # params=params,
+        # meta=meta)
+    
+    # def _extract_results(self, data: dict) -> list[dict]:
+        # return data.get("results", [])
+    
+    # def normalize(self, raw_job: dict) -> CanonicalJobV1:
+        
+        # return CanonicalJobV1(
+            # source= self.name,
+            # source_job_id=raw_job.get("id"),
+            # job_title_raw=raw_job.get("title"),
+            # company_raw=raw_job.get("company", {}).get("display_name"),
+            # url=raw_job.get("redirect_url"),
+            # location_raw=raw_job.get("location", {}).get("display_name"),
+            # description_raw=raw_job.get("description"),
+            # employment_type_raw=raw_job.get("contract_time"),
+            # contract_type_raw=raw_job.get("contract_type"),
+            # salary_min_raw=raw_job.get("salary_min"),
+            # salary_max_raw=raw_job.get("salary_max"),
+            # currency_raw=None,
+            # posted_at_raw=raw_job.get("created")
+        # )

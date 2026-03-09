@@ -27,26 +27,71 @@ class Dataset:
         
         return sorted(set(partitions))
     
-    def read_partitions(self, spark: SparkSession, partitions: List[date]) -> DataFrame:
+    # def read_partitions(self, spark: SparkSession, partitions: List[date]) -> DataFrame:
         
-        if not partitions:
+        # if not partitions:
+            # raise ValueError(f"No partitions to read for dataset {self.name}")
+        
+        # paths = [
+            # str(f"{self.path}/{self.partition_column}={p}")
+            # for p in partitions
+        # ]
+        # base_path = str(self.path)
+        
+        # if self.file_format == "parquet":
+            # reader = self.storage.read_parquet
+        
+        # elif self.file_format == "jsonl":
+            # reader = self.storage.read_jsonl
+        # else:
+            # raise ValueError(f"Unsupported format {self.file_format}")
+        
+        # return reader(spark=spark, base_path=base_path, paths=paths)
+    
+    def read_partitions(
+        self,
+        spark: SparkSession,
+        partitions: List[date] | None = None,
+        filters: List[date] | None = None,
+    ) -> DataFrame:
+
+        if not partitions and not filters:
             raise ValueError(f"No partitions to read for dataset {self.name}")
-        
-        paths = [
-            str(f"{self.path}/{self.partition_column}={p}")
-            for p in partitions
-        ]
+    
         base_path = str(self.path)
-        
+    
+    
         if self.file_format == "parquet":
-            reader = self.storage.read_parquet
-        
+            spark_reader = spark.read.parquet
+            storage_reader = self.storage.read_parquet
+    
         elif self.file_format == "jsonl":
-            reader = self.storage.read_jsonl
+            spark_reader = spark.read.option("multiline", False).json
+            storage_reader = self.storage.read_jsonl
+    
         else:
             raise ValueError(f"Unsupported format {self.file_format}")
-        
-        return reader(spark=spark, base_path=base_path, paths=paths)
+    
+        if partitions:
+    
+            paths = [
+                f"{base_path}/{self.partition_column}={p}"
+                for p in partitions
+            ]
+    
+            return storage_reader(
+                spark=spark,
+                base_path=base_path,
+                paths=paths
+            )
+    
+        df = spark_reader(base_path)
+    
+        df = df.filter(
+            col(self.partition_column).isin(filters)
+        )
+    
+        return df
     
     
     def write(self, df: DataFrame, mode: Optional[str] = None) -> None:
@@ -75,3 +120,50 @@ class Dataset:
         # available = self.list_partitions()
         # processed = partition_manager.get_processed(stage_name=stage_name)
         # return sorted(set(available) - set(processed))
+
+
+def read_partitions(
+    self,
+    spark: SparkSession,
+    partitions: List[date] | None = None,
+    filters: List[date] | None = None,
+) -> DataFrame:
+
+    if not partitions and not filters:
+        raise ValueError(f"No partitions to read for dataset {self.name}")
+
+    base_path = str(self.path)
+
+
+    if self.file_format == "parquet":
+        spark_reader = spark.read.parquet
+        storage_reader = self.storage.read_parquet
+
+    elif self.file_format == "jsonl":
+        spark_reader = spark.read.option("multiline", False).json
+        storage_reader = self.storage.read_jsonl
+
+    else:
+        raise ValueError(f"Unsupported format {self.file_format}")
+
+
+    if partitions:
+
+        paths = [
+            f"{base_path}/{self.partition_column}={p}"
+            for p in partitions
+        ]
+
+        return storage_reader(
+            spark=spark,
+            base_path=base_path,
+            paths=paths
+        )
+
+    df = spark_reader(base_path)
+
+    df = df.filter(
+        col(self.partition_column).isin(filters)
+    )
+
+    return df
