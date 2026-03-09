@@ -10,12 +10,25 @@ from typing import List, Optional
 class ExecutionParams:
     query: str | None = None
     location: str | None = None
+    country: str | None = None
 
 @dataclass
 class BronzeContext:
     root_path: str
     query: str | None = None
     location: str | None = None
+    country: str | None = None
+
+# @dataclass
+# class ExecutionParams:
+    # query: str | None = None
+    # location: str | None = None
+
+# @dataclass
+# class BronzeContext:
+    # root_path: str
+    # query: str | None = None
+    # location: str | None = None
 
 
 # SILVER CONTEXT

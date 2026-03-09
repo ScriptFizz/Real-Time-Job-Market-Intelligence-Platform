@@ -22,6 +22,7 @@ app = typer.Typer(help="Job postings data pipeline CLI")
 def bronze(
     env: str = typer.Option("dev", help="Environment (dev or prod)"),
     query: str = typer.Option(None, help="Override search query"),
+    country: str = typer.Option(None, help="Override country"),
     location: str = typer.Option(None, help="Override location"),
     config: str = typer.Option("settings.yaml", help="Config file path"),
 ):
@@ -37,6 +38,7 @@ def bronze(
     
     execution = ExecutionParams(
         query=query,
+        country=country,
         location=location
     )
     

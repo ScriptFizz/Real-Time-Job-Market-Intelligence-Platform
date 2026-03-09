@@ -38,7 +38,7 @@ class Storage(ABC):
 class LocalStorage(Storage):
     
     def read_parquet(self, spark: SparkSession, base_path: str, paths: List[str]) -> DataFrame:
-        return spark.read.option("basePath", base_path).parquet(*paths)
+        return spark.read.option("basePath", base_path).parquet(paths)
     
     def write_parquet(self, df, path, mode, partition_cols=None):
         writer = df.write.mode(mode)
@@ -47,7 +47,7 @@ class LocalStorage(Storage):
         writer.parquet(path)
     
     def read_jsonl(self, spark: SparkSession, base_path: str, paths: List[str]) -> DataFrame:
-        return spark.read.option("basePath", base_path).json(*paths)
+        return spark.read.option("basePath", base_path).option("multiLine", False).json(paths)
     
     def write_jsonl(self, records, path: Path) -> int: 
         

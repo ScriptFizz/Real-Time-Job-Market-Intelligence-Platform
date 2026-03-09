@@ -16,8 +16,9 @@ environments:
       gold_v2: ./data/gold_v2
     bronze:
       query: "data engineer"
-      location: "London"
-      max_pages: 10
+      country: "us"
+      location: "Chicago"
+      max_pages: 20
       min_interval_seconds: 2.5
     gold_v1:
       fact_per_job_ratio_threshold: 20

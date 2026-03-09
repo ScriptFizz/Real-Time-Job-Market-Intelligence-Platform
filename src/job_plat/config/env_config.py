@@ -21,8 +21,15 @@ class StorageConfig(BaseModel):
 class BronzeConfig(BaseModel):
     query: Optional[str] = None
     location: Optional[str] = None
+    country: Optional[str] = None
     max_pages: Optional[int] = Field(default=None, gt=0)
     min_interval_seconds: Optional[float] = Field(default=None, gt=0)
+
+# class BronzeConfig(BaseModel):
+    # query: Optional[str] = None
+    # location: Optional[str] = None
+    # max_pages: Optional[int] = Field(default=None, gt=0)
+    # min_interval_seconds: Optional[float] = Field(default=None, gt=0)
 
 class GoldV1Config(BaseModel):
     fact_per_job_ratio_threshold: int
