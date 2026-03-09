@@ -6,10 +6,10 @@ from functools import reduce
 # job_embeddings: 1 row per (job_id, model_version)
 
 def build_job_embeddings(
-    fact_job_skills_df: DataFrame,
+    fact_job_skill_df: DataFrame,
     #dim_skills_df: DataFrame,
     skill_embeddings_df: DataFrame,
-    model_version: str,
+    model_version: str = "v1",
     aggregation_method: str = "weighted_mean"
 ) -> DataFrame:
     """
@@ -27,7 +27,7 @@ def build_job_embeddings(
     
     # Join fact -> skill embeddings
     joined = (
-        fact_job_skills_df
+        fact_job_skill_df
         .join(active_embedding, "skill_id")
         .select(
             "job_id",
@@ -50,7 +50,7 @@ def build_job_embeddings(
                     collect_list(
                         transform(embedding, x -> x * skill_confidence)
                     ),
-                    array_repeat(0.0, first(embedding_dim)),
+                    array_repeat(CAST(0.0 AS DOUBLE), first(embedding_dim)),
                     (acc, x) -> zip_with(acc, x, (a, b) -> a + b)
                 )
             """).alias("weighted_sum")

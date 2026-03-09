@@ -83,23 +83,52 @@ class BaseStage(ABC):
         inputs = {}
         self._input_partitions = {}
         
-        for param, dataset_cls in self.INPUT_MAP.items():
+        for name, dataset_cls in self.INPUT_MAP.items():
             ds = self.datasets.get(dataset_cls)
             
-            partitions = ds.get_available_partitions(
-                partition_manager=self.partition_manager,
-                stage_name=self.STAGE_NAME
-            )
+            # Not partitioned dataset
+            if not ds.partition_columns:
+                df = ds.read_partitions(spark=self.spark)
+                partitions = []
             
-            if partitions:
-                df = ds.read_partitions(spark=self.spark, partitions=partitions)
-            else:
-                df = None
+            else:    
+                partitions = ds.get_available_partitions(
+                    partition_manager=self.partition_manager,
+                    stage_name=self.STAGE_NAME
+                )
+                
+                if partitions:
+                    df = ds.read_partitions(spark=self.spark, partitions=partitions)
+                else:
+                    df = None
             
-            inputs[param] = df
-            self._input_partitions[param] = partitions
+            inputs[name] = df
+            self._input_partitions[name] = partitions
             
         return inputs
+    
+    
+    # def read(self) -> dict:
+        # inputs = {}
+        # self._input_partitions = {}
+        
+        # for name, dataset_cls in self.INPUT_MAP.items():
+            # ds = self.datasets.get(dataset_cls)
+            
+            # partitions = ds.get_available_partitions(
+                # partition_manager=self.partition_manager,
+                # stage_name=self.STAGE_NAME
+            # )
+            
+            # if partitions:
+                # df = ds.read_partitions(spark=self.spark, partitions=partitions)
+            # else:
+                # df = None
+            
+            # inputs[name] = df
+            # self._input_partitions[param] = partitions
+            
+        # return inputs
     
     #------------------------
     # WRITE

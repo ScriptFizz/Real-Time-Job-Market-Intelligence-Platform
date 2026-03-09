@@ -3,7 +3,7 @@ from pyspark.sql.types import (
     StructType, StructField,
     StringType, ArrayType, FloatType
 )
-
+from pyspark.sql import functions as F
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
 from typing import List
@@ -25,27 +25,27 @@ def build_skill_embeddings(
     skills: List[str] = (
         dim_skills_df
         .orderBy("skill_id")
-        .select("skill")
+        .select("skills")
         .rdd
-        .map(lambda r:r.skill)
+        .map(lambda r:r.skills)
         .collect()
     )
     
     model = SentenceTransformer(model_name)
     embeddings = model.encode(skills, show_progress_bar=True)
     
-    embedding_dim = len(embeddings[0]) if embeddings else 0
+    embedding_dim = embeddings.shape[1] if embeddings.size > 0 else 0 #len(embeddings[0]) if embeddings else 0
     
     records = [(skill, emb.tolist()) for skill, emb in zip(skills, embeddings)]
     
     embedding_df = spark.createDataFrame(
         records, 
-        schema=["skill", "embedding"]
+        schema=["skills", "embedding"]
     )
     
     result = (
         dim_skills_df
-        .join(embedding_df, "skill")
+        .join(embedding_df, "skills")
         .withColumn("embedding_dim", F.lit(embedding_dim))
         .withColumn("model_name", F.lit(model_name))
         .withColumn("model_version", F.lit(model_version))
@@ -54,7 +54,7 @@ def build_skill_embeddings(
         .withColumn("is_active", F.lit(True))
         .select(
             "skill_id",
-            "skill",
+            "skills",
             "embedding",
             "embedding_dim",
             "model_name",
@@ -67,6 +67,66 @@ def build_skill_embeddings(
     
     return result
     
+############################# 08-03
+
+# def build_skill_embeddings(
+    # dim_skills_df: DataFrame,
+    # spark: SparkSession,
+    # model_name: str = "all-MiniLM-L6-v2",
+    # model_version: str = "v1",
+    # model_provider: str = "sentence-transformer"
+# ) -> DataFrame:
+    # """
+    # Define embedding of normalized skills to store into Gold layer.
+    # """
+    
+    # # Collect distinct skills
+    # skills: List[str] = (
+        # dim_skills_df
+        # .orderBy("skill_id")
+        # .select("skill")
+        # .rdd
+        # .map(lambda r:r.skill)
+        # .collect()
+    # )
+    
+    # model = SentenceTransformer(model_name)
+    # embeddings = model.encode(skills, show_progress_bar=True)
+    
+    # embedding_dim = len(embeddings[0]) if embeddings else 0
+    
+    # records = [(skill, emb.tolist()) for skill, emb in zip(skills, embeddings)]
+    
+    # embedding_df = spark.createDataFrame(
+        # records, 
+        # schema=["skill", "embedding"]
+    # )
+    
+    # result = (
+        # dim_skills_df
+        # .join(embedding_df, "skill")
+        # .withColumn("embedding_dim", F.lit(embedding_dim))
+        # .withColumn("model_name", F.lit(model_name))
+        # .withColumn("model_version", F.lit(model_version))
+        # .withColumn("model_provider", F.lit(model_provider))
+        # .withColumn("generated_at", F.current_timestamp())
+        # .withColumn("is_active", F.lit(True))
+        # .select(
+            # "skill_id",
+            # "skill",
+            # "embedding",
+            # "embedding_dim",
+            # "model_name",
+            # "model_version",
+            # "model_provider",
+            # "generated_at",
+            # "is_active"
+        # )
+    # )
+    
+    # return result
+
+###########################################
 
 # def build_skill_embeddings(
     # dim_skills_df: DataFrame,

@@ -1,22 +1,47 @@
 from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import col
 from pathlib import Path
+
 
 
 def build_fact_job_skills(
     job_skills_silver_df: DataFrame,
     dim_skills_df: DataFrame,
-) -> None:
+) -> DataFrame:
+
+    js = job_skills_silver_df.alias("js")
+    ds = dim_skills_df.alias("ds")
 
     return (
-        job_skills_silver_df
-        .join(dim_skills_df, "skill")
+        js
+        .join(ds, "skills")
         .select(
-            "job_id",
-            "skill_id",
-            "skill_confidence",
-            "processed_at"
+            col("js.job_id"),
+            col("ds.skill_id"),
+            col("js.skill_confidence"),
+            col("js.processed_at"),
+            col("js.ingestion_date")
         )
     )
+
+
+
+# def build_fact_job_skills(
+    # job_skills_silver_df: DataFrame,
+    # dim_skills_df: DataFrame,
+# ) -> None:
+
+    # return (
+        # job_skills_silver_df
+        # .join(dim_skills_df, "skills")
+        # .select(
+            # "job_id",
+            # "skill_id",
+            # "skill_confidence",
+            # "processed_at",
+            # "ingestion_date"
+        # )
+    # )
 
 
 # def build_fact_job_skills(

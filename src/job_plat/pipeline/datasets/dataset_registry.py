@@ -19,7 +19,7 @@ class DatasetRegistry:
                 name = ds.NAME,
                 path= Path(root) / ds.RELATIVE_PATH,
                 storage=storage,
-                partition_column=getattr(ds, "PARTITION_COLUMN", "ingestion_date"),
+                partition_columns=getattr(ds, "PARTITION_COLUMNS", ["ingestion_date"]),
                 write_mode=getattr(ds, "WRITE_MODE", "append"),
                 file_format=getattr(ds, "FILE_FORMAT", "parquet")
             )
