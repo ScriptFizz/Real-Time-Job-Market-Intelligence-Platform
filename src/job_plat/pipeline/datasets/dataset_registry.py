@@ -1,8 +1,7 @@
 from pathlib import Path
 from job_plat.storage.storages import Storage
 from job_plat.pipeline.datasets.dataset import Dataset
-# class BronzeJobs(Dataset):
-    # name = "bronze_job"
+
 
 class DatasetRegistry:
     
@@ -20,6 +19,7 @@ class DatasetRegistry:
                 path= Path(root) / ds.RELATIVE_PATH,
                 storage=storage,
                 partition_columns=getattr(ds, "PARTITION_COLUMNS", ["ingestion_date"]),
+                time_window_column=getattr(ds, "TIME_WINDOW_COLUMN", ""),
                 write_mode=getattr(ds, "WRITE_MODE", "append"),
                 file_format=getattr(ds, "FILE_FORMAT", "parquet")
             )

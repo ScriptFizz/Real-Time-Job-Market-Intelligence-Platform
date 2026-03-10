@@ -6,6 +6,7 @@ from pyspark.sql.functions import (
     sha2,
     col,
     length,
+    first,
     min
 )
 
@@ -15,16 +16,15 @@ def build_dim_jobs(
 ) -> DataFrame:
     return (
         job_silver_df
-        #.withColumn("ingested_date", to_date(col("ingested_at")))
-        .withColumn("description_length", length(col("description")))
-        .select(
-            "job_id",
-            "source",
-            col("job_title").alias("job_title_clean"),
-            "company",
-            "location",
-            "ingestion_date",
-            "description_length"
+        .groupBy("job_id")
+        .agg(
+            first("source").alias("source"),
+            first("job_title").alias("job_title"),
+            first("company").alias("company"),
+            first("location").alias("location"),
+            first("ingestion_date").alias("ingestion_date"),
+            first("posted_at").alias("posted_at"),
+            first(length("description")).alias("description_length")
         )
     )
     
@@ -40,6 +40,25 @@ def build_dim_skills(
         .withColumn("skill_id", sha2(col("skills"), 256))
     )
 
+###################### 09-03
+
+# def build_dim_jobs(
+    # job_silver_df: DataFrame
+# ) -> DataFrame:
+    # return (
+        # job_silver_df
+        # #.withColumn("ingested_date", to_date(col("ingested_at")))
+        # .withColumn("description_length", length(col("description")))
+        # .select(
+            # "job_id",
+            # "source",
+            # col("job_title").alias("job_title_clean"),
+            # "company",
+            # "location",
+            # "ingestion_date",
+            # "description_length"
+        # )
+    # )
 
 ###################### 08-03
 

@@ -13,6 +13,7 @@ class Dataset:
     path: Path
     storage: Storage
     partition_columns: List[str]  = field(default_factory=lambda: ["ingestion_date"])
+    time_window_column: str | None  = field(default_factory=lambda: None)
     write_mode: Literal["append", "overwrite"] = "append"
     file_format: Literal["parquet", "jsonl"] = "parquet"
     
@@ -118,51 +119,51 @@ class Dataset:
         # return sorted(set(available) - set(processed))
 
 
-def read_partitions(
-    self,
-    spark: SparkSession,
-    partitions: List[date] | None = None,
-    filters: List[date] | None = None,
-) -> DataFrame:
+# def read_partitions(
+    # self,
+    # spark: SparkSession,
+    # partitions: List[date] | None = None,
+    # filters: List[date] | None = None,
+# ) -> DataFrame:
 
-    if not partitions and not filters:
-        raise ValueError(f"No partitions to read for dataset {self.name}")
+    # if not partitions and not filters:
+        # raise ValueError(f"No partitions to read for dataset {self.name}")
 
-    base_path = str(self.path)
-
-
-    if self.file_format == "parquet":
-        spark_reader = spark.read.parquet
-        storage_reader = self.storage.read_parquet
-
-    elif self.file_format == "jsonl":
-        spark_reader = spark.read.option("multiline", False).json
-        storage_reader = self.storage.read_jsonl
-
-    else:
-        raise ValueError(f"Unsupported format {self.file_format}")
+    # base_path = str(self.path)
 
 
-    if partitions:
+    # if self.file_format == "parquet":
+        # spark_reader = spark.read.parquet
+        # storage_reader = self.storage.read_parquet
 
-        paths = [
-            f"{base_path}/{self.partition_column}={p}"
-            for p in partitions
-        ]
+    # elif self.file_format == "jsonl":
+        # spark_reader = spark.read.option("multiline", False).json
+        # storage_reader = self.storage.read_jsonl
 
-        return storage_reader(
-            spark=spark,
-            base_path=base_path,
-            paths=paths
-        )
+    # else:
+        # raise ValueError(f"Unsupported format {self.file_format}")
 
-    df = spark_reader(base_path)
 
-    df = df.filter(
-        col(self.partition_column).isin(filters)
-    )
+    # if partitions:
 
-    return df
+        # paths = [
+            # f"{base_path}/{self.partition_column}={p}"
+            # for p in partitions
+        # ]
+
+        # return storage_reader(
+            # spark=spark,
+            # base_path=base_path,
+            # paths=paths
+        # )
+
+    # df = spark_reader(base_path)
+
+    # df = df.filter(
+        # col(self.partition_column).isin(filters)
+    # )
+
+    # return df
 
 
 ################ 08-03

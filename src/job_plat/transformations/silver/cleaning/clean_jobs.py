@@ -106,7 +106,10 @@ def clean_jobs(df: DataFrame) -> DataFrame:
             "ingested_at",
             to_timestamp(col("ingested_at"), "yyyy-MM-dd'T'HH:mm:ssXXX")
         )
-        
+        .withColumn(
+            "posted_at",
+            to_timestamp(col("posted_at_raw"), "yyyy-MM-dd'T'HH:mm:ssXXX")
+        )
         # Unified schema
         .select(
             col("source"),
@@ -117,7 +120,8 @@ def clean_jobs(df: DataFrame) -> DataFrame:
             col("description"),
             col("url"),
             col("ingested_at"),
-            col("ingestion_date")
+            col("ingestion_date"),
+            col("posted_at")
         )
     )
 
@@ -210,6 +214,56 @@ def robust_deduplicate_jobs(df: DataFrame) -> DataFrame:
         .drop("row_num", "dedup_key")
     )
 
+#################################### 09-03
+
+# def clean_jobs(df: DataFrame) -> DataFrame:
+    # """
+    # Clean and normalize Bronze job data into a Silver-layer schema.
+    
+    # Args:
+      # df (DataFrame): Spark DataFrame of the Bronze layer data.
+    
+    # Returns:
+      # (DataFrame): Cleaned and normalized Spark DataFrame (Silver candidate).
+    # """
+    # return (
+        # df
+        # # Drop broken records
+        # .filter(col("job_title_raw").isNotNull())
+        # .filter(col("description_raw").isNotNull())
+        # .filter(trim(col("job_title_raw")) != "")
+        # .filter(trim(col("description_raw")) != "")
+        
+        # # Normalize text
+        # .withColumn("job_title", lower(trim(col("job_title_raw"))))
+        # .withColumn("company", trim(col("company_raw")))
+        # .withColumn("location", trim(col("location_raw")))
+        
+        # # Clean description text
+        # .withColumn(
+            # "description",
+            # regexp_replace(col("description_raw"), r"\s+", " ")
+        # )
+        
+        # # Standardize timestamp
+        # .withColumn(
+            # "ingested_at",
+            # to_timestamp(col("ingested_at"), "yyyy-MM-dd'T'HH:mm:ssXXX")
+        # )
+        
+        # # Unified schema
+        # .select(
+            # col("source"),
+            # col("source_job_id").alias("job_id"),
+            # col("job_title"),
+            # col("company"),
+            # col("location"),
+            # col("description"),
+            # col("url"),
+            # col("ingested_at"),
+            # col("ingestion_date")
+        # )
+    # )
 
 ##########
 
