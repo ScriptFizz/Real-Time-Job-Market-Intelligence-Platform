@@ -56,7 +56,7 @@ class GoldV2Outputs(StageOutput):
         # "job_cluster_metadata": GoldV2JobClusterMetadata
     # }
     
-    sill_embeddings: DataFrame = field(metadata={"dataset": GoldV2SkillEmbeddings})
+    skill_embeddings: DataFrame = field(metadata={"dataset": GoldV2SkillEmbeddings})
     job_embeddings: DataFrame = field(metadata={"dataset": GoldV2JobEmbeddings})
     job_clusters: DataFrame = field(metadata={"dataset": GoldV2JobClusters})
     job_membership: DataFrame = field(metadata={"dataset": GoldV2JobMembership})

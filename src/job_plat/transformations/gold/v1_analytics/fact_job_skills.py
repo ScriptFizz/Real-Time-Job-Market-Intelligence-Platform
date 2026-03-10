@@ -20,7 +20,8 @@ def build_fact_job_skills(
             col("ds.skill_id"),
             col("js.skill_confidence"),
             col("js.processed_at"),
-            col("js.ingestion_date")
+            col("js.ingestion_date"),
+            col("js.posted_at")
         )
     )
 
