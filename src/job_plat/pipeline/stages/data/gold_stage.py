@@ -1,31 +1,31 @@
 from job_plat.pipeline.core.base_stage import BaseStage
 from pyspark.sql import DataFrame
-from job_plat.context.contexts import SilverContext, GoldV1Context
+from job_plat.context.contexts import SilverContext, GoldContext
 from job_plat.transformations.gold.v1_analytics.build_dimensions import build_dim_jobs, build_dim_skills
 from job_plat.transformations.gold.v1_analytics.fact_job_skills import build_fact_job_skills
 from job_plat.storage.storages import Storage
 from pathlib import Path
 from job_plat.ingestion.metadata import StageExecutionContext
-from job_plat.schemas.output_schemas import GoldV1Outputs
+from job_plat.schemas.output_schemas import GoldOutputs
 from job_plat.pipeline.datasets.dataset_definitions import SilverJobSkills, SilverJobs
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.partitioning.partition_manager import PartitionManager
 
-class GoldV1Stage(BaseStage):
+class GoldStage(BaseStage):
     
-    STAGE_NAME = "gold_v1"
+    STAGE_NAME = "gold"
     INPUT_MAP = {"job_silver_df": SilverJobs, "job_skills_silver_df": SilverJobSkills}
-    OUTPUT_TYPE = GoldV1Outputs
+    OUTPUT_TYPE = GoldOutputs
     
     def __init__(
         self, 
-        gold_v1_ctx: GoldV1Context, 
+        gold_ctx: GoldContext, 
         silver_ctx: SilverContext, 
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,):
-        super().__init__(spark=gold_v1_ctx.spark, datasets=datasets, partition_manager=partition_manager)
+        super().__init__(spark=gold_ctx.spark, datasets=datasets, partition_manager=partition_manager)
         
-        self.gold_v1_ctx = gold_v1_ctx
+        self.gold_ctx = gold_ctx
         self.silver_ctx = silver_ctx
     
     def create_context(self) -> StageExecutionContext:
@@ -39,7 +39,7 @@ class GoldV1Stage(BaseStage):
         self, 
         job_silver_df: DataFrame,
         job_skills_silver_df: DataFrame
-        ) -> GoldV1Outputs:
+        ) -> GoldOutputs:
         
         # Skip transform if no new partitions
         if job_silver_df is None or job_skills_silver_df is None:
@@ -57,13 +57,13 @@ class GoldV1Stage(BaseStage):
             dim_skills_df=dim_skills_df
         )
 
-        return GoldV1Outputs(
+        return GoldOutputs(
             dim_jobs=dim_jobs_df,
             dim_skills=dim_skills_df,
             fact_job_skills=fact_df
         )
         
-    def compute_metrics(self, outputs: GoldV1Outputs) -> dict:
+    def compute_metrics(self, outputs: GoldOutputs) -> dict:
         
         dim_jobs_df = outputs.dim_jobs
         dim_skills_df = outputs.dim_skills
@@ -111,13 +111,13 @@ class GoldV1Stage(BaseStage):
                 extra={"issue": "orphan_facts_detected"}
             )
         
-        if metrics.get("fact_per_job_ratio") > self.gold_v1_ctx.fact_per_job_ratio_threshold:
+        if metrics.get("fact_per_job_ratio") > self.gold_ctx.fact_per_job_ratio_threshold:
             self.logger.warning(
                 "data_anomaly_detected",
                 extra={
                     "issue": "fact_per_job_ratio_high",
                     "value": metrics["fact_per_job_ratio"],
-                    "threshold": self.gold_v1_ctx.fact_per_job_ratio_threshold,
+                    "threshold": self.gold_ctx.fact_per_job_ratio_threshold,
                 }
             )
         

@@ -20,11 +20,12 @@ environments:
       location: "Chicago"
       max_pages: 20
       min_interval_seconds: 2.5
-    gold_v1:
+    gold:
       fact_per_job_ratio_threshold: 20
-    gold_v2:
+    ml:
       min_clusters: 3
       min_silhouette: 0.2
+      window_days: 30
     logging_level: "DEBUG"
 
   prod:
@@ -42,9 +43,10 @@ environments:
     bronze:
       query: "data engineer"
       location: "London"
-    gold_v1:
+    gold:
       fact_per_job_ratio_threshold: 20
-    gold_v2:
+    ml:
       min_clusters: 3
       min_silhouette: 0.2
+      window_days: 30
     logging_level: "INFO"
