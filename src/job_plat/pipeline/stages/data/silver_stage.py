@@ -8,7 +8,7 @@ from pyspark.sql.functions import (
     count, 
     sum
 )
-from job_plat.context.contexts import BronzeContext, SilverContext, PipelineContext
+from job_plat.context.contexts import BronzeContext, SilverContext, DataPipelineContext
 from job_plat.pipeline.core.base_stage import BaseStage
 from job_plat.transformations.silver.enrichment.build_job_skills import run_job_skills
 from job_plat.utils.helpers import union_all
@@ -25,7 +25,7 @@ from job_plat.partitioning.partition_manager import PartitionManager
 
 class SilverStage(BaseStage):
     
-    STAGE_NAME = "silver_jobs"
+    STAGE_NAME = "silver"
     INPUT_MAP = {"job_bronze_df": BronzeJobs}
     OUTPUT_TYPE = SilverOutputs
     

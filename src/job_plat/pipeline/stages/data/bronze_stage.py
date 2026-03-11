@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Iterator, Dict
 from pyspark.sql import DataFrame
-from job_plat.context.contexts import BronzeContext, SilverContext, PipelineContext
+from job_plat.context.contexts import BronzeContext, SilverContext, DataPipelineContext
 from job_plat.pipeline.core.base_source_stage import BaseSourceStage
 from job_plat.storage.storages import Storage
 from job_plat.ingestion.connectors import JobConnector

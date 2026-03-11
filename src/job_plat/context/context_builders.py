@@ -1,12 +1,12 @@
-# from job_plat.utils.io import load_params
-# from job_plat.utils.helpers import create_spark
 from job_plat.context.contexts import (
     ExecutionParams,
     BronzeContext, 
     SilverContext, 
-    GoldV1Context, 
-    GoldV2Context,
-    PipelineContext
+    GoldContext, 
+    DataPipelineContext,
+    FeatureContext,
+    MLContext,
+    MLPipelineContext
     )
 from datetime import date
 from pyspark.sql import SparkSession
@@ -43,11 +43,11 @@ def build_bronze_context(
     )
 
 
-def build_pipeline_context(
+def build_data_pipeline_context(
     execution: ExecutionParams,
     config: EnvironmentConfig,
     spark: SparkSession,
-) -> PipelineContext:
+) -> DataPipelineContext:
     
     final_query = execution.query or config.bronze.query
     final_country = execution.country or config.bronze.country
@@ -65,234 +65,44 @@ def build_pipeline_context(
         spark = spark
     )
     
-    gold_v1_ctx = GoldV1Context(
-        fact_per_job_ratio_threshold = config.gold_v1.fact_per_job_ratio_threshold,
+    gold_ctx = GoldContext(
+        fact_per_job_ratio_threshold = config.gold.fact_per_job_ratio_threshold,
         spark = spark
     )
     
-    gold_v2_ctx = GoldV2Context(
-        min_clusters = config.gold_v2.min_clusters,
-        min_silhouette = config.gold_v2.min_silhouette,
-        spark = spark
-    )
     
-    return PipelineContext(
+    return DataPipelineContext(
         env = config.env,
         spark = spark,
         bronze = bronze_ctx,
         silver = silver_ctx,
-        gold_v1 = gold_v1_ctx,
-        gold_v2 = gold_v2_ctx
+        gold = gold_ctx
+    )
+
+
+def build_ml_pipeline_context(
+    config: EnvironmentConfig,
+    spark: SparkSession,
+) -> MLPipelineContext:
+    
+
+    
+    feature_ctx = FeatureContext(
+        spark = spark,
+        window_days = config.ml.window_days
     )
     
-#################################### 08-03
-
-# def build_bronze_context(
-    # config: EnvironmentConfig,
-    # execution: ExecutionParams,
-# ) -> BronzeContext:
+    ml_ctx = MLContext(
+        min_clusters = config.ml.min_clusters,
+        min_silhouette = config.ml.min_silhouette,
+        spark = spark
+    )
     
-    # final_query = execution.query or config.bronze.query
-    # final_location = execution.location or config.bronze.location
-    # root_path = config.paths.root
-    
-    # missing = []
-    # if not final_query:
-        # missing.append("Query must not be empty")
-    # if not final_location:
-        # missing.append("Location must not be empty")
-    # if missing:
-        # raise ValueError(", ".join(missing))
-    
-    # return BronzeContext(
-        # root_path = root_path,
-        # query = final_query,
-        # location = final_location
-    # )
-
-# def build_pipeline_context(
-    # execution: ExecutionParams,
-    # config: EnvironmentConfig,
-    # spark: SparkSession,
-# ) -> PipelineContext:
-    
-    # final_query = execution.query or config.bronze.query
-    # final_location = execution.location or config.bronze.location
-    # root_path = config.paths.root
-    
-    # bronze_ctx = BronzeContext(
-        # root_path = root_path,
-        # query = final_query,
-        # location = final_location
-    # )
-    
-    # silver_ctx = SilverContext(
-        # spark = spark
-    # )
-    
-    # gold_v1_ctx = GoldV1Context(
-        # fact_per_job_ratio_threshold = config.gold_v1.fact_per_job_ratio_threshold,
-        # spark = spark
-    # )
-    
-    # gold_v2_ctx = GoldV2Context(
-        # min_clusters = config.gold_v2.min_clusters,
-        # min_silhouette = config.gold_v2.min_silhouette,
-        # spark = spark
-    # )
-    
-    # return PipelineContext(
-        # env = config.env,
-        # spark = spark,
-        # bronze = bronze_ctx,
-        # silver = silver_ctx,
-        # gold_v1 = gold_v1_ctx,
-        # gold_v2 = gold_v2_ctx
-    # )
-
-################################### 06-03
+    return MLPipelineContext(
+        env = config.env,
+        spark = spark,
+        feature = feature_ctx,
+        ml = ml_ctx
+    )
 
 
-# def build_bronze_context(
-    # config: EnvironmentConfig,
-    # execution: ExecutionParams,
-# ) -> BronzeContext:
-    
-    # final_query = execution.query or config.bronze.query
-    # final_location = execution.location or config.bronze.location
-    
-    # missing = []
-    # if not final_query:
-        # missing.append("Query must not be empty")
-    # if not final_location:
-        # missing.append("Location must not be empty")
-    # if missing:
-        # raise ValueError(", ".join(missing))
-    
-    # return BronzeContext(
-        # base_path = Path(config.paths.bronze),
-        # query = final_query,
-        # location = final_location
-    # )
-
-
-# def build_pipeline_context(
-    # execution: ExecutionParams,
-    # config: EnvironmentConfig,
-    # spark: SparkSession,
-# ) -> PipelineContext:
-    
-    # final_query = execution.query or config.bronze.query
-    # final_location = execution.location or config.bronze.location
-
-    
-    # bronze_ctx = BronzeContext(
-        # base_path = Path(config.paths.bronze),
-        # query = final_query,
-        # location = final_location
-    # )
-    
-    # silver_ctx = SilverContext(
-        # date_range = execution.date_range,
-        # base_path = config.paths.silver,
-        # spark = spark
-    # )
-    
-    # gold_v1_ctx = GoldV1Context(
-        # date_range = execution.date_range,
-        # base_path = config.paths.gold_v1,
-        # fact_per_job_ratio_threshold = config.gold_v1.fact_per_job_ratio_threshold,
-        # spark = spark
-    # )
-    
-    # gold_v2_ctx = GoldV2Context(
-        # date_range = execution.date_range,
-        # base_path = config.paths.gold_v2,
-        # min_clusters = config.gold_v2.min_clusters,
-        # min_silhouette = config.gold_v2.min_silhouette,
-        # spark = spark
-    # )
-    
-    # return PipelineContext(
-        # #date_range = execution.date_range,
-        # env = config.env,
-        # spark = spark,
-        # bronze = bronze_ctx,
-        # silver = silver_ctx,
-        # gold_v1 = gold_v1_ctx,
-        # gold_v2 = gold_v2_ctx
-        
-    # )
-
-    
-##################################à
-# def build_bronze_context(
-    # pipeline_ctx: PipelineContext,
-    # query: str | None,
-    # location: str | None,
-# ) -> BronzeContext:
-    
-    # final_query = query or pipeline_ctx.bronze.query
-    # final_location = location or pipeline_ctx.bronze.location
-    
-    # missing = []
-    # if not final_query:
-        # missing.append("Query must not be empty")
-    # if not final_location:
-        # missing.append("Location must not be empty")
-    # if missing:
-        # raise ValueError(", ".join(missing))
-    
-    # return BronzeContext(
-        # data_date = pipeline_ctx.data_date,
-        # base_path = pipeline_ctx.bronze.base_path,
-        # query = final_query,
-        # location = final_location
-    # )
-
-
-# def build_pipeline_context(
-    # data_range: DateRange,
-    # config: EnvironmentConfig,
-    # spark: SparkSession
-# ) -> PipelineContext:
-
-    
-    # bronze_ctx = BronzeContext(
-        # #data_date = data_date,
-        # base_path = Path(config.paths.bronze),
-        # query = config.bronze.query,
-        # location = config.bronze.location
-    # )
-    
-    # silver_ctx = SilverContext(
-        # date_range = date_range,
-        # base_path = config.paths.silver,
-        # spark = spark
-    # )
-    
-    # gold_v1_ctx = GoldV1Context(
-        # date_range = date_range,
-        # base_path = config.paths.gold_v1,
-        # fact_per_job_ratio_threshold = config.gold_v1.fact_per_job_ratio_threshold,
-        # spark = spark
-    # )
-    
-    # gold_v2_ctx = GoldV2Context(
-        # date_range = date_range,
-        # base_path = config.paths.gold_v2,
-        # min_clusters = config.gold_v2.min_clusters,
-        # min_silhouette = config.gold_v2.min_silhouette,
-        # spark = spark
-    # )
-    
-    # return PipelineContext(
-        # date_range = date_range,
-        # env = config.env,
-        # spark = spark,
-        # bronze = bronze_ctx,
-        # silver = silver_ctx,
-        # gold_v1 = gold_v1_ctx,
-        # gold_v2 = gold_v2_ctx
-        
-    # )
