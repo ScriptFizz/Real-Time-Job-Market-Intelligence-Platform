@@ -17,7 +17,6 @@ def test_gold_stage_runs(
     stage = GoldStage(
         gold_ctx=gold_ctx,
         silver_ctx=silver_ctx,
-        #spark=spark,
         datasets=dataset_registry,
         partition_manager=partition_manager
     )
@@ -36,6 +35,3 @@ def test_gold_stage_runs(
     assert gold_dim_jobs_df.count() > 0
     assert gold_dim_skills_df.count() > 0
     assert gold_fact_job_skills_df.count() > 0
-    # assert "job_title" in silver_jobs_df.columns
-    # assert "skills" in silver_job_skills_df.columns
-    # assert len(silver_jobs.list_partitions()) == 1

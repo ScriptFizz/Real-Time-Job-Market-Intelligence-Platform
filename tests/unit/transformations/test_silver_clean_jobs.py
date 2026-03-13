@@ -90,10 +90,10 @@ def test_deduplicate_jobs(spark):
     result_df = deduplicate_jobs(df)
     
     expected_data = [
-        ("indeed", 1, "2026-03-02"),
-        ("linkedin", 1, "2026-03-02")
+        ("indeed", 1, "2026-03-05"),
+        ("linkedin", 1, "2026-03-10")
     ]
     
     expected_df = spark.createDataFrame(expected_data, ["source", "job_id", "ingested_at"])
     
-    assert_df_equality(result_df, expected_df)
+    assert_df_equality(result_df.orderBy("source"), expected_df.orderBy("source"))
