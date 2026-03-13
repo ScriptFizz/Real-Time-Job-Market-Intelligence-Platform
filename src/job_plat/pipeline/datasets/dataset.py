@@ -93,13 +93,23 @@ class Dataset:
         
         partition_cols = self.partition_columns if self.partition_columns else None
         
-        self.storage.write_parquet(
-            df=df,
-            path=str(self.path),
-            partition_cols=partition_cols,
-            mode=actual_mode
-        )
-
+        if self.file_format == "parquet":
+            self.storage.write_parquet(
+                df=df,
+                path=str(self.path),
+                partition_cols=partition_cols,
+                mode=actual_mode
+            )
+        elif self.file_format == "jsonl":
+            self.storage.write_df_to_json(
+                df=df,
+                path=str(self.path),
+                partition_cols=partition_cols,
+                mode=actual_mode 
+            )
+        else:
+            raise ValueError(f"Unsupported format {self.file_format}")
+            
     def get_available_partitions(self, partition_manager: PartitionManager, stage_name: str) -> List[date]:
         available = self.list_partitions()
         processed = partition_manager.get_processed(stage_name=stage_name)
