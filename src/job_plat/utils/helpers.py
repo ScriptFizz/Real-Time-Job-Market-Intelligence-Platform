@@ -89,6 +89,11 @@ def path_exists(spark: SparkSession, path: str | Path) -> bool:
         return False
 
 
+
+def assert_df_equality(df1, df2):
+    assert sorted(df1.collect()) == sorted(df2.collect())
+
+
 # def build_indeed_url(
     # query str,
     # location: str

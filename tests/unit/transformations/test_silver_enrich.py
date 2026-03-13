@@ -1,4 +1,4 @@
-from job_plat.silver.enrichment.extract_skills import extract_skills, normalize_skills
+from job_plat.transformations.silver.enrichment.extract_skills import extract_skills, normalize_skills
 
 def test_extract_skills():
     tokens = "We require Python and Spark experience".lower().split()
