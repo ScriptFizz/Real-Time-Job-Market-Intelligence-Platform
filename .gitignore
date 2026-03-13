@@ -1,9 +1,11 @@
 # Data
-/data/
-/metadata/
-/metadata/*
+data/*
+!data/.gitkeep
+metadata/*
+!metadata/.gitkeep
+
 # Test fixture
-/tests/fixtures/
+#/tests/fixtures/
 
 # Logs
 /logs/
