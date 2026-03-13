@@ -86,7 +86,7 @@ def deduplicate_jobs(df: DataFrame) -> DataFrame:
     """
     df_valid = df.filter(col("job_id").isNotNull())
     
-    # If the same job appears multiple times, keep the most recent post
+    # If the same job appears multiple times, keep the most recent ingestion
     window_spec = (
         Window
         .partitionBy("source", "job_id")
