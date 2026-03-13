@@ -3,8 +3,9 @@
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
 [![Poetry](https://img.shields.io/badge/poetry-managed-brightgreen.svg)](https://python-poetry.org/)
 [![PySpark](https://img.shields.io/badge/Spark-3.5-orange.svg)](https://spark.apache.org/)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)]
 
-A production-style **data engineering and ML pipeline** to ingest, transform, and analyze job postings from public APIs (ADZuna, USAJobs) using a **medallion architecture** (Bronze → Silver → Gold) and perform **job clustering with embeddings**.
+A production-style **data engineering and ML platform** that ingests job postings from ADZuna and USAJobs, cleans, enriches, and transforms the data into an analytics-ready star schema. Includes ML pipelines for **skill/job embeddings** and **dynamic job clustering**. Built with **PySpark**, **Poetry**, **pytest**, and a Typer CLI for flexible execution.
 
 ---
 
@@ -97,126 +98,26 @@ flowchart LR
 ## Project Structure 
 
 ```
-├── data
-├── docs
-│   ├── docs
-│   │   ├── getting-started.md
-│   │   └── index.md
-│   ├── mkdocs.yml
-│   └── README.md
-├── logs
-│   ├── error.log
-│   └── info.log
-├── Makefile
-├── metadata
-│   └── partitions_metadata.json
-├── models
-├── mypy.ini
-├── notebooks
-├── poetry.lock
-├── pyproject.toml
-├── README.md
-├── reports
-│   └── figures
-├── ruff.toml
-├── settings.yaml
-├── src
-│   └── job_plat
-│       ├── cli.py
-│       ├── config
-│       │   ├── config_loader.py
-│       │   ├── env_config.py
-│       │   ├── __init__.py
-│       │   ├── logconfig.py
-│       ├── context
-│       │   ├── context_builders.py
-│       │   ├── contexts.py
-│       ├── ingestion
-│       │   ├── connectors.py
-│       │   ├── job_schema.py
-│       │   ├── metadata.py
-│       │   └── search_criteria.py
-│       ├── __init__.py
-│       ├── orchestration
-│       │   ├── data_pipeline.py
-│       │   ├── ml_pipeline.py
-│       ├── partitioning
-│       │   ├── partition_manager.py
-│       ├── pipeline
-│       │   ├── core
-│       │   │   ├── base_model_stage.py
-│       │   │   ├── base_source_stage.py
-│       │   │   ├── base_stage.py
-│       │   │   └── read_strategy.py
-│       │   ├── datasets
-│       │   │   ├── dataset_definitions.py
-│       │   │   ├── dataset.py
-│       │   │   ├── dataset_registry.py
-│       │   └── stages
-│       │       ├── data
-│       │       │   ├── bronze_stage.py
-│       │       │   ├── gold_stage.py
-│       │       │   └── silver_stage.py
-│       │       ├── ml
-│       │       │   ├── feature_stage.py
-│       │       │   ├── ml_stage.py
-│       ├── schemas
-│       │   ├── output_schemas.py
-│       ├── storage
-│       │   └── storages.py
-│       ├── transformations
-│       │   ├── bronze
-│       │   │   └── validation
-│       │   │       └── validate.py
-│       │   ├── gold
-│       │   │   ├── v1_analytics
-│       │   │   │   ├── build_dimensions.py
-│       │   │   │   ├── fact_job_skills.py
-│       │   │   └── v2_intelligence
-│       │   │       ├── clusters
-│       │   │       │   ├── build_job_clusters.py
-│       │   │       └── embeddings
-│       │   │           ├── build_job_embeddings.py
-│       │   │           ├── build_skill_embeddings.py
-│       │   │           ├── embedding_skill_normalizer.py
-│       │   └── silver
-│       │       ├── cleaning
-│       │       │   ├── clean_jobs.py
-│       │       ├── enrichment
-│       │       │   ├── build_job_skills.py
-│       │       │   ├── extract_skills.py
-│       │       │   ├── skills.py
-│       │       │   └── spark_ops.py
-│       │       └── validation
-│       │           └── quality_checks.py
-│       └── utils
-│           ├── helpers.py
-│           ├── __init__.py
-│           ├── io.py
-└── tests
-    ├── conftest.py
-    ├── fixtures
-    │   ├── contexts.py
-    │   ├── datasets.py
-    │   ├── partition_manager.py
-    │   ├── sample_dataframe.py
-    │   └── sample_data.py
-    ├── integration
-    │   ├── test_gold_stage.py
-    │   └── test_silver_stage.py
-    └── unit
-        ├── datasets
-        │   ├── test_dataset.py
-        │   └── test_partition_manager.py
-        ├── read_strategy
-        │   └── test_read_strategy.py
-        ├── test_clean_extract.py
-        ├── test_stages.py
-        ├── test_write_jsonl.py
-        └── transformations
-            ├── test_gold_dim_jobs.py
-            ├── test_silver_clean_jobs.py
-            └── test_silver_enrich.py
+my_project/
+├── data/ # Raw and processed datasets
+├── docs/ # Documentation (mkdocs)
+├── logs/ # Logs for pipeline runs
+├── models/ # ML models and embeddings
+├── notebooks/ # Exploratory notebooks
+├── reports/ # Figures, metrics, and reports
+├── settings.yaml # Runtime configuration
+├── pyproject.toml # Poetry project config
+├── src/job_plat/ # Main source code
+│ ├── cli.py # CLI entry points
+│ ├── config/ # Config loaders and logging setup
+│ ├── context/ # Stage context builders
+│ ├── ingestion/ # API connectors and raw schema
+│ ├── orchestration/ # Pipeline runners
+│ ├── partitioning/ # Partition management
+│ ├── pipeline/ # Stages (Bronze, Silver, Gold, ML)
+│ ├── transformations/ # ETL and ML transformations
+│ └── utils/ # Helpers and I/O utilities
+└── tests/ # Unit and integration tests
 
 ```
 
