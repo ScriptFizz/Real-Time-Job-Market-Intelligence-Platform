@@ -7,13 +7,17 @@ def test_silver_stage_runs(
     spark,
     dataset_registry,
     partition_manager,
-    bronze_jobs_data
+    bronze_jobs_data,
+    bronze_ctx,
+    silver_ctx
 ):
     
     stage = SilverStage(
-        spark,
-        dataset_registry,
-        partition_manager
+        silver_ctx=silver_ctx,
+        bronze_ctx=bronze_ctx,
+        #spark=spark,
+        datasets=dataset_registry,
+        partition_manager=partition_manager
     )
     
     stage.execute()

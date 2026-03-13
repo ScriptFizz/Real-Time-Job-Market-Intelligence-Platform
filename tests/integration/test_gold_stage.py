@@ -9,13 +9,17 @@ def test_gold_stage_runs(
     dataset_registry,
     partition_manager,
     silver_jobs_data,
-    silver_job_skills_data
+    silver_job_skills_data,
+    silver_ctx,
+    gold_ctx
 ):
     
     stage = GoldStage(
-        spark,
-        dataset_registry,
-        partition_manager
+        gold_ctx=gold_ctx,
+        silver_ctx=silver_ctx,
+        #spark=spark,
+        datasets=dataset_registry,
+        partition_manager=partition_manager
     )
     
     stage.execute()
