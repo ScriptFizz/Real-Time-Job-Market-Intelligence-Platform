@@ -1,4 +1,4 @@
-from job_plat.utils.storage import LocalStorage
+from job_plat.storage.storages import LocalStorage
 
 def test_write_jsonl(tmp_path):
     storage = LocalStorage()

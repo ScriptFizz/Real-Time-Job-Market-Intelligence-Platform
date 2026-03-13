@@ -11,3 +11,10 @@ def spark():
     )
     yield spark
     spark.stop()
+
+pytest_plugins = [
+    "fixtures.datasets",
+    "fixtures.sample_dataframe",
+    "fixtures.sample_data",
+    "fixtures.partition_manager",
+]
