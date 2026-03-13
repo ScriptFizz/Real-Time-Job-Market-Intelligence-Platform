@@ -1,6 +1,7 @@
 # Data
 /data/
 /metadata/
+/metadata/*
 # Test fixture
 /tests/fixtures/
 
