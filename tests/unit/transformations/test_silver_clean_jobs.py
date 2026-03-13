@@ -28,6 +28,7 @@ from job_plat.transformations.silver.cleaning.clean_jobs import clean_jobs, dedu
         },
         {
             "job_title": "ml scientist",
+            "description": " a description with spaces and capitalization",
             "company": "Datalyst",
             "location": "Los Angeles"
         }
@@ -43,6 +44,8 @@ def test_clean_jobs(spark, input_row, expected):
         input_row["description_raw"],
         input_row["company_raw"],
         input_row["location_raw"],
+        "2024-01-02T10:00:00+00:00",
+        "2024-01-02",
         "2024-01-01T10:00:00+00:00",
         "linkedin",
         "123",
@@ -54,9 +57,11 @@ def test_clean_jobs(spark, input_row, expected):
         "description_raw",
         "company_raw",
         "location_raw",
-        "scraped_at",
+        "ingested_at",
+        "ingestion_date",
+        "posted_at_raw",
         "source",
-        "job_id",
+        "source_job_id",
         "url"
     ])
     
@@ -67,7 +72,7 @@ def test_clean_jobs(spark, input_row, expected):
     assert row["description"] == expected["description"]
     assert row["company"] == expected["company"]
     assert row["location"] == expected["location"]
-    assert row["scraped_at"] is not None
+    assert row["posted_at"] is not None
 
 
 

@@ -17,4 +17,5 @@ pytest_plugins = [
     "fixtures.sample_dataframe",
     "fixtures.sample_data",
     "fixtures.partition_manager",
+    "fixtures.contexts"
 ]

@@ -1,10 +1,12 @@
 import pytest
 from datetime import date
+from types import SimpleNamespace
+from job_plat.pipeline.core.read_strategy import IncrementalReadStrategy
 
 class FakeDataset:
     partition_columns = ["ingestion_date"]
     
-    def get_available_partitions(self, partition_manager, stagge_name):
+    def get_available_partitions(self, partition_manager, stage_name):
         return [date(2025, 3, 1)]
     
     def read_partitions(self, spark, partitions):

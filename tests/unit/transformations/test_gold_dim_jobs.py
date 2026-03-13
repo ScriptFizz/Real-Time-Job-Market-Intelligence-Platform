@@ -41,12 +41,12 @@ def test_build_dim_jobs(spark):
 )
 def test_description_length(spark, description, expected_len):
     
-    df = spar.createDataFrame(
+    df = spark.createDataFrame(
         [(1, "linkedin", "title", "comp", "loc", "2026-01-01", "2026-01-01", description)],
         ["job_id","source","job_title","company","location","ingestion_date","posted_at","description"]
     ) 
     
-    result = build_dim_jobs(df).collect()[0]
+    result =  build_dim_jobs(df).first() # build_dim_jobs(df).collect()[0]
     
     assert result["description_length"] == expected_len 
     
@@ -69,7 +69,7 @@ def test_build_dim_skills(spark):
         ("docker", "2026-02-02")
     ]
 
-    expected_df = spark.createDataFrame(expected_data ["skills", "ingestion_date"])\
+    expected_df = spark.createDataFrame(expected_data, ["skills", "ingestion_date"])\
         .withColumn("skill_id", sha2(col("skills"), 256))
     
     assert_df_equality(result_df, expected_df)

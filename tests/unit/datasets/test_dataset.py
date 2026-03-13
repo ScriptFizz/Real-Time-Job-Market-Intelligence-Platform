@@ -16,6 +16,7 @@ def test_list_partitions(spark, tmp_path):
     
     df = spark.createDataFrame(
         [(1, "2025-03-01"), (2, "2025-03-02")],
+        ["job_id", "ingestion_date"]
     )
     
     ds.write(df)

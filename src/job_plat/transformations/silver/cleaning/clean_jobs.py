@@ -47,7 +47,7 @@ def clean_jobs(df: DataFrame) -> DataFrame:
         # Clean description text
         .withColumn(
             "description",
-            lower(regexp_replace(col("description_raw"), r"\s+", " "))
+            lower(trim(regexp_replace(col("description_raw"), r"\s+", " ")))
         )
         
         # Standardize timestamp
