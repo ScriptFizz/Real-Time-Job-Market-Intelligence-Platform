@@ -61,10 +61,15 @@ class LocalStorage(Storage):
                 tmp.write(json.dumps(record) + "\n")
                 count += 1
         
-        #os.replace(tmp_path, path)
         shutil.move(str(tmp_path), str(path))
          
         return count
+    
+    def write_df_to_json(self, df, path, mode, partition_cols=None):
+        writer = df.write.mode(mode).option("compression", "none")
+        if partition_cols:
+            writer = writer.partitionBy(*partition_cols)
+        writer.json(path)
     
     def list_dirs(self, path: str | Path, pattern: str) -> List:
         return Path(path).glob(pattern)

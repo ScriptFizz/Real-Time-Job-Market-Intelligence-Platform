@@ -2,6 +2,10 @@ import pytest
 from job_plat.utils.helpers import assert_df_equality
 from pyspark.sql import SparkSession
 from job_plat.transformations.gold.v1_analytics.build_dimensions import build_dim_jobs, build_dim_skills
+from pyspark.sql.functions import (
+    col,
+    sha2
+)
 
 
 def test_build_dim_jobs(spark):

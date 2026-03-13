@@ -15,7 +15,7 @@ from job_plat.transformations.silver.cleaning.clean_jobs import clean_jobs, dedu
         {
             "job_title": "data engineer",
             "company": "ACME",
-            "description": " a description with spaces",
+            "description": "a description with spaces",
             "location": "Berlin"
         }
     ),
@@ -28,7 +28,7 @@ from job_plat.transformations.silver.cleaning.clean_jobs import clean_jobs, dedu
         },
         {
             "job_title": "ml scientist",
-            "description": " a description with spaces and capitalization",
+            "description": "a description with spaces and capitalization",
             "company": "Datalyst",
             "location": "Los Angeles"
         }
