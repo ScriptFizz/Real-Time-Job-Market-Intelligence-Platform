@@ -50,7 +50,7 @@ def test_description_length(spark, description, expected_len):
         ["job_id","source","job_title","company","location","ingestion_date","posted_at","description"]
     ) 
     
-    result =  build_dim_jobs(df).first() # build_dim_jobs(df).collect()[0]
+    result =  build_dim_jobs(df).first() 
     
     assert result["description_length"] == expected_len 
     
@@ -77,102 +77,3 @@ def test_build_dim_skills(spark):
         .withColumn("skill_id", sha2(col("skills"), 256))
     
     assert_df_equality(result_df, expected_df)
-
-
-
-
-################################
-
-
-# @pytest.mark.parametrize(
-    # "input_rows", "expected",
-    # [(
-        # [{
-            # "job_id": 123,
-            # "source": "linkedin",
-            # "job_title": "data engineer ",
-            # "company": "ACME",
-            # "location": "Berlin",
-            # "ingestion_date": "05/03/2026",
-            # "posted_at": "03/03/2026",
-            # "description": "this is not an empty description"
-        # },
-        # {
-        
-            # "job_id": 456,
-            # "source": "indeed",
-            # "job_title": "ml engineer ",
-            # "company": "Google",
-            # "location": "Austin",
-            # "ingestion_date": "06/03/2026",
-            # "posted_at": "02/03/2026",
-            # "description": "this is not an empty description"
-        # },
-        # {
-            # "job_id": 123,
-            # "source": "linkedin",
-            # "job_title": "data engineer",
-            # "company": "ACME S.p.a.",
-            # "location": "Berlin",
-            # "ingestion_date": "08/03/2026",
-            # "posted_at": "05/03/2026",
-            # "description": "this is not an empty description too"
-        # }
-        
-        # ],
-        # [
-        # {
-            # "job_id": 123,
-            # "source": " a    description with  spaces ",
-            # "job_title": " ACME ",
-            # "company": "ACME",
-            # "location": "Berlin",
-            # "ingestion_date": ,
-            # "posted_at" "",
-            # "description_length": len("this is not an empty description")
-        # },
-        # {
-        
-            # "job_id": 456,
-            # "source": "indeed",
-            # "job_title": "ml engineer ",
-            # "company": "Google",
-            # "location": "Austin",
-            # "ingestion_date": "06/03/2026",
-            # "posted_at": "02/03/2026",
-            # "description": "this is not an empty description"
-        # }
-        # ]
-    # )
-    
-    # ]
-# )
-# def test_build_dim_jobs(spark, input_rows, expected):
-    
-    # data = [(
-            # row["job_id"],
-            # row["source"],
-            # row["job_title"],
-            # row["company"],
-            # row["location"],
-            # row["ingestion_date"],
-            # row["posted_at"],
-            # row["description"]
-    # ) for row in input_rows]
-
-    # df = spark.createDataFrame(data, [
-            # "job_id",
-            # "source",
-            # "job_title",
-            # "company",
-            # "location",
-            # "ingestion_date",
-            # "posted_at",
-            # "description"
-    # ])
-    
-    # result = build_dim_jobs(df)
-    # rows = result.collect()
-    
-    # assert len(rows) == 2
-    # assert all(x >= 0 for x in rows["description_length"])

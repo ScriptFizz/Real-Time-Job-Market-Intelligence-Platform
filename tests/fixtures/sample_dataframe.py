@@ -64,66 +64,6 @@ def job_bronze_df(spark):
 
     return spark.createDataFrame(data, schema)
 
-# @pytest.fixture
-# def job_bronze_df(spark):
-    
-    # data = [(
-        # {"source": "linkedin", 
-        # "source_job_id": 2, 
-        # "job_title_raw": "  Data Engineer ", 
-        # "company_raw": " ACME ", 
-        # "location_raw": " Berlin", 
-        # "description_raw": " a    python with  docker  and sql ", 
-        # "url": "http://myurl.co", 
-        # "employment_type_raw": "full-time", 
-        # "contract_type_raw": "indeterminate", 
-        # "salary_min_raw": 12000, 
-        # "salary_max_raw": 19000, 
-        # "currency_raw": "euro", 
-        # "posted_at_raw": "2026-03-01"}, 
-        # "2026-03-01",
-        # 123, 
-        # {"started_at": "2026-03-01T10:00:00+00:00"}
-        # )
-    # ]
-    
-    # columns = [
-        # "payload",
-        # "ingestion_date",
-        # "run_id",
-        # "ingestion_metadata"
-        # ]
-    
-    # return spark.createDataFrame(data, columns)
-
-
-
-# @pytest.fixture
-# def bronze_jobs_df(spark):
-    
-    # data = [
-        # ("linkedin", 2, "  Data Engineer ", " ACME ",  " Berlin", " a    python with  docker  and sql ",
-        # "url", "full-time", "indeterminate", 12000, 19000, "euro", "2026-03-01", "2026-03-01")
-    # ]
-    
-    # columns = [
-        # "source", 
-        # "source_job_id", 
-        # "job_title_raw", 
-        # "company_raw", 
-        # "location_raw", 
-        # "description_raw", 
-        # "url", 
-        # "employment_type_raw", 
-        # "contract_type_raw", 
-        # "salary_min_raw", 
-        # "salary_max_raw", 
-        # "currency_raw", 
-        # "posted_at_raw",
-        # "ingestion_date"
-        # ]
-    
-    # return spark.createDataFrame(data, columns)
     
 @pytest.fixture
 def silver_jobs_df(spark):
@@ -169,16 +109,16 @@ def silver_job_skills_df(spark):
 
     return spark.createDataFrame(data, columns)
 
-# @pytest.fixture
-# def silver_job_skills_df(spark):
+
+@pytest.fixture
+def gold_dim_skills_df(spark):
+    data = [
+         (1, "python", "2026-03-01"),
+        (2, "spark", "2026-03-01"),
+        (3, "aws", "2026-03-02"),
+        (4, "docker", "2026-03-02")
+    ]
+
+    columns = ["skill_id", "skills", "ingestion_date"]
     
-    # data = [
-        # ("python", "2026-03-01"),
-        # ("spark", "2026-03-02"),
-        # ("python", "2026-03-02"),
-        # ("docker", "2026-03-01"),
-    # ]
-    
-    # columns = ["skills", "ingestion_date"]
-    
-    # return spark.createDataFrame(data, columns)
+    return spark.createDataFrame(data, columns)
