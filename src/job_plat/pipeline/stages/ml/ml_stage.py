@@ -1,6 +1,6 @@
 from job_plat.pipeline.core.base_stage import BaseStage
 from job_plat.context.contexts import FeatureContext, MLContext
-from job_plat.transformations.gold.v2_intelligence.clusters.build_job_clusters import build_job_clusters
+from job_plat.transformations.ml.clusters.build_job_clusters import build_job_clusters
 from job_plat.storage.storages import Storage
 from pyspark.sql import DataFrame
 from job_plat.ingestion.metadata import StageExecutionContext
