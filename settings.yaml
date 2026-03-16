@@ -37,6 +37,8 @@ environments:
     storage:
       type: "gcs"
     paths:
+      root: gs://job-pipeline
+      metadata: gs://job-pipeline/metadata
       bronze: gs://job-pipeline/bronze
       silver: gs://job-pipeline/silver
       gold: gs://job-pipeline/gold

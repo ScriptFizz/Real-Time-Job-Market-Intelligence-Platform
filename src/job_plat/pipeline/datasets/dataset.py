@@ -10,7 +10,7 @@ from job_plat.partitioning.partition_manager import PartitionManager
 @dataclass
 class Dataset:
     name: str
-    path: Path
+    path: str
     storage: Storage
     partition_columns: List[str]  = field(default_factory=lambda: ["ingestion_date"])
     time_window_column: str | None  = field(default_factory=lambda: None)
@@ -29,7 +29,7 @@ class Dataset:
         partitions = []
         
         for p in dirs:
-            value = p.name.split("=")[1]
+            value = Path(p).name.split("=")[1]
             partitions.append(date.fromisoformat(value))
         
         return sorted(set(partitions))

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from pyspark.sql import DataFrame, SparkSession
 import logging
 import time
+from pathlib import Path
 from job_plat.pipeline.core.read_strategy import ReadStrategy, IncrementalReadStrategy
 from job_plat.pipeline.datasets.dataset_definitions import DatasetDef
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
@@ -139,7 +140,7 @@ class BaseStage(ABC):
         missing = []
         for dataset_cls in self.INPUT_MAP.values():
             ds = self.datasets.get(dataset_cls)
-            if not ds.path.exists():
+            if not Path(ds.path).exists():
                 missing.append(str(ds.path))
             
         if missing:
