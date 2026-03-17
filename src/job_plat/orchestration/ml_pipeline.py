@@ -18,7 +18,6 @@ def run_feature_pipeline(
     partition_manager: PartitionManager
 ) -> None:
     stage = FeatureStage(
-        #gold_ctx = ctx.gold,
         feature_ctx = ctx.feature,
         datasets = datasets,
         partition_manager = partition_manager
@@ -35,7 +34,6 @@ def run_ml_pipeline(
     partition_manager: PartitionManager
 ) -> None:
     stage = MLStage(
-        #feature_ctx = ctx.feature,
         ml_ctx = ctx.ml,
         datasets = datasets,
         partition_manager = partition_manager

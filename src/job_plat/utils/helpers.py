@@ -5,6 +5,18 @@ from urllib.parse import urlencode
 from job_plat.config.env_config import SparkConfig
 from datetime import datetime
 
+from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
+from job_plat.pipeline.datasets.dataset_definitions import DATASET_DEFS
+from job_plat.config.config_loader import ConfigLoader
+from job_plat.ingestion.connectors import build_connectors
+from job_plat.context.contexts import ExecutionParams
+from job_plat.config.logconfig import setup_logging
+from job_plat.storage.storages import get_storage
+from job_plat.utils.helpers import create_spark, parse_date
+from job_plat.context.context_builders import build_bronze_context, build_data_pipeline_context, build_ml_pipeline_context
+
+
 class StageSkip(Exception):
     pass
 
@@ -35,29 +47,6 @@ def create_spark(
         builder = builder.config(key, value)
     
     return builder.getOrCreate()
-
-
-# def create_spark(
-    # app_name: str,
-    # master_url: str = "local[*]"
-# ) -> SparkSession:
-    # """
-    # Create a SparkSession with a specific application name and master URL.
-    
-    # Args:
-        # app_name (str): Name of the application to create.
-        # master_url(str): Master URL of the application to create.
-        
-    # Returns:
-        # (SparkSession): Entry point to programming Spark.
-    # """
-    # return (
-        # SparkSession.builder
-        # .appName(app_name)
-        # .master(master_url)
-        # .getOrCreate()
-    # )
-
 
 
 def union_all(dfs: list[DataFrame]) -> DataFrame:
@@ -94,24 +83,28 @@ def assert_df_equality(df1, df2):
     assert sorted(df1.collect()) == sorted(df2.collect())
 
 
-# def build_indeed_url(
-    # query str,
-    # location: str
-    # ) -> str:
-    # """
+
+def build_common(env: str = "dev", config_path: str = "settings.yaml"):
+        
+    config_loader = ConfigLoader(config_path=config_path, env=env)
+    env_config = config_loader.load_env()
     
-    # """
-    # missing = []
-    # if not query:
-        # missing.append("Missing job role")
-    # if not location:
-        # missing.append("Missing location")
+    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
+    setup_logging(log_level=log_level)
     
-    # if missing:
-        # raise ValueError(f"Incomplete data: {', '.join(missing)}")
+    spark = create_spark(env_config.spark)
+    storage = get_storage(env_config.storage.type)
     
-    # params = {
-        # "q": query,
-        # "l": location
-    # }
-    # return f"https://www.indeed.com/jobs?{urlencode(params)}"
+    datasets = DatasetRegistry(
+        root = env_config.paths.rootm
+        storage = storage,
+        dataset_defs = DATASET_DEFS
+    )
+    
+    partition_manager = PartitionManager(
+        metadata_path = env_config.paths.metadata
+    )
+    
+    connectors = build_connectors(env_config)
+    
+    return env_config, spark, storage, datasets, partition_manager, connectors
