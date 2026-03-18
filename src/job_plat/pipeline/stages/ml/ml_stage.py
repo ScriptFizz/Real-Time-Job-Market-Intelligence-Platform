@@ -3,7 +3,7 @@ from job_plat.context.contexts import FeatureContext, MLContext
 from job_plat.transformations.ml.clusters.build_job_clusters import build_job_clusters
 from job_plat.storage.storages import Storage
 from pyspark.sql import DataFrame
-from job_plat.ingestion.metadata import StageExecutionContext
+from job_plat.context.contexts import StageExecutionContext
 from pyspark.sql.functions import countDistinct, avg
 from job_plat.schemas.output_schemas import MLOutputs
 from job_plat.pipeline.datasets.dataset_definitions import FeatureJobEmbeddings, FeatureSkillEmbeddings
@@ -22,9 +22,8 @@ class MLStage(BaseStage):
         ml_ctx: MLContext,
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,):
-        super().__init__(spark=ml_ctx.spark, datasets=datasets, partition_manager=partition_manager, ctx=ml_ctx)
-        #self.feature_ctx = feature_ctx
-        # self.ml_ctx = ml_ctx
+        super().__init__(datasets=datasets, partition_manager=partition_manager, ctx=ml_ctx)
+
         
     def create_context(self) -> StageExecutionContext:
         run_context = StageExecutionContext(
@@ -41,7 +40,7 @@ class MLStage(BaseStage):
         
         
         self.logger.info("building_clusters_data")
-        job_membership_df, job_clusters_df, job_centroids_df, job_metadata_df = build_job_clusters(spark=self.ctx.spark, job_embeddings_df=job_embeddings_df)
+        job_membership_df, job_clusters_df, job_centroids_df, job_metadata_df = build_job_clusters(spark=self.spark, job_embeddings_df=job_embeddings_df)
         
         return MLOutputs(
             job_clusters=job_clusters_df,

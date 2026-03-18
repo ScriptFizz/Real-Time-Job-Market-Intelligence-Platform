@@ -9,7 +9,7 @@ from job_plat.pipeline.datasets.dataset_definitions import DatasetDef
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.config.logconfig import ContextLogger
 from job_plat.storage.storages import Storage
-from job_plat.ingestion.metadata import StageExecutionContext
+from job_plat.context.contexts import StageExecutionContext
 from job_plat.schemas.output_schemas import StageOutput
 from job_plat.partitioning.partition_manager import PartitionManager
 from typing import Any
@@ -23,8 +23,9 @@ class BaseStage(ABC):
     OUTPUT_TYPE: type[StageOutput]
     READ_STRATEGY: ReadStrategy = IncrementalReadStrategy()
     
-    def __init__(self, spark: SparkSession, datasets: DatasetRegistry, partition_manager: PartitionManager, ctx: BaseContext):
-        self.spark = spark
+    #def __init__(self, spark: SparkSession, datasets: DatasetRegistry, partition_manager: PartitionManager, ctx: BaseContext):
+    def __init__(self, datasets: DatasetRegistry, partition_manager: PartitionManager, ctx: BaseContext):
+        self.spark = ctx.spark
         self.datasets = datasets
         self.partition_manager = partition_manager
         self.ctx = ctx

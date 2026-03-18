@@ -3,14 +3,14 @@ from datetime import datetime
 import uuid
 import json
 from pathlib import Path
+from job_plat.context.contexts import StageExecutionContext
 
-
-@dataclass(kw_only=True)
-class StageExecutionContext:
-    stage: str
-    pipeline_version: str
-    run_id: str = str(uuid.uuid4())
-    started_at: datetime = datetime.utcnow()
+# @dataclass(kw_only=True)
+# class StageExecutionContext:
+    # stage: str
+    # pipeline_version: str
+    # run_id: str = str(uuid.uuid4())
+    # started_at: datetime = datetime.utcnow()
 
 
 @dataclass(kw_only=True)

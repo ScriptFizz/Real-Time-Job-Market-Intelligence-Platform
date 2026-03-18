@@ -1,30 +1,33 @@
-from airflow.decorators import dag, task
-from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.decorators import dag, task, get_current_context
 from datetime import datetime
 import subprocess
-# import logging
-# from job_plat.pipeline.stages.ml.feature_stage import FeatureStage
-# from job_plat.pipeline.stages.ml.ml_stage import MLStage
-# from job_plat.context.context_builders import build_ml_pipeline_context
-# from job_plat.utils.helpers import build_common
+
 
 @dag(schedule="@weekly", start_date=datetime(2024, 1, 1), catchup=False)
 def ml_dag():
     
     @task
     def run_features():
+        
+        context = get_current_context()
+        execution_date = context["logical_date"].isoformat()
         subprocess.run(
             [
-                "poetry", "run", "python", "-m", "job_plat.cli", "feature"
+                "poetry", "run", "python", "-m", "job_plat.cli", "feature",
+                "--execution-date", execution_date,
             ],
             check=True
         )
             
     @task
     def run_ml():
+        
+        context = get_current_context()
+        execution_date = context["logical_date"].isoformat()
         subprocess.run(
             [
-                "poetry", "run", "python", "-m", "job_plat.cli", "ml"
+                "poetry", "run", "python", "-m", "job_plat.cli", "ml",
+                "--execution-date", execution_date,
             ],
             check=True
         )

@@ -5,10 +5,10 @@ from typing import Optional, Literal, Any
 class PathsConfig(BaseModel):
     root: str
     metadata: str
-    bronze: str
-    silver: str
-    gold_v1: str
-    gold_v2: str
+    # bronze: str
+    # silver: str
+    # gold_v1: str
+    # gold_v2: str
 
 class SparkConfig(BaseModel):
     app_name: str

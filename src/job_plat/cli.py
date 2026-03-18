@@ -12,7 +12,7 @@ from job_plat.orchestration.data_pipeline import run_bronze_pipeline, run_silver
 from job_plat.orchestration.ml_pipeline import run_feature_pipeline, run_ml_pipeline, run_full_ml_pipeline
 from job_plat.context.contexts import ExecutionParams
 from job_plat.config.logconfig import setup_logging
-from job_plat.storage.storages import get_storage
+from job_plat.storage.storages import get_storage, Storage
 from job_plat.utils.helpers import create_spark, parse_date
 from job_plat.partitioning.partition_manager import PartitionManager
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
@@ -23,7 +23,7 @@ load_dotenv()
 app = typer.Typer(help="Job postings data pipeline CLI")
 
 
-def setup_run(config: str, env: str, exec_date: datetime | None, query: str | None, country: str | None, location: str | None) -> Tuple(EnvironmentConfig, ExecutionParams, datetime, SparkSession):
+def setup_run(config: str, env: str, execution_date: str | None, query: str | None = None, country: str | None = None, location: str | None = None) -> Tuple[EnvironmentConfig, ExecutionParams, datetime, SparkSession]:
     config_loader = ConfigLoader(config_path=config, env=env)
     env_config = config_loader.load_env()
     
@@ -36,16 +36,16 @@ def setup_run(config: str, env: str, exec_date: datetime | None, query: str | No
         location=location
     )
     
-    exec_date = (
+    execution_date = (
         datetime.fromisoformat(execution_date)
         if execution_date
         else datetime.utcnow()
     )
         
     spark = create_spark(env_config.spark)
-    return env_config, execution exec_date, spark
+    return env_config, execution, execution_date, spark
 
-def build_common(env_config: EnvironmentConfig, execution: ExecutionParams, spark: SparkSession, exec_date: datetime) -> Storage, DatasetRegistry, PartitionManager:
+def build_common(env_config: EnvironmentConfig, execution: ExecutionParams, spark: SparkSession, execution_date: datetime) -> Tuple[Storage, DatasetRegistry, PartitionManager]:
             
     storage = get_storage(env_config.storage.type)
     
@@ -72,14 +72,14 @@ def bronze(
     Run bronze ingestion stage.
     """
     
-    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date, query=query, country=country, location=location)
+    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date, query=query, country=country, location=location)
     
     try:
         
         bronze_ctx = build_bronze_context(
             config = env_config,
             execution = execution,
-            execution_date=exec_date
+            execution_date=execution_date
         )
         
         storage = get_storage(env_config.storage.type)
@@ -109,7 +109,7 @@ def silver(
     Run silver stage.
     """
     
-    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
+    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
@@ -117,10 +117,10 @@ def silver(
             execution=execution, 
             config=env_config,
             spark=spark,
-            execution_date=exec_date,
+            execution_date=execution_date,
             )
         
-        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, execution_date=execution_date)
         
         run_silver_pipeline(
             ctx=pipeline_ctx,
@@ -143,7 +143,7 @@ def gold(
     Run gold stage.
     """
     
-    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
+    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
@@ -151,10 +151,10 @@ def gold(
             execution=execution, 
             config=env_config,
             spark=spark,
-            execution_date=exec_date
+            execution_date=execution_date
             )
         
-        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, execution_date=execution_date)
 
         run_gold_pipeline(
             ctx=pipeline_ctx,
@@ -181,19 +181,19 @@ def data_pipeline(
     Run the full pipeline (bronze → silver → gold).
     """
     
-    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date, query=query, country=country, location=location)
+    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date, query=query, country=country, location=location)
 
     try: 
         pipeline_ctx = build_data_pipeline_context(
             execution=execution, 
             config=env_config,
             spark=spark,
-            execution_date=exec_date
+            execution_date=execution_date
             )
         
         connectors = build_connectors(env_config)
         
-        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, execution_date=execution_date)
         
         run_data_pipeline(
             ctx=pipeline_ctx,
@@ -223,18 +223,18 @@ def feature(
     Run feature stage.
     """
     
-    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
+    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
         pipeline_ctx = build_ml_pipeline_context(
             config=env_config,
             spark=spark,
-            execution_date=exec_date
+            execution_date=execution_date
         )
             
         
-        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, execution_date=execution_date)
         
         run_feature_pipeline(
             ctx=pipeline_ctx,
@@ -258,17 +258,17 @@ def ml(
     Run ml stage.
     """
     
-    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
+    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
         pipeline_ctx = build_ml_pipeline_context(
             config=env_config,
             spark=spark,
-            execution_date=exec_date
+            execution_date=execution_date
         )
         
-        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, execution_date=execution_date)
         
         run_ml_pipeline(
             ctx=pipeline_ctx,
@@ -292,17 +292,17 @@ def ml_pipeline(
     Run full ml pipeline.
     """
     
-    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
+    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
         pipeline_ctx = build_ml_pipeline_context(
             config=env_config,
             spark=spark,
-            execution_date=exec_date
+            execution_date=execution_date
         )
         
-        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, execution_date=execution_date)
         
         run_full_ml_pipeline(
             ctx=pipeline_ctx,

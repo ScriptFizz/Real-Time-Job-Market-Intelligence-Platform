@@ -72,7 +72,7 @@ def build_data_pipeline_context(
     
     gold_ctx = GoldContext(
         fact_per_job_ratio_threshold = config.gold.fact_per_job_ratio_threshold,
-        spark = spark
+        spark = spark,
         execution_date=execution_date
     )
     
@@ -112,7 +112,7 @@ def build_ml_pipeline_context(
         env = config.env,
         spark = spark,
         feature = feature_ctx,
-        ml = ml_ctxm
+        ml = ml_ctx,
         execution_date=execution_date
     )
 

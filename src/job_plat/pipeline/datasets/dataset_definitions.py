@@ -73,7 +73,7 @@ class FeatureJobEmbeddings(DatasetDef):
 
 class MLJobClusters(DatasetDef):
     NAME = "ml_job_clusters"
-    RELATIVE_PATH = "gold_v2/job_clusters"
+    RELATIVE_PATH = "ml/job_clusters"
     PARTITION_COLUMNS = []
     
 class MLJobMembership(DatasetDef):
