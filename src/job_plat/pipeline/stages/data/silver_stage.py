@@ -8,6 +8,7 @@ from pyspark.sql.functions import (
     count, 
     sum
 )
+from job_plat.utils.helpers import StageSkip
 from job_plat.context.contexts import BronzeContext, SilverContext, DataPipelineContext
 from job_plat.pipeline.core.base_stage import BaseStage
 from job_plat.transformations.silver.enrichment.build_job_skills import run_job_skills
@@ -16,7 +17,7 @@ from job_plat.transformations.silver.cleaning.clean_jobs import clean_jobs, dedu
 from job_plat.transformations.silver.validation.quality_checks import run_quality_checks
 from typing import List
 from job_plat.storage.storages import Storage
-from job_plat.ingestion.metadata import StageExecutionContext
+from job_plat.context.contexts import StageExecutionContext
 from job_plat.schemas.output_schemas import SilverOutputs
 from job_plat.pipeline.datasets.dataset_definitions import BronzeJobs
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
@@ -36,9 +37,8 @@ class SilverStage(BaseStage):
         partition_manager: PartitionManager,
         ):
         
-        super().__init__(spark=silver_ctx.spark, datasets=datasets, partition_manager=partition_manager, ctx=silver_ctx)
-        # self.silver_ctx = silver_ctx
-        # self.bronze_ctx = bronze_ctx
+        super().__init__(datasets=datasets, partition_manager=partition_manager, ctx=silver_ctx)
+
         self._metrics = {}
         
     
@@ -53,6 +53,10 @@ class SilverStage(BaseStage):
         self, 
         job_bronze_df: DataFrame
         ) -> SilverOutputs:
+        
+        # Skip transform if no new partitions
+        if job_bronze_df is None:
+            raise StageSkip("no new partitions")
         
         df_normalized = job_bronze_df.select(
             col("run_id"),

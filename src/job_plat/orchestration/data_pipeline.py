@@ -38,7 +38,6 @@ def run_silver_pipeline(
 ) -> None:
     stage = SilverStage(
         silver_ctx = ctx.silver,
-        bronze_ctx = ctx.bronze,
         datasets = datasets,
         partition_manager = partition_manager
     )
@@ -55,7 +54,6 @@ def run_gold_pipeline(
 ) -> None:
     
     stage = GoldStage(
-        silver_ctx = ctx.silver,
         gold_ctx = ctx.gold,
         datasets = datasets,
         partition_manager = partition_manager

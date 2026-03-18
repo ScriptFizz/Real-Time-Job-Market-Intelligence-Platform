@@ -5,7 +5,7 @@ from job_plat.transformations.gold.v1_analytics.build_dimensions import build_di
 from job_plat.transformations.gold.v1_analytics.fact_job_skills import build_fact_job_skills
 from job_plat.storage.storages import Storage
 from pathlib import Path
-from job_plat.ingestion.metadata import StageExecutionContext
+from job_plat.context.contexts import StageExecutionContext
 from job_plat.schemas.output_schemas import GoldOutputs
 from job_plat.pipeline.datasets.dataset_definitions import SilverJobSkills, SilverJobs
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
@@ -22,10 +22,8 @@ class GoldStage(BaseStage):
         gold_ctx: GoldContext, 
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,):
-        super().__init__(spark=gold_ctx.spark, datasets=datasets, partition_manager=partition_manager, ctx = gold_ctx)
+        super().__init__(datasets=datasets, partition_manager=partition_manager, ctx = gold_ctx)
         
-        # self.gold_ctx = gold_ctx
-        # self.silver_ctx = silver_ctx
     
     def create_context(self) -> StageExecutionContext:
         run_context = StageExecutionContext(

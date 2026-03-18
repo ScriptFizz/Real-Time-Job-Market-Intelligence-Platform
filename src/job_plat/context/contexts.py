@@ -17,7 +17,7 @@ class ExecutionParams:
 
 @dataclass
 class BaseContext:
-    execution_date: datetime | None = None
+    execution_date: datetime | None
 
 @dataclass
 class BronzeContext(BaseContext):

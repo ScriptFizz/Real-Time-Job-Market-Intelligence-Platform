@@ -4,7 +4,8 @@ import logging
 import time
 from job_plat.storage.storages import Storage
 from job_plat.config.logconfig import ContextLogger
-from job_plat.ingestion.metadata import StageExecutionContext, IngestionRun
+from job_plat.context.contexts import StageExecutionContext
+from job_plat.ingestion.metadata import IngestionRun
 from typing import Iterator, Dict
 
 

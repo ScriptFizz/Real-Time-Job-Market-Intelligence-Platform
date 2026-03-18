@@ -6,7 +6,7 @@ from job_plat.transformations.feature.embeddings.build_job_embeddings import bui
 #from job_plat.transformations.gold.v2_intelligence.clusters.build_job_clusters import build_job_clusters
 from job_plat.storage.storages import Storage
 from pyspark.sql import DataFrame
-from job_plat.ingestion.metadata import StageExecutionContext
+from job_plat.context.contexts import StageExecutionContext
 from pyspark.sql.functions import countDistinct, avg
 from job_plat.schemas.output_schemas import FeatureOutputs
 from job_plat.pipeline.datasets.dataset_definitions import GoldDimJobs, GoldDimSkills, GoldFactJobSkills
@@ -26,10 +26,8 @@ class FeatureStage(BaseStage):
         feature_ctx: FeatureContext,
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,):
-        super().__init__(spark=feature_ctx.spark, datasets=datasets, partition_manager=partition_manager)
-        #self.gold_ctx = gold_ctx
-        self.feature_ctx = feature_ctx
-        self.READ_STRATEGY = TimeWindowReadStrategy(window_days=feature_ctx.window_days)
+        super().__init__(datasets=datasets, partition_manager=partition_manager, ctx=feature_ctx)
+        self.READ_STRATEGY = TimeWindowReadStrategy(window_days=self.ctx.window_days)
         
     def create_context(self) -> StageExecutionContext:
         run_context = StageExecutionContext(
@@ -46,7 +44,7 @@ class FeatureStage(BaseStage):
         ) -> FeatureOutputs:
         
         self.logger.info("building_skill_embeddings")
-        skill_embeddings_df = build_skill_embeddings(dim_skills_df=dim_skills_df, spark=self.ctx.spark)
+        skill_embeddings_df = build_skill_embeddings(dim_skills_df=dim_skills_df, spark=self.spark)
         
         self.logger.info("building_job_embeddings")
         job_embeddings_df = build_job_embeddings(fact_job_skill_df=fact_job_skill_df, skill_embeddings_df=skill_embeddings_df)
