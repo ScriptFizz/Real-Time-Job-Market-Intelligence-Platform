@@ -46,7 +46,7 @@ class FeatureStage(BaseStage):
         ) -> FeatureOutputs:
         
         self.logger.info("building_skill_embeddings")
-        skill_embeddings_df = build_skill_embeddings(dim_skills_df=dim_skills_df, spark=self.feature_ctx.spark)
+        skill_embeddings_df = build_skill_embeddings(dim_skills_df=dim_skills_df, spark=self.ctx.spark)
         
         self.logger.info("building_job_embeddings")
         job_embeddings_df = build_job_embeddings(fact_job_skill_df=fact_job_skill_df, skill_embeddings_df=skill_embeddings_df)

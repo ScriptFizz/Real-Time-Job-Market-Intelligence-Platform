@@ -96,7 +96,7 @@ def build_common(env: str = "dev", config_path: str = "settings.yaml"):
     storage = get_storage(env_config.storage.type)
     
     datasets = DatasetRegistry(
-        root = env_config.paths.rootm
+        root = env_config.paths.root,
         storage = storage,
         dataset_defs = DATASET_DEFS
     )

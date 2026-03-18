@@ -3,6 +3,8 @@ from pathlib import Path
 from datetime import date
 from pyspark.sql import SparkSession
 from typing import List, Optional
+from datetime import datetime
+import uuid
 
 #  EXECUTION PARAMS
 
@@ -11,9 +13,14 @@ class ExecutionParams:
     query: str | None = None
     location: str | None = None
     country: str | None = None
+    
 
 @dataclass
-class BronzeContext:
+class BaseContext:
+    execution_date: datetime | None = None
+
+@dataclass
+class BronzeContext(BaseContext):
     root_path: str
     query: str | None = None
     location: str | None = None
@@ -23,14 +30,14 @@ class BronzeContext:
 # SILVER CONTEXT
 
 @dataclass
-class SilverContext:
+class SilverContext(BaseContext):
     spark: SparkSession
     
 
 # GOLD CONTEXT
 
 @dataclass
-class GoldContext:
+class GoldContext(BaseContext):
     fact_per_job_ratio_threshold: int
     spark: SparkSession
 
@@ -38,14 +45,14 @@ class GoldContext:
 # FEATURE CONTEXT
 
 @dataclass
-class FeatureContext:
+class FeatureContext(BaseContext):
     spark: SparkSession
     window_days: int        
 
 # ML CONTEXT
 
 @dataclass
-class MLContext:
+class MLContext(BaseContext):
     min_clusters: int
     min_silhouette: float
     spark: SparkSession
@@ -54,7 +61,7 @@ class MLContext:
 # DATA PIPELINE CONTEXT
 
 @dataclass
-class DataPipelineContext:
+class DataPipelineContext(BaseContext):
     env: str
     spark: SparkSession
     bronze: BronzeContext
@@ -65,9 +72,17 @@ class DataPipelineContext:
 # ML PIPELINE CONTEXT
 
 @dataclass
-class MLPipelineContext:
+class MLPipelineContext(BaseContext):
     env: str
     spark: SparkSession
-    #gold: GoldContext
     feature: FeatureContext
     ml: MLContext
+
+
+
+@dataclass(kw_only=True)
+class StageExecutionContext:
+    stage: str
+    pipeline_version: str
+    run_id: str = str(uuid.uuid4())
+    started_at: datetime = datetime.utcnow()

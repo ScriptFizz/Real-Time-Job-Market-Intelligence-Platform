@@ -1,9 +1,12 @@
 import typer
 import logging
+from typing import Tuple
 from dotenv import load_dotenv
 from datetime import datetime
+from pyspark.sql import SparkSession
 from job_plat.config.config_loader import ConfigLoader
 from job_plat.ingestion.connectors import build_connectors
+from job_plat.config.env_config import EnvironmentConfig
 from job_plat.context.context_builders import build_bronze_context, build_data_pipeline_context, build_ml_pipeline_context
 from job_plat.orchestration.data_pipeline import run_bronze_pipeline, run_silver_pipeline, run_gold_pipeline, run_data_pipeline
 from job_plat.orchestration.ml_pipeline import run_feature_pipeline, run_ml_pipeline, run_full_ml_pipeline
@@ -19,18 +22,8 @@ load_dotenv()
 
 app = typer.Typer(help="Job postings data pipeline CLI")
 
-@app.command()
-def bronze(
-    env: str = typer.Option("dev", help="Environment (dev or prod)"),
-    query: str = typer.Option(None, help="Override search query"),
-    country: str = typer.Option(None, help="Override country"),
-    location: str = typer.Option(None, help="Override location"),
-    config: str = typer.Option("settings.yaml", help="Config file path"),
-):
-    """
-    Run bronze ingestion stage.
-    """
-    
+
+def setup_run(config: str, env: str, exec_date: datetime | None, query: str | None, country: str | None, location: str | None) -> Tuple(EnvironmentConfig, ExecutionParams, datetime, SparkSession):
     config_loader = ConfigLoader(config_path=config, env=env)
     env_config = config_loader.load_env()
     
@@ -43,13 +36,50 @@ def bronze(
         location=location
     )
     
+    exec_date = (
+        datetime.fromisoformat(execution_date)
+        if execution_date
+        else datetime.utcnow()
+    )
+        
     spark = create_spark(env_config.spark)
+    return env_config, execution exec_date, spark
+
+def build_common(env_config: EnvironmentConfig, execution: ExecutionParams, spark: SparkSession, exec_date: datetime) -> Storage, DatasetRegistry, PartitionManager:
+            
+    storage = get_storage(env_config.storage.type)
+    
+    datasets = DatasetRegistry(
+        root=env_config.paths.root,
+        storage=storage,
+        dataset_defs=DATASET_DEFS
+    )
+    
+    partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
+    
+    return storage, datasets, partition_manager
+
+@app.command()
+def bronze(
+    env: str = typer.Option("dev", help="Environment (dev or prod)"),
+    query: str = typer.Option(None, help="Override search query"),
+    country: str = typer.Option(None, help="Override country"),
+    location: str = typer.Option(None, help="Override location"),
+    config: str = typer.Option("settings.yaml", help="Config file path"),
+    execution_date: str = typer.Option(None, help="Execution date ISO format"),
+):
+    """
+    Run bronze ingestion stage.
+    """
+    
+    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date, query=query, country=country, location=location)
     
     try:
         
         bronze_ctx = build_bronze_context(
             config = env_config,
-            execution = execution
+            execution = execution,
+            execution_date=exec_date
         )
         
         storage = get_storage(env_config.storage.type)
@@ -73,38 +103,24 @@ def bronze(
 def silver(
     env: str = typer.Option("dev", help="Environment (dev or prod)"),
     config: str = typer.Option("settings.yaml", help="Config file path"),
+    execution_date: str = typer.Option(None, help="Execution date ISO format"),
 ):
     """
     Run silver stage.
     """
     
-    execution = ExecutionParams(query=None, location=None)
-    
-    config_loader = ConfigLoader(config_path=config, env=env)
-    env_config = config_loader.load_env()
-    
-    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-    setup_logging(log_level=log_level)
-    
-    spark = create_spark(env_config.spark)
+    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
     
     try:
     
         pipeline_ctx = build_data_pipeline_context(
             execution=execution, 
             config=env_config,
-            spark=spark
+            spark=spark,
+            execution_date=exec_date,
             )
-            
-        storage = get_storage(env_config.storage.type)
         
-        datasets = DatasetRegistry(
-            root=env_config.paths.root,
-            storage=storage,
-            dataset_defs=DATASET_DEFS
-        )
-        
-        partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
         
         run_silver_pipeline(
             ctx=pipeline_ctx,
@@ -121,39 +137,25 @@ def silver(
 def gold(
     env: str = typer.Option("dev", help="Environment (dev or prod)"),
     config: str = typer.Option("settings.yaml", help="Config file path"),
+    execution_date: str = typer.Option(None, help="Execution date ISO format"),
 ):
     """
     Run gold stage.
     """
     
-    execution = ExecutionParams(query=None, location=None)
-    
-    config_loader = ConfigLoader(config_path=config, env=env)
-    env_config = config_loader.load_env()
-    
-    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-    setup_logging(log_level=log_level)
-    
-    spark = create_spark(env_config.spark)
+    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
     
     try:
     
         pipeline_ctx = build_data_pipeline_context(
             execution=execution, 
             config=env_config,
-            spark=spark
+            spark=spark,
+            execution_date=exec_date
             )
-            
-        storage = get_storage(env_config.storage.type)
         
-        datasets = DatasetRegistry(
-            root=env_config.paths.root,
-            storage=storage,
-            dataset_defs=DATASET_DEFS
-        )
-        
-        partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
-        
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
+
         run_gold_pipeline(
             ctx=pipeline_ctx,
             datasets=datasets,
@@ -172,44 +174,26 @@ def data_pipeline(
     country: str = typer.Option(None, help="Override country"),
     location: str = typer.Option(None, help="Override location"),
     config: str = typer.Option("settings.yaml", help="Config file path"),
+    execution_date: str = typer.Option(None, help="Execution date ISO format"),
 ):
     
     """
     Run the full pipeline (bronze → silver → gold).
     """
     
-    execution = ExecutionParams(query=None, location=None)
-    config_loader = ConfigLoader(config_path=config, env=env)
-    env_config = config_loader.load_env()
-    
-    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-    setup_logging(log_level=log_level)
-    
-    execution = ExecutionParams(
-        query=query,
-        country=country,
-        location=location
-    )
-    
-    spark = create_spark(env_config.spark)
+    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date, query=query, country=country, location=location)
 
     try: 
         pipeline_ctx = build_data_pipeline_context(
             execution=execution, 
             config=env_config,
-            spark=spark
+            spark=spark,
+            execution_date=exec_date
             )
-        storage = get_storage(env_config.storage.type)
         
         connectors = build_connectors(env_config)
         
-        datasets = DatasetRegistry(
-            root=env_config.paths.root,
-            storage=storage,
-            dataset_defs=DATASET_DEFS
-        )
-        
-        partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
         
         run_data_pipeline(
             ctx=pipeline_ctx,
@@ -233,35 +217,24 @@ def data_pipeline(
 def feature(
     env: str = typer.Option("dev", help="Environment (dev or prod)"),
     config: str = typer.Option("settings.yaml", help="Config file path"),
+    execution_date: str = typer.Option(None, help="Execution date ISO format"),
 ):
     """
     Run feature stage.
     """
     
-    config_loader = ConfigLoader(config_path=config, env=env)
-    env_config = config_loader.load_env()
-    
-    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-    setup_logging(log_level=log_level)
-    
-    spark = create_spark(env_config.spark)
+    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
     
     try:
     
         pipeline_ctx = build_ml_pipeline_context(
             config=env_config,
             spark=spark,
+            execution_date=exec_date
         )
             
         
-        storage = get_storage(env_config.storage.type)
-        datasets = DatasetRegistry(
-            root=env_config.paths.root,
-            storage=storage,
-            dataset_defs=DATASET_DEFS
-        )
-        
-        partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
         
         run_feature_pipeline(
             ctx=pipeline_ctx,
@@ -279,34 +252,23 @@ def feature(
 def ml(
     env: str = typer.Option("dev", help="Environment (dev or prod)"),
     config: str = typer.Option("settings.yaml", help="Config file path"),
+    execution_date: str = typer.Option(None, help="Execution date ISO format"),
 ):
     """
     Run ml stage.
     """
     
-    config_loader = ConfigLoader(config_path=config, env=env)
-    env_config = config_loader.load_env()
-    
-    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-    setup_logging(log_level=log_level)
-    
-    spark = create_spark(env_config.spark)
+    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
     
     try:
     
         pipeline_ctx = build_ml_pipeline_context(
             config=env_config,
             spark=spark,
+            execution_date=exec_date
         )
         
-        storage = get_storage(env_config.storage.type)
-        datasets = DatasetRegistry(
-            root=env_config.paths.root,
-            storage=storage,
-            dataset_defs=DATASET_DEFS
-        )
-        
-        partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
         
         run_ml_pipeline(
             ctx=pipeline_ctx,
@@ -324,34 +286,23 @@ def ml(
 def ml_pipeline(
     env: str = typer.Option("dev", help="Environment (dev or prod)"),
     config: str = typer.Option("settings.yaml", help="Config file path"),
+    execution_date: str = typer.Option(None, help="Execution date ISO format"),
 ):
     """
     Run full ml pipeline.
     """
     
-    config_loader = ConfigLoader(config_path=config, env=env)
-    env_config = config_loader.load_env()
-    
-    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-    setup_logging(log_level=log_level)
-    
-    spark = create_spark(env_config.spark)
+    env_config, execution exec_date, spark = setup_run(config=config, env=env, exec_date=execution_date)
     
     try:
     
         pipeline_ctx = build_ml_pipeline_context(
             config=env_config,
             spark=spark,
+            execution_date=exec_date
         )
         
-        storage = get_storage(env_config.storage.type)
-        datasets = DatasetRegistry(
-            root=env_config.paths.root,
-            storage=storage,
-            dataset_defs=DATASET_DEFS
-        )
-        
-        partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
+        storage, datasets, partition_manager = build_common(env_config=env_config, execution=execution, spark=spark, exec_date=exec_date)
         
         run_full_ml_pipeline(
             ctx=pipeline_ctx,

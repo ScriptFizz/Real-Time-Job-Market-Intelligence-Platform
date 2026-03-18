@@ -20,13 +20,12 @@ class GoldStage(BaseStage):
     def __init__(
         self, 
         gold_ctx: GoldContext, 
-        silver_ctx: SilverContext, 
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,):
-        super().__init__(spark=gold_ctx.spark, datasets=datasets, partition_manager=partition_manager)
+        super().__init__(spark=gold_ctx.spark, datasets=datasets, partition_manager=partition_manager, ctx = gold_ctx)
         
-        self.gold_ctx = gold_ctx
-        self.silver_ctx = silver_ctx
+        # self.gold_ctx = gold_ctx
+        # self.silver_ctx = silver_ctx
     
     def create_context(self) -> StageExecutionContext:
         run_context = StageExecutionContext(
@@ -111,13 +110,13 @@ class GoldStage(BaseStage):
                 extra={"issue": "orphan_facts_detected"}
             )
         
-        if metrics.get("fact_per_job_ratio") > self.gold_ctx.fact_per_job_ratio_threshold:
+        if metrics.get("fact_per_job_ratio") > self.ctx.fact_per_job_ratio_threshold:
             self.logger.warning(
                 "data_anomaly_detected",
                 extra={
                     "issue": "fact_per_job_ratio_high",
                     "value": metrics["fact_per_job_ratio"],
-                    "threshold": self.gold_ctx.fact_per_job_ratio_threshold,
+                    "threshold": self.ctx.fact_per_job_ratio_threshold,
                 }
             )
         
