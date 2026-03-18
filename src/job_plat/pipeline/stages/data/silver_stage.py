@@ -32,14 +32,13 @@ class SilverStage(BaseStage):
     def __init__(
         self, 
         silver_ctx: SilverContext, 
-        bronze_ctx: BronzeContext,
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,
         ):
         
-        super().__init__(spark=silver_ctx.spark, datasets=datasets, partition_manager=partition_manager)
-        self.silver_ctx = silver_ctx
-        self.bronze_ctx = bronze_ctx
+        super().__init__(spark=silver_ctx.spark, datasets=datasets, partition_manager=partition_manager, ctx=silver_ctx)
+        # self.silver_ctx = silver_ctx
+        # self.bronze_ctx = bronze_ctx
         self._metrics = {}
         
     

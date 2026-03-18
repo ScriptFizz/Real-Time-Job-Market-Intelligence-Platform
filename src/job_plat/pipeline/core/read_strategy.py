@@ -8,13 +8,13 @@ from pyspark.sql.functions import col
 
 class ReadStrategy(ABC):
     @abstractmethod
-    def read(self, stage, dataset, input_name):
+    def read(self, stage, dataset, input_name, execution_date):
         pass
 
 
 class IncrementalReadStrategy(ReadStrategy):
     
-    def read(self, stage, dataset, input_name):
+    def read(self, stage, dataset, input_name, execution_date):
         
         if not dataset.partition_columns:
             df = dataset.read_partitions(spark=stage.spark)
@@ -41,13 +41,13 @@ class TimeWindowReadStrategy(ReadStrategy):
     def __init__(self, window_days: int):
         self.window_days = window_days
     
-    def read(self, stage, dataset, input_name):
+    def read(self, stage, dataset, input_name, execution_date):
         
         df = stage.spark.read.parquet(str(dataset.path))
         
         if dataset.time_window_column is not None:
                 
-            window_end = datetime.utcnow()
+            window_end = execution_date if execution_date else datetime.utcnow()
             window_start = window_end - timedelta(days=self.window_days)
 
             df = df.filter(

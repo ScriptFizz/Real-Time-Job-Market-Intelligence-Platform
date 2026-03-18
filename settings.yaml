@@ -10,15 +10,15 @@ environments:
     paths:
       root: ./data
       metadata: ./metadata
-      bronze: ./data/bronze
-      silver: ./data/silver
-      gold_v1: ./data/gold_v1
-      gold_v2: ./data/gold_v2
+      #bronze: ./data/bronze
+      #silver: ./data/silver
+      #gold_v1: ./data/gold_v1
+      #gold_v2: ./data/gold_v2
     bronze:
       query: "data engineer"
       country: "us"
       location: "Chicago"
-      max_pages: 20
+      max_pages: 5
       min_interval_seconds: 2.5
     gold:
       fact_per_job_ratio_threshold: 20
@@ -39,9 +39,9 @@ environments:
     paths:
       root: gs://job-pipeline
       metadata: gs://job-pipeline/metadata
-      bronze: gs://job-pipeline/bronze
-      silver: gs://job-pipeline/silver
-      gold: gs://job-pipeline/gold
+      #bronze: gs://job-pipeline/bronze
+      #silver: gs://job-pipeline/silver
+      #gold: gs://job-pipeline/gold
     bronze:
       query: "data engineer"
       location: "London"

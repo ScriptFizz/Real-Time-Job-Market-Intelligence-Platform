@@ -3,6 +3,7 @@ from pyspark.sql import DataFrame, SparkSession
 import logging
 import time
 from pathlib import Path
+from job_plat.context.contexts import BaseContext
 from job_plat.pipeline.core.read_strategy import ReadStrategy, IncrementalReadStrategy
 from job_plat.pipeline.datasets.dataset_definitions import DatasetDef
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
@@ -22,10 +23,11 @@ class BaseStage(ABC):
     OUTPUT_TYPE: type[StageOutput]
     READ_STRATEGY: ReadStrategy = IncrementalReadStrategy()
     
-    def __init__(self, spark: SparkSession, datasets: DatasetRegistry, partition_manager: PartitionManager):
+    def __init__(self, spark: SparkSession, datasets: DatasetRegistry, partition_manager: PartitionManager, ctx: BaseContext):
         self.spark = spark
         self.datasets = datasets
         self.partition_manager = partition_manager
+        self.ctx = ctx
         self._base_logger = logging.getLogger(
             f"pipeline.{self.__module__}.{self.__class__.__name__}"
             )
@@ -92,7 +94,8 @@ class BaseStage(ABC):
             df, partitions = self.READ_STRATEGY.read(
                 stage=self,
                 dataset=ds,
-                input_name=name
+                input_name=name,
+                execution_date = self.ctx.execution_date
             )
             
             inputs[name] = df

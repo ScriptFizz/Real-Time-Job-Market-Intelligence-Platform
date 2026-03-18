@@ -324,11 +324,11 @@ class ADZunaConnector(PaginatedAPIConnector):
 
 def build_connectors(config: EnvironmentConfig) -> list[JobConnector]:
     return [
-        USAJobConnector(
-            api_key=os.getenv("USAJOBS_API_KEY"),
-            max_pages=config.bronze.max_pages,
-            min_interval_seconds = config.bronze.min_interval_seconds
-        ),
+        # USAJobConnector(
+            # api_key=os.getenv("USAJOBS_API_KEY"),
+            # max_pages=config.bronze.max_pages,
+            # min_interval_seconds = config.bronze.min_interval_seconds
+        # ),
         ADZunaConnector(
             api_key=os.getenv("ADZUNA_API_KEY"),
             app_id=os.getenv("ADZUNA_APP_ID"),

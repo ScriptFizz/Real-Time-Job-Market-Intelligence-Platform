@@ -19,13 +19,12 @@ class MLStage(BaseStage):
     
     def __init__(
         self, 
-        #feature_ctx: FeatureContext, 
         ml_ctx: MLContext,
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,):
-        super().__init__(spark=ml_ctx.spark, datasets=datasets, partition_manager=partition_manager)
+        super().__init__(spark=ml_ctx.spark, datasets=datasets, partition_manager=partition_manager, ctx=ml_ctx)
         #self.feature_ctx = feature_ctx
-        self.ml_ctx = ml_ctx
+        # self.ml_ctx = ml_ctx
         
     def create_context(self) -> StageExecutionContext:
         run_context = StageExecutionContext(
@@ -42,7 +41,7 @@ class MLStage(BaseStage):
         
         
         self.logger.info("building_clusters_data")
-        job_membership_df, job_clusters_df, job_centroids_df, job_metadata_df = build_job_clusters(spark=self.ml_ctx.spark, job_embeddings_df=job_embeddings_df)
+        job_membership_df, job_clusters_df, job_centroids_df, job_metadata_df = build_job_clusters(spark=self.ctx.spark, job_embeddings_df=job_embeddings_df)
         
         return MLOutputs(
             job_clusters=job_clusters_df,
@@ -90,7 +89,7 @@ class MLStage(BaseStage):
     
     def evaluate_metrics(self, metrics: dict) -> None:
         
-        if metrics["num_clusters"] < self.ml_ctx.min_clusters:
+        if metrics["num_clusters"] < self.ctx.min_clusters:
             self.logger.warning(
                 "model_issue",
                 extra={
@@ -99,12 +98,12 @@ class MLStage(BaseStage):
                 },
             )
         
-        if metrics["silhouette_score"] is not None and metrics["silhouette_score"] < self.ml_ctx.min_silhouette:
+        if metrics["silhouette_score"] is not None and metrics["silhouette_score"] < self.ctx.min_silhouette:
             self.logger.warning(
                 "model_quality_degraded",
                 extra={
                     "silhouette_score": metrics["silhouette_score"],
-                    "threshold": self.ml_ctx.min_silhouette,
+                    "threshold": self.ctx.min_silhouette,
                 },
             )
 
