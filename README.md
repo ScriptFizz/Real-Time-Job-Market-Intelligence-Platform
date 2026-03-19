@@ -94,7 +94,6 @@ It is designed with **production-ready patterns**:
 ## Architecture
 
 ```mermaid
-```mermaid
 flowchart TD
     subgraph Data Sources
         A[ADZuna API]
