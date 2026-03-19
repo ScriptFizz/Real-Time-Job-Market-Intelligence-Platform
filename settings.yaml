@@ -38,6 +38,7 @@ environments:
     bronze:
       query: "data engineer"
       location: "London"
+      max_pages: 5
     gold:
       fact_per_job_ratio_threshold: 20
     ml:

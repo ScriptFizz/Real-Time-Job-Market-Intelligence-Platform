@@ -23,7 +23,6 @@ class BaseStage(ABC):
     OUTPUT_TYPE: type[StageOutput]
     READ_STRATEGY: ReadStrategy = IncrementalReadStrategy()
     
-    #def __init__(self, spark: SparkSession, datasets: DatasetRegistry, partition_manager: PartitionManager, ctx: BaseContext):
     def __init__(self, datasets: DatasetRegistry, partition_manager: PartitionManager, ctx: BaseContext):
         self.spark = ctx.spark
         self.datasets = datasets
