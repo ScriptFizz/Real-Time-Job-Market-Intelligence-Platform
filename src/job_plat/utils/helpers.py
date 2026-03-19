@@ -84,27 +84,27 @@ def assert_df_equality(df1, df2):
 
 
 
-def build_common(env: str = "dev", config_path: str = "settings.yaml"):
+# def build_common(env: str = "dev", config_path: str = "settings.yaml"):
         
-    config_loader = ConfigLoader(config_path=config_path, env=env)
-    env_config = config_loader.load_env()
+    # config_loader = ConfigLoader(config_path=config_path, env=env)
+    # env_config = config_loader.load_env()
     
-    log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-    setup_logging(log_level=log_level)
+    # log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
+    # setup_logging(log_level=log_level)
     
-    spark = create_spark(env_config.spark)
-    storage = get_storage(env_config.storage.type)
+    # spark = create_spark(env_config.spark)
+    # storage = get_storage(env_config.storage.type)
     
-    datasets = DatasetRegistry(
-        root = env_config.paths.root,
-        storage = storage,
-        dataset_defs = DATASET_DEFS
-    )
+    # datasets = DatasetRegistry(
+        # root = env_config.paths.root,
+        # storage = storage,
+        # dataset_defs = DATASET_DEFS
+    # )
     
-    partition_manager = PartitionManager(
-        metadata_path = env_config.paths.metadata
-    )
+    # partition_manager = PartitionManager(
+        # metadata_path = env_config.paths.metadata
+    # )
     
-    connectors = build_connectors(env_config)
+    # connectors = build_connectors(env_config)
     
-    return env_config, spark, storage, datasets, partition_manager, connectors
+    # return env_config, spark, storage, datasets, partition_manager, connectors
