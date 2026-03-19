@@ -12,7 +12,8 @@ from pyspark.sql.functions import (
     concat_ws,
     row_number,
     coalesce,
-    desc
+    desc, 
+    expr
 )
 from pyspark.sql.types import StringType
 from pathlib import Path
@@ -53,11 +54,23 @@ def clean_jobs(df: DataFrame) -> DataFrame:
         # Standardize timestamp
         .withColumn(
             "ingested_at",
-            to_timestamp(col("ingested_at"), "yyyy-MM-dd'T'HH:mm:ssXXX")
+            expr("""
+                coalesce(
+                    try_to_timestamp(ingested_at, "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"),
+                    try_to_timestamp(ingested_at, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                    try_to_timestamp(ingested_at)
+                    )
+        """)
         )
         .withColumn(
             "posted_at",
-            to_timestamp(col("posted_at_raw"), "yyyy-MM-dd'T'HH:mm:ssXXX")
+            expr("""
+                coalesce(
+                    try_to_timestamp(posted_at_raw, "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"),
+                    try_to_timestamp(posted_at_raw, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                    try_to_timestamp(posted_at_raw)
+                    )
+        """)
         )
         # Unified schema
         .select(

@@ -63,9 +63,31 @@ class ConfigLoader:
         raw_env_config = self._config.get("environments", {}).get(env)
         if raw_env_config is None:
             raise KeyError(f"Environment '{env}' not found in config.")
-
-        return EnvironmentConfig(
+        
+        env_config = EnvironmentConfig(
             env=env,
             **raw_env_config,
         )
-
+        
+        # Handle local paths
+        if env_config.storage.type == "local":
+            # Normalize paths
+            root_path = (self.project_root / env_config.paths.root).resolve()
+            metadata_path = (self.project_root / env_config.paths.metadata).resolve()
+            
+            # Ensure directories exists
+            root_path.mkdir(parents=True, exist_ok=True)
+            metadata_path.mkdir(parents=True, exist_ok=True)
+            
+            # Write back normalized paths
+            env_config.paths.root = str(root_path)
+            env_config.paths.metadata = str(metadata_path)
+        
+        # Handle GCS
+        elif env_config.storage.type == "gcs":
+            if not str(env_config.paths.root).startswith("gs://"):
+                raise ValueError("GCS root path must start with 'gs://'")
+            if not str(env_config,paths.metadata).startswith("gs://"):
+                raise ValueError("GCS metadata path must start with 'gs://'")
+        
+        return env_config
