@@ -10,10 +10,6 @@ environments:
     paths:
       root: ./data
       metadata: ./metadata
-      #bronze: ./data/bronze
-      #silver: ./data/silver
-      #gold_v1: ./data/gold_v1
-      #gold_v2: ./data/gold_v2
     bronze:
       query: "data engineer"
       country: "us"
@@ -39,9 +35,6 @@ environments:
     paths:
       root: gs://job-pipeline
       metadata: gs://job-pipeline/metadata
-      #bronze: gs://job-pipeline/bronze
-      #silver: gs://job-pipeline/silver
-      #gold: gs://job-pipeline/gold
     bronze:
       query: "data engineer"
       location: "London"
