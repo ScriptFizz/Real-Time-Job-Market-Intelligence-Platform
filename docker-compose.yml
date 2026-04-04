@@ -1,68 +1,146 @@
 services:
-  airflow-init:
-    build: .
-    container_name: airflow-init
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: jobplat-app
     volumes:
-      - ./src/job_plat/dags:/app/dags
+      - ./src:/app/src
       - ./data:/app/data
-    environment:
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-    command: airflow db init
+    networks:
+      - jobplat
+    depends_on:
+      - postgres
+      - spark-master
+    command: tail -f /dev/null
 
   airflow-webserver:
-    build: .
+    image: apache/airflow:2.9.0
     container_name: airflow-webserver
     depends_on:
-      - postgres
-      - spark-master
-    volumes:
-      - ./src/job_plat/dags:/app/dags
-      - ./data:/app/data
+      postgres:
+        condition: service_started
+      spark-master:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully
     environment:
-      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW_CONN_SPARK_DEFAULT=spark://spark-master:7077
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    volumes:
+      - ./src/job_plat/dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
     ports:
       - "8080:8080"
-    command: airflow webserver
+    command: >
+      bash -c "
+      until airflow db check; do
+        echo 'Waiting for DB...';
+        sleep 5;
+      done;
+      airflow webserver
+      "
+    networks:
+      - jobplat
 
   airflow-scheduler:
-    build: .
+    image: apache/airflow:2.9.0
     container_name: airflow-scheduler
     depends_on:
-      - airflow-webserver
-      - postgres
-      - spark-master
+      airflow-webserver:
+        condition: service_started
+      postgres:
+        condition: service_started
+      spark-master:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     volumes:
-      - ./src/job_plat/dags:/app/dags
-      - ./data:/app/data
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW_CONN_SPARK_DEFAULT=spark://spark-master:7077
-    command: airflow scheduler
+      - ./src/job_plat/dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+    command: >
+      bash -c "
+      until airflow db check; do
+        echo 'Waiting for DB...';
+        sleep 5;
+      done;
+      airflow scheduler
+      "
+    networks:
+      - jobplat
 
-  spark-master:
-    image: bitnami/spark:latest
-    container_name: spark-master
+  airflow-init:
+    image: apache/airflow:2.9.0
+    container_name: airflow-init
+    depends_on:
+      - postgres
     environment:
-      - SPARK_MODE=master
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    volumes:
+      - ./src/job_plat/dags:/opt/airflow/dags
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create \
+        --username admin \
+        --password admin \
+        --firstname admin \
+        --lastname admin \
+        --role Admin \
+        --email admin@example.com || true
+      "
+    networks:
+      - jobplat
+
+  # ✅ FIXED Spark master
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: spark-master
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_MASTER_HOST: spark-master
     ports:
       - "7077:7077"
       - "8081:8080"
+    volumes:
+      - ./src:/app/src
+    networks:
+      - jobplat
 
+  # ✅ FIXED Spark worker
   spark-worker:
-    image: bitnami/spark:latest
+    image: apache/spark:3.5.0
     container_name: spark-worker
     depends_on:
       - spark-master
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
+    volumes:
+      - ./src:/app/src
+    networks:
+      - jobplat
 
   postgres:
     image: postgres:15
+    container_name: postgres
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
+    networks:
+      - jobplat
+
+networks:
+  jobplat:
+    driver: bridge

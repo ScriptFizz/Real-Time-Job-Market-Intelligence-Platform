@@ -26,7 +26,7 @@ def parse_date(d: str | None):
 
 def create_spark(
     spark_config: SparkConfig
-) -> SparkSession:
+) -> Tuple[SparkSession, bool]:
     """
     Create a SparkSession with a specific application name and master URL.
     
@@ -46,7 +46,10 @@ def create_spark(
     for key, value in spark_config.config.items():
         builder = builder.config(key, value)
     
-    return builder.getOrCreate()
+    is_local = False
+    if spark_config.master == "local[*]":
+        is_local=True
+    return builder.getOrCreate(), is_local
 
 
 

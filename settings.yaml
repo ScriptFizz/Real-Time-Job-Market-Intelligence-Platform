@@ -2,7 +2,7 @@ environments:
   dev:
     spark:
       app_name: "job-platform-dev"
-      master: "local[*]"
+      master: "spark://spark-master:7077" #"local[*]"
       config:
         spark.sql.shuffle.partitions: 4
     storage:
@@ -27,7 +27,7 @@ environments:
   prod:
     spark:
       app_name: "job-platform-prod"
-      master: "yarn"
+      master: "spark://spark-master:7077" # "yarn"
       config:
         spark.sql.shuffle.partitions: 200
     storage:

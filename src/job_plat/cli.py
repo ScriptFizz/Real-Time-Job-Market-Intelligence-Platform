@@ -14,7 +14,7 @@ from job_plat.context.contexts import ExecutionParams
 from job_plat.config.logconfig import setup_logging
 from job_plat.storage.storages import get_storage, Storage
 #from job_plat.utils.helpers import create_spark, parse_date
-from job_plat.utils.helpers import get_or_create_spark, parse_date
+from job_plat.utils.helpers import create_spark, parse_date
 from job_plat.partitioning.partition_manager import PartitionManager
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.pipeline.datasets.dataset_definitions import DATASET_DEFS
@@ -43,7 +43,7 @@ def setup_run(config: str, env: str, execution_date: str | None, query: str | No
         else datetime.utcnow()
     )
         
-    spark, is_spark_created = get_or_create_spark(env_config.spark)
+    spark, is_spark_created = create_spark(env_config.spark)
     return env_config, execution, execution_date, spark, is_spark_created
 
 def build_common(env_config: EnvironmentConfig, execution: ExecutionParams, spark: SparkSession, execution_date: datetime) -> Tuple[Storage, DatasetRegistry, PartitionManager]:

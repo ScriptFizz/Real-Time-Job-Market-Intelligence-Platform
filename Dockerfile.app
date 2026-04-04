@@ -23,13 +23,15 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry export \
     --without dev \
     --without viz \
+    --with spark \
     -f requirements.txt \
     -o requirements.txt \
     && rm -rf /tmp/poetry-cache
 
 # Remove CUDA dependencies pulled by sentence-transformers
 RUN sed -i '/^torch/d' requirements.txt \
- && sed -i '/^nvidia-/d' requirements.txt
+ && sed -i '/^nvidia-/d' requirements.txt \
+ && sed -i '/^cuda-/d' requirements.txt
 
 # Install CPU-only torch
 RUN pip install --no-cache-dir \
@@ -41,6 +43,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project code
 COPY . .
+
+ENV PYTHONPATH=/app/src
 
 # Default command for testing/debugging
 CMD ["python", "-m", "job_plat.cli"]
