@@ -13,7 +13,8 @@ from job_plat.orchestration.ml_pipeline import run_feature_pipeline, run_ml_pipe
 from job_plat.context.contexts import ExecutionParams
 from job_plat.config.logconfig import setup_logging
 from job_plat.storage.storages import get_storage, Storage
-from job_plat.utils.helpers import create_spark, parse_date
+#from job_plat.utils.helpers import create_spark, parse_date
+from job_plat.utils.helpers import get_or_create_spark, parse_date
 from job_plat.partitioning.partition_manager import PartitionManager
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.pipeline.datasets.dataset_definitions import DATASET_DEFS
@@ -23,7 +24,7 @@ load_dotenv()
 app = typer.Typer(help="Job postings data pipeline CLI")
 
 
-def setup_run(config: str, env: str, execution_date: str | None, query: str | None = None, country: str | None = None, location: str | None = None) -> Tuple[EnvironmentConfig, ExecutionParams, datetime, SparkSession]:
+def setup_run(config: str, env: str, execution_date: str | None, query: str | None = None, country: str | None = None, location: str | None = None) -> Tuple[EnvironmentConfig, ExecutionParams, datetime, SparkSession, bool]:
     config_loader = ConfigLoader(config_path=config, env=env)
     env_config = config_loader.load_env()
     
@@ -42,8 +43,8 @@ def setup_run(config: str, env: str, execution_date: str | None, query: str | No
         else datetime.utcnow()
     )
         
-    spark = create_spark(env_config.spark)
-    return env_config, execution, execution_date, spark
+    spark, is_spark_created = get_or_create_spark(env_config.spark)
+    return env_config, execution, execution_date, spark, is_spark_created
 
 def build_common(env_config: EnvironmentConfig, execution: ExecutionParams, spark: SparkSession, execution_date: datetime) -> Tuple[Storage, DatasetRegistry, PartitionManager]:
             
@@ -72,7 +73,7 @@ def bronze(
     Run bronze ingestion stage.
     """
     
-    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date, query=query, country=country, location=location)
+    env_config, execution, execution_date, spark, is_spark_created = setup_run(config=config, env=env, execution_date=execution_date, query=query, country=country, location=location)
     
     try:
         
@@ -96,7 +97,8 @@ def bronze(
             )
     
     finally:
-        spark.stop()
+        if is_spark_created:
+            spark.stop()
 
 
 @app.command()
@@ -109,7 +111,7 @@ def silver(
     Run silver stage.
     """
     
-    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
+    env_config, execution, execution_date, spark, is_spark_created = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
@@ -129,7 +131,8 @@ def silver(
         )
     
     finally:
-        spark.stop()
+        if is_spark_created:
+            spark.stop()
 
 
 
@@ -143,7 +146,7 @@ def gold(
     Run gold stage.
     """
     
-    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
+    env_config, execution, execution_date, spark, is_spark_created = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
@@ -163,7 +166,8 @@ def gold(
         )
     
     finally:
-        spark.stop()
+        if is_spark_created:
+            spark.stop()
 
 
 
@@ -181,7 +185,7 @@ def data_pipeline(
     Run the full pipeline (bronze → silver → gold).
     """
     
-    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date, query=query, country=country, location=location)
+    env_config, execution, execution_date, spark, is_spark_created = setup_run(config=config, env=env, execution_date=execution_date, query=query, country=country, location=location)
 
     try: 
         pipeline_ctx = build_data_pipeline_context(
@@ -204,7 +208,8 @@ def data_pipeline(
         )
     
     finally:
-        spark.stop()
+        if is_spark_created:
+            spark.stop()
 
 
 ###################
@@ -223,7 +228,7 @@ def feature(
     Run feature stage.
     """
     
-    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
+    env_config, execution, execution_date, spark, is_spark_created = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
@@ -243,7 +248,8 @@ def feature(
         ) 
     
     finally:
-        spark.stop()
+        if is_spark_created:
+            spark.stop()
 
 
 # ML
@@ -258,7 +264,7 @@ def ml(
     Run ml stage.
     """
     
-    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
+    env_config, execution, execution_date, spark, is_spark_created = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
@@ -277,7 +283,8 @@ def ml(
         ) 
     
     finally:
-        spark.stop()
+        if is_spark_created:
+            spark.stop()
 
 
 # FULL ML
@@ -292,7 +299,7 @@ def ml_pipeline(
     Run full ml pipeline.
     """
     
-    env_config, execution, execution_date, spark = setup_run(config=config, env=env, execution_date=execution_date)
+    env_config, execution, execution_date, spark, is_spark_created = setup_run(config=config, env=env, execution_date=execution_date)
     
     try:
     
@@ -311,7 +318,8 @@ def ml_pipeline(
         ) 
     
     finally:
-        spark.stop()
+        if is_spark_created:
+            spark.stop()
 
 
 

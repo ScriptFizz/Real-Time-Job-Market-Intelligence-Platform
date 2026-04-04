@@ -15,14 +15,14 @@ from job_plat.config.logconfig import setup_logging
 from job_plat.storage.storages import get_storage
 #from job_plat.utils.helpers import create_spark, parse_date
 from job_plat.context.context_builders import build_bronze_context, build_data_pipeline_context, build_ml_pipeline_context
-
+from typing import Tuple
 
 class StageSkip(Exception):
     pass
 
 def parse_date(d: str | None):
     return datetime.strptime(d, "%Y-%m-%d").date() if d else None
-
+    
 
 def create_spark(
     spark_config: SparkConfig
@@ -47,6 +47,29 @@ def create_spark(
         builder = builder.config(key, value)
     
     return builder.getOrCreate()
+
+
+
+def get_or_create_spark(
+    spark_config: SparkConfig
+) -> Tuple[SparkSession, bool]:
+    """
+    Get an active SparkSession, otherwise create it with a specific application name and master URL.
+    
+    Args:
+        
+        
+    Returns:
+        (SparkSession): Entry point to programming Spark.
+    """
+    
+    spark = SparkSession.getActiveSession()
+    
+    if spark is not None:
+        return spark, False
+    
+    create_spark(spark_config=spark_config), True
+
 
 
 def union_all(dfs: list[DataFrame]) -> DataFrame:

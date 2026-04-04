@@ -23,14 +23,15 @@ rich = "^13.7"
 tenacity = "^8.3"
 pydantic = "^2.7"
 sentence-transformers = "^5.2.3"
+psycopg2-binary = "^2.9.11"
 
 [tool.poetry.group.spark.dependencies]
 pyspark = ">=3.5.1,<4.0.0"
 
-[tool.poetry.group.scraping.dependencies]
-beautifulsoup4 = ">=4.12.3,<5.0.0"
-lxml = ">=5.2.0,<6.0.0"
-playwright = ">=1.42,<2.0.0"
+#[tool.poetry.group.scraping.dependencies]
+#beautifulsoup4 = ">=4.12.3,<5.0.0"
+#lxml = ">=5.2.0,<6.0.0"
+#playwright = ">=1.42,<2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mkdocs = "^1.6.1"
