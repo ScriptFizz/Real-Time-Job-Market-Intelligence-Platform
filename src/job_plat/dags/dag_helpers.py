@@ -1,6 +1,12 @@
 import sys
 import subprocess
 import time
+import os
+
+
+def spark_app(path: str) -> str:
+    base = os.getenv("SPARK_APP_PATH", "/app/src/job_plat/runners")
+    return f"{base}/{path}"
 
 def run_command(cmd: list) -> None:
     

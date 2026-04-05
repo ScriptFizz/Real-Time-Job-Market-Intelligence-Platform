@@ -2,7 +2,7 @@ from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
 from airflow.sensors.external_task import ExternalTaskSensor
 from datetime import datetime, timedelta
-from job_plat.dags.dag_helpers import run_command
+from job_plat.dags.dag_helpers import spark_app
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 
@@ -20,8 +20,8 @@ def ml_dag():
     
     run_features = SparkSubmitOperator(
         task_id="run_features",
-        application="/app/src/job_plat/cli.py",
-        application_args=["feature", "--execution-date", execution_date, "--env", "{{ params.env }}"],
+        application=spark_app("ml/feature_runner.py"),
+        application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
         conn_id="spark_default",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
@@ -29,8 +29,9 @@ def ml_dag():
     
     run_ml = SparkSubmitOperator(
         task_id="run_ml",
-        application="/app/src/job_plat/cli.py",
-        application_args=["ml", "--execution-date", execution_date, "--env", "{{ params.env }}"],
+        application=spark_app("ml/ml_runner.py"),
+        #application_args=["ml", "--execution-date", execution_date, "--env", "{{ params.env }}"],
+        application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
         conn_id="spark_default",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
