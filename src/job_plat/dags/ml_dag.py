@@ -4,6 +4,9 @@ from airflow.sensors.external_task import ExternalTaskSensor
 from datetime import datetime, timedelta
 from job_plat.dags.dag_helpers import spark_app
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.providers.apache.livy.operators.livy import LivyOperator
+
+
 
 
 @dag(schedule="@weekly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
@@ -20,29 +23,112 @@ def ml_dag():
     
     run_features = SparkSubmitOperator(
         task_id="run_features",
-        application=spark_app("ml/feature_runner.py"),
+        application="/opt/spark/jobs/job_plat/runners/ml/feature_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
         conn_id="spark_default",
+        conf={
+        "spark.master": "spark://spark-master:7077",
+        "spark.submit.deployMode": "cluster"
+        },
+        deploy_mode="cluster",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
     
     run_ml = SparkSubmitOperator(
         task_id="run_ml",
-        application=spark_app("ml/ml_runner.py"),
+        application="/opt/spark/jobs/job_plat/runners/ml/ml_runner.py",
         #application_args=["ml", "--execution-date", execution_date, "--env", "{{ params.env }}"],
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
         conn_id="spark_default",
+        conf={
+        "spark.master": "spark://spark-master:7077",
+        "spark.submit.deployMode": "cluster"
+        },
+        deploy_mode="cluster",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
     
     wait_for_gold >> run_features >> run_ml
 
-dag = ml_dag()
+ml_dag()
 
 
+# @dag(
+    # schedule="@weekly",
+    # start_date=datetime(2024, 1, 1),
+    # catchup=False,
+    # params={"env": "dev"},
+    # default_args={"retries": 2, "retry_delay": timedelta(minutes=5)},
+# )
+# def ml_dag():
+    # wait_for_gold = ExternalTaskSensor(
+        # task_id="wait_for_gold",
+        # external_dag_id="processing_dag",
+        # external_task_id="run_gold",
+        # mode="reschedule",
+        # timeout=600
+    # )
 
+    # run_features = LivyOperator(
+        # task_id="run_features",
+        # file="local:///opt/spark/jobs/job_plat/runners/ml/feature_runner.py",
+        # livy_conn_id="livy_default",
+        # conf={"spark.master": "spark://spark-master:7077", "spark.app.name": "feature-processing"},
+        # args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"]
+    # )
+
+    # run_ml = LivyOperator(
+        # task_id="run_ml",
+        # file="local:///opt/spark/jobs/job_plat/runners/ml/ml_runner.py",
+        # livy_conn_id="livy_default",
+        # conf={"spark.master": "spark://spark-master:7077", "spark.app.name": "ml-processing"},
+        # args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"]
+    # )
+
+    # wait_for_gold >> run_features >> run_ml
+
+# ml_dag()
+
+
+######################################################
+# @dag(schedule="@weekly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
+# def ml_dag():
+    
+    # wait_for_gold = ExternalTaskSensor(
+        # task_id="wait_for_gold",
+        # external_dag_id="processing_dag",
+        # external_task_id="run_gold",
+        # mode="reschedule",
+        # timeout=600,
+    # )
+    
+    
+    # run_features = SparkSubmitOperator(
+        # task_id="run_features",
+        # application=spark_app("ml/feature_runner.py"),
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # run_ml = SparkSubmitOperator(
+        # task_id="run_ml",
+        # application=spark_app("ml/ml_runner.py"),
+        # #application_args=["ml", "--execution-date", execution_date, "--env", "{{ params.env }}"],
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # wait_for_gold >> run_features >> run_ml
+
+# ml_dag()
+
+###################################################
 
 # @dag(schedule="@weekly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
 # def ml_dag():

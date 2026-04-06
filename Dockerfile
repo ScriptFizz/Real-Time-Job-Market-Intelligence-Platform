@@ -1,31 +1,39 @@
 # ---- Base ----
-FROM python:3.11-slim-bookworm AS base
+FROM apache/spark:3.5.0-python3
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    POETRY_CACHE_DIR=/tmp/poetry-cache
+USER root
 
-WORKDIR /app
+ENV PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 
 
-# Install system dependencies for building Python packages
+# ---- Python deps ----
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc \
+    curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install poetry && poetry self add poetry-plugin-export
 
-# Copy dependency files only (for caching)
+# ------ Set working dir -----
+WORKDIR /opt/spark/jobs
+
+# ------ Copy dependency files ---------
 COPY pyproject.toml poetry.lock ./
+
+# ---- Install poetry + deps ----
+RUN pip install --no-cache-dir \
+    poetry==1.7.1 \
+    poetry-plugin-export==1.6.0
+
+# Debug poetry plugin line
+RUN poetry self show plugins
 
 # Export requirements
 RUN poetry export \
-    --without dev \
-    --without viz \
-    -f requirements.txt \
-    -o requirements.txt \
-    && rm -rf /tmp/poetry-cache
+        --without dev \
+        --without viz \
+        -f requirements.txt \
+        -o requirements.txt 
 
 # Remove CUDA dependencies pulled by sentence-transformers
 RUN sed -i '/^torch/d' requirements.txt \
@@ -39,14 +47,64 @@ RUN pip install --no-cache-dir \
 # Install the rest of dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ---- Copy your project ----
+COPY src/job_plat /opt/spark/jobs/job_plat
+COPY settings.yaml /opt/spark/jobs/settings.yaml
+
+# ---- Permissions (important for Spark) ----
+RUN chmod -R 755 /opt/spark/jobs
+
+USER 185
+
+
+###########################################
+# ---- Base ----
+#FROM python:3.11-slim-bookworm AS base
+
+#ENV PYTHONDONTWRITEBYTECODE=1 \
+#    PYTHONUNBUFFERED=1 \
+#     PIP_NO_CACHE_DIR=1 \
+#    POETRY_CACHE_DIR=/tmp/poetry-cache
+
+#WORKDIR /app
+
+# Install system dependencies for building Python packages
+#RUN apt-get update && apt-get install -y --no-install-recommends \
+#    build-essential gcc \
+#    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+#RUN pip install poetry && poetry self add poetry-plugin-export
+
+# Copy dependency files only (for caching)
+#COPY pyproject.toml poetry.lock ./
+
+# Export requirements
+#RUN poetry export \
+#    --without dev \
+#    --without viz \
+#    -f requirements.txt \
+#    -o requirements.txt \
+#    && rm -rf /tmp/poetry-cache
+
+# Remove CUDA dependencies pulled by sentence-transformers
+#RUN sed -i '/^torch/d' requirements.txt \
+# && sed -i '/^nvidia-/d' requirements.txt
+
+# Install CPU-only torch
+#RUN pip install --no-cache-dir \
+#    torch==2.2.2 \
+#    --index-url https://download.pytorch.org/whl/cpu#
+
+# Install the rest of dependencies
+#RUN pip install --no-cache-dir -r requirements.txt
+
 # Copy project code
-COPY . .
+#COPY . .
 
 # Default command for testing/debugging
-CMD ["python", "-m", "job_plat.cli"]
-
-
-
+#CMD ["python", "-m", "job_plat.cli"]
+#############################################
 # ---- Builder stage ----
 #FROM python:3.11-slim-bookworm as builder
 

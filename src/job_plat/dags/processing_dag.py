@@ -4,6 +4,8 @@ from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from datetime import datetime, timedelta
 from job_plat.dags.dag_helpers import spark_app
+from airflow.providers.apache.livy.operators.livy import LivyOperator
+
 
 
 @dag(schedule="@daily", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
@@ -21,30 +23,111 @@ def processing_dag():
     
     run_silver = SparkSubmitOperator(
         task_id="run_silver",
-        application=spark_app("data/silver_runner.py"),
+        application="/opt/spark/jobs/job_plat/runners/data/silver_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
         conn_id="spark_default",
+        conf={
+        "spark.master": "spark://spark-master:7077",
+        "spark.submit.deployMode": "cluster"
+        },
+        deploy_mode="cluster",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
     
     run_gold = SparkSubmitOperator(
         task_id="run_gold",
-        application=spark_app("data/gold_runner.py"),
+        application="/opt/spark/jobs/job_plat/runners/data/gold_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
         conn_id="spark_default",
+        conf={
+        "spark.master": "spark://spark-master:7077",
+        "spark.submit.deployMode": "cluster"
+        },
+        deploy_mode="cluster",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
         
     wait_for_bronze >> run_silver >> run_gold
 
-dag = processing_dag()
+processing_dag()
+
+
+# @dag(
+    # schedule="@daily",
+    # start_date=datetime(2024, 1, 1),
+    # catchup=False,
+    # params={"env": "dev"},
+    # default_args={"retries": 2, "retry_delay": timedelta(minutes=5)},
+# )
+# def processing_dag():
+    # wait_for_bronze = ExternalTaskSensor(
+        # task_id="wait_for_bronze",
+        # external_dag_id="ingestion_dag",
+        # external_task_id="ingest_jobs",
+        # mode="reschedule",
+        # timeout=600,
+        # execution_delta=timedelta(hours=1)
+    # )
+
+    # run_silver = LivyOperator(
+        # task_id="run_silver",
+        # file="local:///opt/spark/jobs/job_plat/runners/data/silver_runner.py",
+        # livy_conn_id="livy_default",
+        # conf={"spark.master": "spark://spark-master:7077", "spark.app.name": "silver-processing"},
+        # args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"]
+    # )
+
+    # run_gold = LivyOperator(
+        # task_id="run_gold",
+        # file="local:///opt/spark/jobs/job_plat/runners/data/gold_runner.py",
+        # livy_conn_id="livy_default",
+        # conf={"spark.master": "spark://spark-master:7077", "spark.app.name": "gold-processing"},
+        # args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"]
+    # )
+
+    # wait_for_bronze >> run_silver >> run_gold
+
+# processing_dag()
 
 
 ########################
+# @dag(schedule="@daily", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
+# def processing_dag():
+    
+    # wait_for_bronze = ExternalTaskSensor(
+        # task_id="wait_for_bronze",
+        # external_dag_id="ingestion_dag",
+        # external_task_id="ingest_jobs",
+        # mode="reschedule",
+        # timeout=600,
+        # execution_delta=timedelta(hours=1)
+    # )
+    
+    
+    # run_silver = SparkSubmitOperator(
+        # task_id="run_silver",
+        # application=spark_app("data/silver_runner.py"),
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # run_gold = SparkSubmitOperator(
+        # task_id="run_gold",
+        # application=spark_app("data/gold_runner.py"),
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+        
+    # wait_for_bronze >> run_silver >> run_gold
 
-
+# processing_dag()
+##########################
 # @dag(schedule="@daily", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
 # def processing_dag():
     
