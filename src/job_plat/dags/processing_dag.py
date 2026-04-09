@@ -3,8 +3,8 @@ from airflow.operators.python import get_current_context
 from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from datetime import datetime, timedelta
-from job_plat.dags.dag_helpers import spark_app
-from airflow.providers.apache.livy.operators.livy import LivyOperator
+#from job_plat.dags.dag_helpers import spark_app
+#from airflow.providers.apache.livy.operators.livy import LivyOperator
 
 
 
@@ -23,28 +23,37 @@ def processing_dag():
     
     run_silver = SparkSubmitOperator(
         task_id="run_silver",
-        application="/opt/spark/jobs/job_plat/runners/data/silver_runner.py",
+        #application="/opt/spark/jobs/job_plat/runners/data/silver_runner.py",
+        application="/opt/airflow/src/job_plat/runners/data/silver_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",
+        conn_id="spark_default",  # keep it real
         conf={
-        "spark.master": "spark://spark-master:7077",
-        "spark.submit.deployMode": "cluster"
-        },
-        deploy_mode="cluster",
+        #"spark.master": "spark://spark-master:7077",
+        "spark.submit.deployMode": "client"}, 
+        #conf={
+        #"spark.master": "spark://spark-master:7077"#,
+        #"spark.submit.deployMode": "cluster"
+        #},
+        #master=None,
+        #deploy_mode="client", #"cluster",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
     
     run_gold = SparkSubmitOperator(
         task_id="run_gold",
-        application="/opt/spark/jobs/job_plat/runners/data/gold_runner.py",
+        #application="/opt/spark/jobs/job_plat/runners/data/gold_runner.py",
+        application="/opt/airflow/src/job_plat/runners/data/gold_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",
-        conf={
-        "spark.master": "spark://spark-master:7077",
-        "spark.submit.deployMode": "cluster"
-        },
-        deploy_mode="cluster",
+        conn_id="spark_default",  # keep it real
+        conf={#"spark.master": "spark://spark-master:7077",
+        "spark.submit.deployMode": "client"},
+        #conf={
+        #"spark.master": "spark://spark-master:7077"#,
+        #"spark.submit.deployMode": "cluster"
+        #},
+        #master=None,
+        #deploy_mode="client", #"cluster",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )

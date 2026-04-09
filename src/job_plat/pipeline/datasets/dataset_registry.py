@@ -13,6 +13,7 @@ class DatasetRegistry:
         ):
             
         self._datasets = {}
+        self.storage = storage
         for ds in dataset_defs:
             dataset = Dataset(
                 name = ds.NAME,

@@ -12,7 +12,7 @@ class PathsConfig(BaseModel):
 
 class SparkConfig(BaseModel):
     app_name: str
-    master: str
+    master: str | None
     config: dict[str, Any] = Field(default_factory=dict)
 
 class StorageConfig(BaseModel):

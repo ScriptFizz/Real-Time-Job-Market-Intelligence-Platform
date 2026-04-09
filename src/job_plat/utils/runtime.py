@@ -11,6 +11,7 @@ from job_plat.utils.helpers import create_spark
 from job_plat.storage.storages import get_storage, Storage
 from job_plat.partitioning.partition_manager import PartitionManager
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
+from job_plat.pipeline.datasets.dataset_definitions import DATASET_DEFS
 from job_plat.config.logconfig import setup_logging
 
 

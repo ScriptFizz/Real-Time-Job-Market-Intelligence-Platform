@@ -6,6 +6,11 @@ authors = ["ScriptFizz <nsimamail@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "job_plat", from = "src" }]
 
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 pandas = ">=2.3.3,<3.0.0"
@@ -24,6 +29,9 @@ tenacity = "^8.3"
 pydantic = "^2.7"
 sentence-transformers = "^5.2.3"
 psycopg2-binary = "^2.9.11"
+python-json-logger = "^2.0.7"
+torch = {version = "2.2.2", source = "pytorch-cpu"}
+apache-airflow = "^3.2.0"
 
 [tool.poetry.group.spark.dependencies]
 pyspark = ">=3.5.1,<4.0.0"

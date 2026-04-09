@@ -36,15 +36,23 @@ def create_spark(
     Returns:
         (SparkSession): Entry point to programming Spark.
     """
+    from pyspark.sql import SparkSession
+    import os
+    
+    master = os.getenv("SPARK_MASTER_URL", "spark://spark-master:7077")
     
     builder = (
         SparkSession.builder
         .appName(spark_config.app_name)
-        .master(spark_config.master)
+        .master(master)
+        #.master(spark_config.master)
     )
+    # if spark_config.master:
+        # builder.master(spark_config.master)
     
     for key, value in spark_config.config.items():
-        builder = builder.config(key, value)
+        if key != "spark.master":
+            builder = builder.config(key, value)
     
     return builder.getOrCreate()
 

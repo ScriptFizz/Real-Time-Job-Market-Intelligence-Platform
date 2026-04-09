@@ -15,17 +15,21 @@ services:
       airflow-init:
         condition: service_completed_successfully
     environment:
-      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
+      SPARK_MASTER_URL: spark://spark-master:7077
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077 #?extra__spark__deploy-mode=client
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/src/job_plat/dags
+      #AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/src/job_plat/dags
       PYTHONPATH: /opt/airflow/src
     volumes:
       - ./src:/opt/airflow/src
+      - ./src/job_plat/dags:/opt/airflow/dags
+      #- ./src:/opt/spark/jobs/job_plat
       - ./data:/opt/airflow/data
       - ./logs:/opt/airflow/logs
       - ./metadata:/opt/airflow/metadata 
+      - ./settings.yaml:/opt/airflow/settings.yaml
     ports:
       - "8080:8080"
     command: >
@@ -55,17 +59,21 @@ services:
       airflow-init:
         condition: service_completed_successfully
     environment:
-      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
+      SPARK_MASTER_URL: spark://spark-master:7077
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077 #?extra__spark__deploy-mode=client
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/src/job_plat/dags
+      #AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/src/job_plat/dags
       PYTHONPATH: /opt/airflow/src
     volumes:
       - ./src:/opt/airflow/src
+      - ./src/job_plat/dags:/opt/airflow/dags
+      #- ./src:/opt/spark/jobs/job_plat
       - ./data:/opt/airflow/data
       - ./logs:/opt/airflow/logs
       - ./metadata:/opt/airflow/metadata 
+      - ./settings.yaml:/opt/airflow/settings.yaml
     command: >
       bash -c "
       until airflow db check; do
@@ -86,12 +94,15 @@ services:
     depends_on:
       - postgres
     environment:
-      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077 #?extra__spark__deploy-mode=client
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/src/job_plat/dags
+      #AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/src/job_plat/dags
       PYTHONPATH: /opt/airflow/src
     volumes:
       - ./src:/opt/airflow/src
+      - ./src/job_plat/dags:/opt/airflow/dags
+      #- ./src:/opt/spark/jobs/job_plat
+      - ./settings.yaml:/opt/airflow/settings.yaml
     command: >
       bash -c "
       airflow db migrate &&
@@ -115,8 +126,10 @@ services:
       - "8081:8080"
     restart: unless-stopped
     volumes:
+      - ./src:/opt/spark/jobs/job_plat
       - ./metadata:/opt/spark/metadata
       - ./data:/opt/spark/data
+      - ./settings.yaml:/opt/airflow/settings.yaml
     networks:
       - jobplat
 
@@ -134,8 +147,10 @@ services:
       SPARK_WORKER_NAME: worker-1
     restart: unless-stopped
     volumes:
+      - ./src:/opt/spark/jobs/job_plat
       - ./metadata:/opt/spark/metadata
       - ./data:/opt/spark/data
+      - ./settings.yaml:/opt/airflow/settings.yaml
     networks:
       - jobplat
 

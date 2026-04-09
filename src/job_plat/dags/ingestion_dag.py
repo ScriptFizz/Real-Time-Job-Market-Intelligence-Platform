@@ -1,26 +1,30 @@
 from airflow.decorators import dag, task
 from airflow.operators.python import get_current_context
 from datetime import datetime, timedelta
-from job_plat.dags.dag_helpers import spark_app
+#from job_plat.dags.dag_helpers import spark_app
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from airflow.providers.apache.livy.operators.livy import LivyOperator
+#from airflow.providers.apache.livy.operators.livy import LivyOperator
 
 
 
 
-@dag(schedule="@hourly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
+@dag(schedule="@hourly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 1, "retry_delay": timedelta(minutes=1),})
 def ingestion_dag():
     
     ingest_jobs = SparkSubmitOperator(
         task_id="ingest_jobs",
-        application="/opt/spark/jobs/job_plat/runners/data/bronze_runner.py",
+        #application="/opt/spark/jobs/job_plat/runners/data/bronze_runner.py",
+        application="/opt/airflow/src/job_plat/runners/data/bronze_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",
+        conn_id="spark_default",  # keep it real
         conf={
-        "spark.master": "spark://spark-master:7077",
-        "spark.submit.deployMode": "cluster"
-        },
-        deploy_mode="cluster",
+        #"spark.master": "spark://spark-master:7077",
+        "spark.submit.deployMode": "client"}, 
+        #conf={
+        #"spark.master": "spark://spark-master:7077"#,
+        #"spark.submit.deployMode": "cluster"
+        #},
+        #deploy_mode="client", #"cluster",
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
