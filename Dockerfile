@@ -3,19 +3,18 @@ FROM apache/spark:3.5.0-python3
 
 USER root
 
-ENV PIP_NO_CACHE_DIR=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 
+ENV PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
-# ---- Python deps ----
+# Basic utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    build-essential \
+    curl build-essential software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
+# Create consistent user (IMPORTANT)
+RUN useradd -u 1000 -m sparkuser
 
 # ------ Set working dir -----
-WORKDIR /opt/spark/jobs
+WORKDIR /opt/jobplat
 
 # ------ Copy dependency files ---------
 COPY pyproject.toml poetry.lock ./
@@ -25,8 +24,8 @@ RUN pip install --no-cache-dir \
     poetry==1.7.1 \
     poetry-plugin-export==1.6.0
 
-# Debug poetry plugin line
-RUN poetry self show plugins
+RUN poetry env use python3.8 || true
+RUN poetry lock --no-update
 
 # Export requirements
 RUN poetry export \
@@ -44,18 +43,80 @@ RUN pip install --no-cache-dir \
     torch==2.2.2 \
     --index-url https://download.pytorch.org/whl/cpu
 
+
+# ---- Copy your project ----
+COPY src /opt/jobplat/src
+COPY settings.yaml /opt/jobplat/settings.yaml
+
 # Install the rest of dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ---- Permissions (important for Spark) ----
+RUN chown -R sparkuser:sparkuser /opt/jobplat
+RUN chown -R sparkuser:sparkuser /opt/spark
+RUN mkdir -p /opt/spark/work && chown -R sparkuser:sparkuser /opt/spark/work
+
+USER sparkuser
+
+###############  09-04-2026 #######################
+
+# ---- Base ----
+#FROM apache/spark:3.5.0-python3
+
+#USER root
+
+#ENV PIP_NO_CACHE_DIR=1 \
+#    PYTHONDONTWRITEBYTECODE=1 \
+#    PYTHONUNBUFFERED=1 
+
+# ---- Python deps ----
+#RUN apt-get update && apt-get install -y --no-install-recommends \
+#    curl \
+#    build-essential \
+#    && rm -rf /var/lib/apt/lists/*
+
+
+# ------ Set working dir -----
+#WORKDIR /opt/spark/jobs
+
+# ------ Copy dependency files ---------
+#COPY pyproject.toml poetry.lock ./
+
+# ---- Install poetry + deps ----
+#RUN pip install --no-cache-dir \
+#    poetry==1.7.1 \
+#    poetry-plugin-export==1.6.0
+
+# Debug poetry plugin line
+#RUN poetry self show plugins
+
+# Export requirements
+#RUN poetry export \
+#        --without dev \
+#        --without viz \
+#        -f requirements.txt \
+#        -o requirements.txt 
+
+# Remove CUDA dependencies pulled by sentence-transformers
+#RUN sed -i '/^torch/d' requirements.txt \
+# && sed -i '/^nvidia-/d' requirements.txt
+
+# Install CPU-only torch
+#RUN pip install --no-cache-dir \
+#    torch==2.2.2 \
+#    --index-url https://download.pytorch.org/whl/cpu
+
+# Install the rest of dependencies
+#RUN pip install --no-cache-dir -r requirements.txt
+
 # ---- Copy your project ----
-COPY src/job_plat /opt/spark/jobs/job_plat
-COPY settings.yaml /opt/spark/jobs/settings.yaml
+#COPY src/job_plat /opt/spark/jobs/job_plat
+#COPY settings.yaml /opt/spark/jobs/settings.yaml
 
 # ---- Permissions (important for Spark) ----
-RUN chmod -R 755 /opt/spark/jobs
+#RUN chmod -R 755 /opt/spark/jobs
 
-USER 185
-
+#USER 185
 
 ###########################################
 # ---- Base ----

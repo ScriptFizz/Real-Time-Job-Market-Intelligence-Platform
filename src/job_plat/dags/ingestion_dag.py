@@ -1,11 +1,11 @@
-from airflow.decorators import dag, task
-from airflow.operators.python import get_current_context
-from datetime import datetime, timedelta
-#from job_plat.dags.dag_helpers import spark_app
+from airflow.decorators import dag
+from airflow.operators.python import ShortCircuitOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-#from airflow.providers.apache.livy.operators.livy import LivyOperator
+from datetime import datetime, timedelta
 
-
+def should_trigger_daily(**kwargs):
+    return datetime.utcnow().hour == 0
 
 
 @dag(schedule="@hourly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 1, "retry_delay": timedelta(minutes=1),})
@@ -13,25 +13,57 @@ def ingestion_dag():
     
     ingest_jobs = SparkSubmitOperator(
         task_id="ingest_jobs",
-        #application="/opt/spark/jobs/job_plat/runners/data/bronze_runner.py",
-        application="/opt/airflow/src/job_plat/runners/data/bronze_runner.py",
+        application="/opt/jobplat/src/job_plat/runners/data/bronze_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",  # keep it real
-        conf={
-        #"spark.master": "spark://spark-master:7077",
-        "spark.submit.deployMode": "client"}, 
-        #conf={
-        #"spark.master": "spark://spark-master:7077"#,
-        #"spark.submit.deployMode": "cluster"
-        #},
-        #deploy_mode="client", #"cluster",
+        conn_id="spark_default",  
+        conf={"spark.submit.deployMode": "client"}, 
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
     
-    ingest_jobs
+    daily_gate = ShortCircuitOperator(
+        task_id="daily_gate",
+        python_callable=should_trigger_daily,
+    )
+    
+    trigger_processing = TriggerDagRunOperator(
+        task_id="trigger_processing",
+        trigger_dag_id="processing_dag",
+        conf={"env": "{{ params.env }}"},
+    )
+    
+    ingest_jobs >> daily_gate >> trigger_processing
 
 dag = ingestion_dag()
+
+
+# @dag(schedule="@hourly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 1, "retry_delay": timedelta(minutes=1),})
+# def ingestion_dag():
+    
+    # ingest_jobs = SparkSubmitOperator(
+        # task_id="ingest_jobs",
+        # #application="/opt/spark/jobs/job_plat/runners/data/bronze_runner.py",
+        # #application="/opt/airflow/src/job_plat/runners/data/bronze_runner.py",
+        # application="/opt/jobplat/src/job_plat/runners/data/bronze_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",  # keep it real
+        # conf={
+        # #"spark.master": "spark://spark-master:7077",
+        # "spark.submit.deployMode": "client"}, 
+        # #conf={
+        # #"spark.master": "spark://spark-master:7077"#,
+        # #"spark.submit.deployMode": "cluster"
+        # #},
+        # #deploy_mode="client", #"cluster",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # ingest_jobs
+
+# dag = ingestion_dag()
+
+
 
 # @dag(
     # schedule="@daily",

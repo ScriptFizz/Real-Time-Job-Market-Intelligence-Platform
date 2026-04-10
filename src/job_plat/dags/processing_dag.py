@@ -1,68 +1,110 @@
-from airflow.decorators import dag, task
-from airflow.operators.python import get_current_context
-from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.decorators import dag
+from airflow.operators.python import ShortCircuitOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from datetime import datetime, timedelta
-#from job_plat.dags.dag_helpers import spark_app
-#from airflow.providers.apache.livy.operators.livy import LivyOperator
 
 
+def should_trigger_weekly(**kwargs):
+    return datetime.utcnow().weekday() == 0
 
-@dag(schedule="@daily", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
+@dag(schedule=None, params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=1),})
 def processing_dag():
-    
-    wait_for_bronze = ExternalTaskSensor(
-        task_id="wait_for_bronze",
-        external_dag_id="ingestion_dag",
-        external_task_id="ingest_jobs",
-        mode="reschedule",
-        timeout=600,
-        execution_delta=timedelta(hours=1)
-    )
-    
     
     run_silver = SparkSubmitOperator(
         task_id="run_silver",
-        #application="/opt/spark/jobs/job_plat/runners/data/silver_runner.py",
-        application="/opt/airflow/src/job_plat/runners/data/silver_runner.py",
+        application="/opt/jobplat/src/job_plat/runners/data/silver_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",  # keep it real
-        conf={
-        #"spark.master": "spark://spark-master:7077",
-        "spark.submit.deployMode": "client"}, 
-        #conf={
-        #"spark.master": "spark://spark-master:7077"#,
-        #"spark.submit.deployMode": "cluster"
-        #},
-        #master=None,
-        #deploy_mode="client", #"cluster",
+        conn_id="spark_default",  
+        conf={"spark.submit.deployMode": "client"}, 
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
     
     run_gold = SparkSubmitOperator(
         task_id="run_gold",
-        #application="/opt/spark/jobs/job_plat/runners/data/gold_runner.py",
-        application="/opt/airflow/src/job_plat/runners/data/gold_runner.py",
+        application="/opt/jobplat/src/job_plat/runners/data/gold_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",  # keep it real
-        conf={#"spark.master": "spark://spark-master:7077",
-        "spark.submit.deployMode": "client"},
-        #conf={
-        #"spark.master": "spark://spark-master:7077"#,
-        #"spark.submit.deployMode": "cluster"
-        #},
-        #master=None,
-        #deploy_mode="client", #"cluster",
+        conn_id="spark_default", 
+        conf={"spark.submit.deployMode": "client"},
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
+    
+    weekly_gate = ShortCircuitOperator(
+        task_id="weekly_gate",
+        python_callable=should_trigger_weekly,
+    )
+    
+    trigger_ml = TriggerDagRunOperator(
+        task_id="trigger_ml",
+        trigger_dag_id="ml_dag",
+        conf={"env": "{{ params.env }}"},
+    )
         
-    wait_for_bronze >> run_silver >> run_gold
+    run_silver >> run_gold >> weekly_gate >> trigger_ml
 
-processing_dag()
+dag = processing_dag()
 
 
+#######################
+
+# @dag(schedule="@daily", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
+# def processing_dag():
+    
+    # wait_for_bronze = ExternalTaskSensor(
+        # task_id="wait_for_bronze",
+        # external_dag_id="ingestion_dag",
+        # external_task_id="ingest_jobs",
+        # mode="reschedule",
+        # timeout=600,
+        # execution_delta=timedelta(hours=1)
+    # )
+    
+    
+    # run_silver = SparkSubmitOperator(
+        # task_id="run_silver",
+        # #application="/opt/spark/jobs/job_plat/runners/data/silver_runner.py",
+        # application="/opt/jobplat/src/job_plat/runners/data/silver_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",  # keep it real
+        # conf={
+        # #"spark.master": "spark://spark-master:7077",
+        # "spark.submit.deployMode": "client"}, 
+        # #conf={
+        # #"spark.master": "spark://spark-master:7077"#,
+        # #"spark.submit.deployMode": "cluster"
+        # #},
+        # #master=None,
+        # #deploy_mode="client", #"cluster",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # run_gold = SparkSubmitOperator(
+        # task_id="run_gold",
+        # #application="/opt/spark/jobs/job_plat/runners/data/gold_runner.py",
+        # application="/opt/jobplat/src/job_plat/runners/data/gold_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",  # keep it real
+        # conf={#"spark.master": "spark://spark-master:7077",
+        # "spark.submit.deployMode": "client"},
+        # #conf={
+        # #"spark.master": "spark://spark-master:7077"#,
+        # #"spark.submit.deployMode": "cluster"
+        # #},
+        # #master=None,
+        # #deploy_mode="client", #"cluster",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+        
+    # wait_for_bronze >> run_silver >> run_gold
+
+# processing_dag()
+
+
+##########################
 # @dag(
     # schedule="@daily",
     # start_date=datetime(2024, 1, 1),

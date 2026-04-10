@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 from typing import Any
 from job_plat.config.env_config import BronzeConfig, PathsConfig, EnvironmentConfig
 
@@ -71,9 +72,19 @@ class ConfigLoader:
         
         # Handle local paths
         if env_config.storage.type == "local":
+            
+            data_root = os.getenv("DATA_ROOT")
+            metadata_root = os.getenv("METADATA_ROOT")
             # Normalize paths
-            root_path = (self.project_root / env_config.paths.root).resolve()
-            metadata_path = (self.project_root / env_config.paths.metadata).resolve()
+            if data_root:
+                root_path = Path(data_root).resolve()
+            else:
+                root_path = (self.project_root / env_config.paths.root).resolve()
+            
+            if metadata_root:
+                metadata_path = Path(metadata_root).resolve()
+            else:
+                metadata_path = (self.project_root / env_config.paths.metadata).resolve()
             
             # Ensure directories exists
             root_path.mkdir(parents=True, exist_ok=True)

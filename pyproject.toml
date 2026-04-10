@@ -12,7 +12,7 @@ url = "https://download.pytorch.org/whl/cpu"
 priority = "explicit"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.8,<3.12"
 pandas = ">=2.3.3,<3.0.0"
 numpy = ">=1.24.4,<2.0.0"
 pyyaml = ">=6.0.3,<7.0.0"
@@ -31,15 +31,11 @@ sentence-transformers = "^5.2.3"
 psycopg2-binary = "^2.9.11"
 python-json-logger = "^2.0.7"
 torch = {version = "2.2.2", source = "pytorch-cpu"}
-apache-airflow = "^3.2.0"
+apache-airflow = "==2.9.0"
 
 [tool.poetry.group.spark.dependencies]
 pyspark = ">=3.5.1,<4.0.0"
 
-#[tool.poetry.group.scraping.dependencies]
-#beautifulsoup4 = ">=4.12.3,<5.0.0"
-#lxml = ">=5.2.0,<6.0.0"
-#playwright = ">=1.42,<2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mkdocs = "^1.6.1"
@@ -51,7 +47,8 @@ ruff = ">=0.14.8,<0.15.0"
 types-requests = ">=2.32.4.20250913,<3.0.0.0"
 
 [tool.poetry.group.viz.dependencies]
-matplotlib = "^3.10.8"
+optional=true
+matplotlib = "^3.7.5"
 seaborn = "^0.13.2"
 
 [build-system]

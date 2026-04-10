@@ -1,65 +1,88 @@
-from airflow.decorators import dag, task
-from airflow.operators.python import get_current_context
-from airflow.sensors.external_task import ExternalTaskSensor
-from datetime import datetime, timedelta
-#from job_plat.dags.dag_helpers import spark_app
+from airflow.decorators import dag
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-#from airflow.providers.apache.livy.operators.livy import LivyOperator
+from datetime import datetime, timedelta
 
-
-
-
-@dag(schedule="@weekly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
+@dag(schedule=None, params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=1),})
 def ml_dag():
-    
-    wait_for_gold = ExternalTaskSensor(
-        task_id="wait_for_gold",
-        external_dag_id="processing_dag",
-        external_task_id="run_gold",
-        mode="reschedule",
-        timeout=600,
-    )
-    
     
     run_features = SparkSubmitOperator(
         task_id="run_features",
-        #application="/opt/spark/jobs/job_plat/runners/ml/feature_runner.py",
-        application="/opt/airflow/src/job_plat/runners/data/feature_runner.py",
+        application="/opt/jobplat/src/job_plat/runners/data/feature_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",  # keep it real
-        conf={#"spark.master": "spark://spark-master:7077",
-        "spark.submit.deployMode": "client"}, 
-        #conf={
-        #"spark.master": "spark://spark-master:7077"#,
-        #"spark.submit.deployMode": "cluster"
-        #},
-        #deploy_mode="client", #"cluster",
+        conn_id="spark_default", 
+        conf={"spark.submit.deployMode": "client"}, 
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
     
     run_ml = SparkSubmitOperator(
         task_id="run_ml",
-        #application="/opt/spark/jobs/job_plat/runners/ml/ml_runner.py",
-        application="/opt/airflow/src/job_plat/runners/data/ml_runner.py",
+        application="/opt/jobplat/src/job_plat/runners/data/ml_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",  # keep it real
-        conf={#"spark.master": "spark://spark-master:7077",
-        "spark.submit.deployMode": "client"}, 
-        #conf={
-        #"spark.master": "spark://spark-master:7077"#,
-        #"spark.submit.deployMode": "cluster"
-        #},
-        #deploy_mode="client", #"cluster",
+        conn_id="spark_default", 
+        conf={"spark.submit.deployMode": "client"}, 
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )
     
-    wait_for_gold >> run_features >> run_ml
+    run_features >> run_ml
 
-ml_dag()
+dag = ml_dag()
 
 
+####
+
+# @dag(schedule="@weekly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=5),})
+# def ml_dag():
+    
+    # wait_for_gold = ExternalTaskSensor(
+        # task_id="wait_for_gold",
+        # external_dag_id="processing_dag",
+        # external_task_id="run_gold",
+        # mode="reschedule",
+        # timeout=600,
+    # )
+    
+    
+    # run_features = SparkSubmitOperator(
+        # task_id="run_features",
+        # #application="/opt/spark/jobs/job_plat/runners/ml/feature_runner.py",
+        # application="/opt/jobplat/src/job_plat/runners/data/feature_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",  # keep it real
+        # conf={#"spark.master": "spark://spark-master:7077",
+        # "spark.submit.deployMode": "client"}, 
+        # #conf={
+        # #"spark.master": "spark://spark-master:7077"#,
+        # #"spark.submit.deployMode": "cluster"
+        # #},
+        # #deploy_mode="client", #"cluster",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # run_ml = SparkSubmitOperator(
+        # task_id="run_ml",
+        # #application="/opt/spark/jobs/job_plat/runners/ml/ml_runner.py",
+        # application="/opt/jobplat/src/job_plat/runners/data/ml_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # conn_id="spark_default",  # keep it real
+        # conf={#"spark.master": "spark://spark-master:7077",
+        # "spark.submit.deployMode": "client"}, 
+        # #conf={
+        # #"spark.master": "spark://spark-master:7077"#,
+        # #"spark.submit.deployMode": "cluster"
+        # #},
+        # #deploy_mode="client", #"cluster",
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # wait_for_gold >> run_features >> run_ml
+
+# ml_dag()
+
+#####
 # @dag(
     # schedule="@weekly",
     # start_date=datetime(2024, 1, 1),
