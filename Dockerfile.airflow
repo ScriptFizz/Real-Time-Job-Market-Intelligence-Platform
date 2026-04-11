@@ -1,10 +1,9 @@
-FROM apache/airflow:2.9.0
+FROM apache/airflow:2.8.4-python3.11
 
 USER root
 
 # Install Java & utilities
-RUN apt-get update && apt-get install -y \
-    openjdk-17-jdk procps curl software-properties-common \
+RUN apt-get update && apt-get install -y openjdk-17-jdk curl \
     && rm -rf /var/lib/apt/lists/*
 
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -18,19 +17,27 @@ RUN curl -fsSL https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spar
 
 ENV PATH="/opt/spark/bin:${PATH}"
 
+#RUN pip install --upgrade pip setuptools wheel
+
 # Create non-root user
-RUN useradd -u 1000 -g 0 -m airflowuser
-USER airflowuser
+#RUN useradd -u 1000 -g 0 -m airflowuser
+#USER airflowuser
+
+USER airflow
+
+COPY requirements.airflow.txt .
+RUN pip install --no-cache-dir -r requirements.airflow.txt
 
 # Install Python packages
-RUN pip install --no-cache-dir \
-    apache-airflow-providers-apache-spark \
-    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.0/constraints-3.8.txt"
+#RUN pip install --no-cache-dir \
+#    apache-airflow-providers-apache-spark \
+#    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.0/constraints-3.8.txt"
 
-RUN pip install --no-cache-dir python-json-logger
+#RUN pip install --no-cache-dir \
+#    torch==2.2.2 \
+#    --index-url https://download.pytorch.org/whl/cpu
 
-
-
+#RUN pip install --no-cache-dir sentence-transformers
 
 
 

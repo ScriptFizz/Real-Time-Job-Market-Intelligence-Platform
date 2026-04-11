@@ -22,7 +22,6 @@ class FeatureStage(BaseStage):
     
     def __init__(
         self, 
-        #gold_ctx: GoldContext, 
         feature_ctx: FeatureContext,
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,):

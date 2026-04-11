@@ -3,7 +3,7 @@ import math
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import Callable, Iterator, Dict, Any
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 import requests

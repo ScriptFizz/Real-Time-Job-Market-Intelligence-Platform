@@ -16,7 +16,11 @@ def ingestion_dag():
         application="/opt/jobplat/src/job_plat/runners/data/bronze_runner.py",
         application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
         conn_id="spark_default",  
-        conf={"spark.submit.deployMode": "client"}, 
+        #conf={"spark.submit.deployMode": "client"}, 
+        conf={"spark.submit.deployMode": "cluster",
+            #"spark.submit.pyFiles": "/opt/jobplat/src",
+            "spark.eventLog.enabled": "true",
+            "spark.eventLog.dir": "file:/tmp/spark-events"}, 
         execution_timeout=timedelta(minutes=30),
         verbose=True,
     )

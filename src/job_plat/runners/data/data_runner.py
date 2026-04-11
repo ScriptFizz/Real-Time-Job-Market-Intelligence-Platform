@@ -42,7 +42,8 @@ def main(
             )
             
     finally:
-        spark.stop()
+        if spark:
+            spark.stop()
 
 
 if __name__ == "__main__":

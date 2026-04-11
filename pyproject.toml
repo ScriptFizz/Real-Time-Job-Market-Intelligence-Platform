@@ -13,17 +13,17 @@ priority = "explicit"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.12"
-pandas = ">=2.3.3,<3.0.0"
+pandas = [
+  { version = ">=2.3.3,<3.0.0", python = ">=3.9" },
+  { version = ">=1.5,<2.0", python = ">=3.8,<3.9" }
+]
 numpy = ">=1.24.4,<2.0.0"
 pyyaml = ">=6.0.3,<7.0.0"
 requests = ">=2.32.5,<3.0.0"
 python-dateutil = ">=2.9.0.post0,<3.0.0"
 tqdm = ">=4.67.1,<5.0.0"
-faker = ">=38.2.0,<39.0.0"
 dotenv = ">=0.9.9,<0.10.0"
 typer = ">=0.20.0,<0.21.0"
-jupyterlab = "^4.1"
-ipykernel = ">=7.1.0,<8.0.0"
 rich = "^13.7"
 tenacity = "^8.3"
 pydantic = "^2.7"
@@ -39,17 +39,25 @@ pyspark = ">=3.5.1,<4.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mkdocs = "^1.6.1"
-black = ">=25.12.0,<26.0.0"
+black = {version = ">=25.12.0,<26.0.0", python = ">=3.10"}
 mypy = ">=1.19.0,<2.0.0"
-pytest = ">=9.0.2,<10.0.0"
-pre-commit = ">=4.5.0,<5.0.0"
+pytest = { version = "^9.0.2", python = ">=3.10" }
+faker = {version = ">=38.2.0,<39.0.0", python = ">=3.10"}
+pre-commit = { version = ">=4.5.0,<5.0.0", python = ">=3.10" } #">=4.5.0,<5.0.0"
 ruff = ">=0.14.8,<0.15.0"
 types-requests = ">=2.32.4.20250913,<3.0.0.0"
 
-[tool.poetry.group.viz.dependencies]
+[tool.poetry.group.viz]
 optional=true
+[tool.poetry.group.viz.dependencies]
 matplotlib = "^3.7.5"
 seaborn = "^0.13.2"
+
+[tool.poetry.group.notebook]
+optional=true
+[tool.poetry.group.notebook.dependencies]
+jupyterlab = "^4.1"
+ipykernel = {version = ">=7.1.0,<8.0.0", python = ">=3.10"}
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
