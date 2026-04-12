@@ -1,41 +1,128 @@
 from airflow.decorators import dag
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+#from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from datetime import datetime, timedelta
 
 @dag(schedule=None, params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=1),})
 def ml_dag():
     
-    run_features = SparkSubmitOperator(
+    run_features = KubernetesPodOperator(
         task_id="run_features",
-        application="/opt/jobplat/src/job_plat/runners/data/feature_runner.py",
-        application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default", 
-        #conf={"spark.submit.deployMode": "client"}, 
-        conf={"spark.submit.deployMode": "cluster",
-            #"spark.submit.pyFiles": "/opt/jobplat/src",
-            "spark.eventLog.enabled": "true",
-            "spark.eventLog.dir": "file:/tmp/spark-events"}, 
-        execution_timeout=timedelta(minutes=30),
-        verbose=True,
+        name="spark-submit",
+        namespace="default",
+
+        image="jobplat-spark",
+
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=[
+            "--master", "k8s://https://kubernetes.default.svc",
+            "--deploy-mode", "cluster",
+            "--name", "arrow-spark",
+
+            "--conf", "spark.kubernetes.container.image=jobplat-spark",
+            "--conf", "spark.kubernetes.namespace=default",
+            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
+            "--conf", "spark.executor.instances=2",
+
+            "--conf", "spark.eventLog.enabled=true",
+            "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
+
+            "local:///opt/jobplat/src/job_plat/runners/ml/feature_runner.py",
+            "--env", "{{ params.env }}",
+            "--execution-date", "{{ ts }}"
+        ],
+
+        get_logs=True,
+        is_delete_operator_pod=True,
     )
     
-    run_ml = SparkSubmitOperator(
+    run_ml = KubernetesPodOperator(
         task_id="run_ml",
-        application="/opt/jobplat/src/job_plat/runners/data/ml_runner.py",
-        application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default", 
-        #conf={"spark.submit.deployMode": "client"}, 
-        conf={"spark.submit.deployMode": "cluster",
-            #"spark.submit.pyFiles": "/opt/jobplat/src",
-            "spark.eventLog.enabled": "true",
-            "spark.eventLog.dir": "file:/tmp/spark-events"}, 
-        execution_timeout=timedelta(minutes=30),
-        verbose=True,
+        name="spark-submit",
+        namespace="default",
+
+        image="jobplat-spark",
+
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=[
+            "--master", "k8s://https://kubernetes.default.svc",
+            "--deploy-mode", "cluster",
+            "--name", "arrow-spark",
+
+            "--conf", "spark.kubernetes.container.image=jobplat-spark",
+            "--conf", "spark.kubernetes.namespace=default",
+            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
+            "--conf", "spark.executor.instances=2",
+
+            "--conf", "spark.eventLog.enabled=true",
+            "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
+
+            "local:///opt/jobplat/src/job_plat/runners/ml/ml_runner.py",
+            "--env", "{{ params.env }}",
+            "--execution-date", "{{ ts }}"
+        ],
+
+        get_logs=True,
+        is_delete_operator_pod=True,
     )
     
     run_features >> run_ml
 
 dag = ml_dag()
+
+#########12-04-26##########
+
+
+# run_features = SparkSubmitOperator(
+        # task_id="run_features",
+        # application="/opt/jobplat/src/job_plat/runners/data/feature_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # #conf={"spark.submit.deployMode": "client"}, 
+        # conf={"spark.master": "k8s://https://kubernetes.default.svc",
+        # "spark.submit.deployMode": "cluster",
+
+        # "spark.kubernetes.container.image": "jobplat-spark",
+        # "spark.kubernetes.container.image.pullPolicy": "IfNotPresent",
+        # "spark.kubernetes.namespace": "default",
+
+        # "spark.kubernetes.authenticate.driver.serviceAccountName": "default",
+
+        # "spark.executor.instances": "2",
+
+        # #"spark.kubernetes.driver.pod.name": "feature-driver",
+
+        # "spark.eventLog.enabled": "true",
+        # "spark.eventLog.dir": "file:/tmp/spark-events",},
+        # env_vars={"SPARK_MASTER": "k8s://https://kubernetes.default.svc"}, 
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # run_ml = SparkSubmitOperator(
+        # task_id="run_ml",
+        # application="/opt/jobplat/src/job_plat/runners/data/ml_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # #conf={"spark.submit.deployMode": "client"}, 
+        # conf={"spark.master": "k8s://https://kubernetes.default.svc",
+        # "spark.submit.deployMode": "cluster",
+
+        # "spark.kubernetes.container.image": "jobplat-spark",
+        # "spark.kubernetes.container.image.pullPolicy": "IfNotPresent",
+        # "spark.kubernetes.namespace": "default",
+
+        # "spark.kubernetes.authenticate.driver.serviceAccountName": "default",
+
+        # "spark.executor.instances": "2",
+
+        # #"spark.kubernetes.driver.pod.name": "ml-driver",
+
+        # "spark.eventLog.enabled": "true",
+        # "spark.eventLog.dir": "file:/tmp/spark-events",},
+        # env_vars={"SPARK_MASTER": "k8s://https://kubernetes.default.svc"}, 
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+
 
 
 ####

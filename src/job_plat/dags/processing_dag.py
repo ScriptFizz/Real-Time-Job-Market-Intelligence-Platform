@@ -1,7 +1,8 @@
 from airflow.decorators import dag
 from airflow.operators.python import ShortCircuitOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+#from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
 from datetime import datetime, timedelta
 
 
@@ -11,32 +12,64 @@ def should_trigger_weekly(**kwargs):
 @dag(schedule=None, params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=1),})
 def processing_dag():
     
-    run_silver = SparkSubmitOperator(
-        task_id="run_silver",
-        application="/opt/jobplat/src/job_plat/runners/data/silver_runner.py",
-        application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default",  
-        #conf={"spark.submit.deployMode": "client"}, 
-        conf={"spark.submit.deployMode": "cluster",
-            #"spark.submit.pyFiles": "/opt/jobplat/src",
-            "spark.eventLog.enabled": "true",
-            "spark.eventLog.dir": "file:/tmp/spark-events"}, 
-        execution_timeout=timedelta(minutes=30),
-        verbose=True,
+    run_silver = KubernetesPodOperator(
+        task_id="ingest_jobs",
+        name="spark-submit",
+        namespace="default",
+
+        image="jobplat-spark",
+
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=[
+            "--master", "k8s://https://kubernetes.default.svc",
+            "--deploy-mode", "cluster",
+            "--name", "arrow-spark",
+
+            "--conf", "spark.kubernetes.container.image=jobplat-spark",
+            "--conf", "spark.kubernetes.namespace=default",
+            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
+            "--conf", "spark.executor.instances=2",
+
+            "--conf", "spark.eventLog.enabled=true",
+            "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
+
+            "local:///opt/jobplat/src/job_plat/runners/data/silver_runner.py",
+            "--env", "{{ params.env }}",
+            "--execution-date", "{{ ts }}"
+        ],
+
+        get_logs=True,
+        is_delete_operator_pod=True,
     )
     
-    run_gold = SparkSubmitOperator(
-        task_id="run_gold",
-        application="/opt/jobplat/src/job_plat/runners/data/gold_runner.py",
-        application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
-        conn_id="spark_default", 
-        #conf={"spark.submit.deployMode": "client"},
-        conf={"spark.submit.deployMode": "cluster",
-            #"spark.submit.pyFiles": "/opt/jobplat/src",
-            "spark.eventLog.enabled": "true",
-            "spark.eventLog.dir": "file:/tmp/spark-events"}, 
-        execution_timeout=timedelta(minutes=30),
-        verbose=True,
+    run_gold = KubernetesPodOperator(
+        task_id="ingest_jobs",
+        name="spark-submit",
+        namespace="default",
+
+        image="jobplat-spark",
+
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=[
+            "--master", "k8s://https://kubernetes.default.svc",
+            "--deploy-mode", "cluster",
+            "--name", "arrow-spark",
+
+            "--conf", "spark.kubernetes.container.image=jobplat-spark",
+            "--conf", "spark.kubernetes.namespace=default",
+            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
+            "--conf", "spark.executor.instances=2",
+
+            "--conf", "spark.eventLog.enabled=true",
+            "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
+
+            "local:///opt/jobplat/src/job_plat/runners/data/gold_runner.py",
+            "--env", "{{ params.env }}",
+            "--execution-date", "{{ ts }}"
+        ],
+
+        get_logs=True,
+        is_delete_operator_pod=True,
     )
     
     weekly_gate = ShortCircuitOperator(
@@ -53,6 +86,59 @@ def processing_dag():
     run_silver >> run_gold >> weekly_gate >> trigger_ml
 
 dag = processing_dag()
+
+
+#######12-04-26#########
+
+# run_silver = SparkSubmitOperator(
+        # task_id="run_silver",
+        # application="/opt/jobplat/src/job_plat/runners/data/silver_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # #conf={"spark.submit.deployMode": "client"}, 
+        # conf={"spark.master": "k8s://https://kubernetes.default.svc",
+        # "spark.submit.deployMode": "cluster",
+
+        # "spark.kubernetes.container.image": "jobplat-spark",
+        # "spark.kubernetes.container.image.pullPolicy": "IfNotPresent",
+        # "spark.kubernetes.namespace": "default",
+
+        # "spark.kubernetes.authenticate.driver.serviceAccountName": "default",
+
+        # "spark.executor.instances": "2",
+
+        # #"spark.kubernetes.driver.pod.name": "silver-driver",
+
+        # "spark.eventLog.enabled": "true",
+        # "spark.eventLog.dir": "file:/tmp/spark-events",},
+        # env_vars={"SPARK_MASTER": "k8s://https://kubernetes.default.svc"}, 
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
+    
+    # run_gold = SparkSubmitOperator(
+        # task_id="run_gold",
+        # application="/opt/jobplat/src/job_plat/runners/data/gold_runner.py",
+        # application_args=["--env", "{{ params.env }}", "--execution-date", "{{ ts }}"],
+        # #conf={"spark.submit.deployMode": "client"},
+        # conf={"spark.master": "k8s://https://kubernetes.default.svc",
+        # "spark.submit.deployMode": "cluster",
+
+        # "spark.kubernetes.container.image": "jobplat-spark",
+        # "spark.kubernetes.container.image.pullPolicy": "IfNotPresent",
+        # "spark.kubernetes.namespace": "default",
+
+        # "spark.kubernetes.authenticate.driver.serviceAccountName": "default",
+
+        # "spark.executor.instances": "2",
+
+        # #"spark.kubernetes.driver.pod.name": "gold-driver",
+
+        # "spark.eventLog.enabled": "true",
+        # "spark.eventLog.dir": "file:/tmp/spark-events",}, 
+        # env_vars={"SPARK_MASTER": "k8s://https://kubernetes.default.svc"},
+        # execution_timeout=timedelta(minutes=30),
+        # verbose=True,
+    # )
 
 
 #######################
