@@ -1,74 +1,115 @@
 from airflow.decorators import dag
-#from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
+from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
 from datetime import datetime, timedelta
 
 @dag(schedule=None, params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=1),})
 def ml_dag():
     
-    run_features = KubernetesPodOperator(
+    
+    run_features = SparkKubernetesOperator(
         task_id="run_features",
-        name="spark-submit",
         namespace="default",
-
-        image="jobplat-spark",
-
-        cmds=["/opt/spark/bin/spark-submit"],
-        arguments=[
-            "--master", "k8s://https://kubernetes.default.svc",
-            "--deploy-mode", "cluster",
-            "--name", "arrow-spark",
-
-            "--conf", "spark.kubernetes.container.image=jobplat-spark",
-            "--conf", "spark.kubernetes.namespace=default",
-            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
-            "--conf", "spark.executor.instances=2",
-
-            "--conf", "spark.eventLog.enabled=true",
-            "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
-
-            "local:///opt/jobplat/src/job_plat/runners/ml/feature_runner.py",
-            "--env", "{{ params.env }}",
-            "--execution-date", "{{ ts }}"
-        ],
-
-        get_logs=True,
-        is_delete_operator_pod=True,
+        application_file="/opt/airflow/dags/spark_features.yaml",
+        do_xcom_push=False,
     )
     
-    run_ml = KubernetesPodOperator(
+    run_ml = SparkKubernetesOperator(
         task_id="run_ml",
-        name="spark-submit",
         namespace="default",
-
-        image="jobplat-spark",
-
-        cmds=["/opt/spark/bin/spark-submit"],
-        arguments=[
-            "--master", "k8s://https://kubernetes.default.svc",
-            "--deploy-mode", "cluster",
-            "--name", "arrow-spark",
-
-            "--conf", "spark.kubernetes.container.image=jobplat-spark",
-            "--conf", "spark.kubernetes.namespace=default",
-            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
-            "--conf", "spark.executor.instances=2",
-
-            "--conf", "spark.eventLog.enabled=true",
-            "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
-
-            "local:///opt/jobplat/src/job_plat/runners/ml/ml_runner.py",
-            "--env", "{{ params.env }}",
-            "--execution-date", "{{ ts }}"
-        ],
-
-        get_logs=True,
-        is_delete_operator_pod=True,
+        application_file="/opt/airflow/dags/spark_ml.yaml",
+        do_xcom_push=False,
     )
+    
     
     run_features >> run_ml
 
 dag = ml_dag()
+
+
+################14-04-2026#######################
+
+# from airflow.decorators import dag
+# #from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+# from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
+# from datetime import datetime, timedelta
+
+# @dag(schedule=None, params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 2, "retry_delay": timedelta(minutes=1),})
+# def ml_dag():
+    
+    # run_features = KubernetesPodOperator(
+        # task_id="run_features",
+        # name="spark-submit",
+        # namespace="default",
+
+        # image="jobplat-spark",
+
+        # cmds=["/opt/spark/bin/spark-submit"],
+        # arguments=[
+            # #"--master", "k8s://https://kubernetes.default.svc",
+            # "--master k8s://https://host.docker.internal:39909",
+            # "--deploy-mode", "cluster",
+            # "--name", "arrow-spark",
+
+            # "--conf", "spark.kubernetes.container.image=jobplat-spark",
+            # "--conf", "spark.kubernetes.namespace=default",
+            # "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
+            # #"--conf", "spark.executor.instances=2",
+            # "--conf", "spark.executor.instances=1",
+            # "--conf", "spark.executor.memory=384m",
+            # "--conf", "spark.driver.memory=384m",
+            # "--conf spark.executor.cores=1",
+            # "--conf spark.driver.cores=1",
+
+            # "--conf", "spark.eventLog.enabled=true",
+            # "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
+
+            # "local:///opt/jobplat/src/job_plat/runners/ml/feature_runner.py",
+            # "--env", "{{ params.env }}",
+            # "--execution-date", "{{ ts }}"
+        # ],
+
+        # get_logs=True,
+        # is_delete_operator_pod=True,
+    # )
+    
+    # run_ml = KubernetesPodOperator(
+        # task_id="run_ml",
+        # name="spark-submit",
+        # namespace="default",
+
+        # image="jobplat-spark",
+
+        # cmds=["/opt/spark/bin/spark-submit"],
+        # arguments=[
+            # #"--master", "k8s://https://kubernetes.default.svc",
+            # "--master k8s://https://host.docker.internal:39909",
+            # "--deploy-mode", "cluster",
+            # "--name", "arrow-spark",
+
+            # "--conf", "spark.kubernetes.container.image=jobplat-spark",
+            # "--conf", "spark.kubernetes.namespace=default",
+            # "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
+            # #"--conf", "spark.executor.instances=2",
+            # "--conf", "spark.executor.instances=1",
+            # "--conf", "spark.executor.memory=384m",
+            # "--conf", "spark.driver.memory=384m",
+
+            # "--conf", "spark.eventLog.enabled=true",
+            # "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
+
+            # "local:///opt/jobplat/src/job_plat/runners/ml/ml_runner.py",
+            # "--env", "{{ params.env }}",
+            # "--execution-date", "{{ ts }}"
+        # ],
+
+        # get_logs=True,
+        # is_delete_operator_pod=True,
+    # )
+    
+    # run_features >> run_ml
+
+# dag = ml_dag()
+
 
 #########12-04-26##########
 

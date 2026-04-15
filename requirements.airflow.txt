@@ -1,8 +1,0 @@
-apache-airflow==2.9.0
-
-# Spark integration
-apache-airflow-providers-apache-spark==4.8.0
-
-# Optional (only if needed later)
-# apache-airflow-providers-google==10.12.0
-# protobuf<5

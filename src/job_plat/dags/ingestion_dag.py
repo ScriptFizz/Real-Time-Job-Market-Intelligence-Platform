@@ -1,8 +1,7 @@
 from airflow.decorators import dag
 from airflow.operators.python import ShortCircuitOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-#from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
+from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
 from datetime import datetime, timedelta
 
 def should_trigger_daily(**kwargs):
@@ -12,34 +11,11 @@ def should_trigger_daily(**kwargs):
 @dag(schedule="@hourly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 1, "retry_delay": timedelta(minutes=1),})
 def ingestion_dag():
     
-    ingest_jobs = KubernetesPodOperator(
-        task_id="ingest_jobs",
-        name="spark-submit",
+    ingest_jobs = SparkKubernetesOperator(
+        task_id="spark_ingestion",
         namespace="default",
-
-        image="jobplat-spark",
-
-        cmds=["/opt/spark/bin/spark-submit"],
-        arguments=[
-            "--master", "k8s://https://kubernetes.default.svc",
-            "--deploy-mode", "cluster",
-            "--name", "arrow-spark",
-
-            "--conf", "spark.kubernetes.container.image=jobplat-spark",
-            "--conf", "spark.kubernetes.namespace=default",
-            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
-            "--conf", "spark.executor.instances=2",
-
-            "--conf", "spark.eventLog.enabled=true",
-            "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
-
-            "local:///opt/jobplat/src/job_plat/runners/data/bronze_runner.py",
-            "--env", "{{ params.env }}",
-            "--execution-date", "{{ ts }}"
-        ],
-
-        get_logs=True,
-        is_delete_operator_pod=True,
+        application_file="/opt/airflow/dags/spark_ingestion.yaml",
+        do_xcom_push=False,
     )
         
     daily_gate = ShortCircuitOperator(
@@ -56,6 +32,73 @@ def ingestion_dag():
     ingest_jobs >> daily_gate >> trigger_processing
 
 dag = ingestion_dag()
+
+#############14-04-26##############
+
+# from airflow.decorators import dag
+# from airflow.operators.python import ShortCircuitOperator
+# from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+# #from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+# from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
+# from datetime import datetime, timedelta
+
+# def should_trigger_daily(**kwargs):
+    # return datetime.utcnow().hour == 0
+
+
+# @dag(schedule="@hourly", params={"env": "dev"}, start_date=datetime(2024, 1, 1), catchup=False, default_args={"retries": 1, "retry_delay": timedelta(minutes=1),})
+# def ingestion_dag():
+    
+    # ingest_jobs = KubernetesPodOperator(
+        # task_id="ingest_jobs",
+        # name="spark-submit",
+        # namespace="default",
+
+        # image="jobplat-spark",
+
+        # cmds=["/opt/spark/bin/spark-submit"],
+        # arguments=[
+            # #"--master", "k8s://https://kubernetes.default.svc",
+            # "--master", "k8s://https://host.docker.internal:39909",
+            # "--deploy-mode", "cluster",
+            # "--name", "arrow-spark",
+
+            # "--conf", "spark.kubernetes.container.image=jobplat-spark",
+            # "--conf", "spark.kubernetes.namespace=default",
+            # "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=default",
+            # #"--conf", "spark.executor.instances=2",
+            # "--conf", "spark.executor.instances=1",
+            # "--conf", "spark.executor.memory=384m",
+            # "--conf", "spark.driver.memory=384m",
+            # "--conf spark.executor.cores=1",
+            # "--conf spark.driver.cores=1",
+
+            # "--conf", "spark.eventLog.enabled=true",
+            # "--conf", "spark.eventLog.dir=file:/tmp/spark-events",
+
+            # "local:///opt/jobplat/src/job_plat/runners/data/bronze_runner.py",
+            # "--env", "{{ params.env }}",
+            # "--execution-date", "{{ ts }}"
+        # ],
+
+        # get_logs=True,
+        # is_delete_operator_pod=True,
+    # )
+        
+    # daily_gate = ShortCircuitOperator(
+        # task_id="daily_gate",
+        # python_callable=should_trigger_daily,
+    # )
+    
+    # trigger_processing = TriggerDagRunOperator(
+        # task_id="trigger_processing",
+        # trigger_dag_id="processing_dag",
+        # conf={"env": "{{ params.env }}"},
+    # )
+    
+    # ingest_jobs >> daily_gate >> trigger_processing
+
+# dag = ingestion_dag()
 
 ############12-04-26#############
 
