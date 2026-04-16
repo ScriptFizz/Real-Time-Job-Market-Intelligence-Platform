@@ -1,0 +1,66 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: ingestion-job
+  namespace: default
+spec:
+  type: Python
+  mode: cluster
+  image: jobplat-spark:latest
+  imagePullPolicy: Never
+
+  mainApplicationFile: local:///opt/jobplat/src/job_plat/runners/ml/feature_runner.py
+
+  sparkVersion: 3.5.0
+
+  restartPolicy:
+    type: Never
+
+  volumes:
+    - name: config-volume
+      configMap:
+        name: jobplat-config
+
+    - name: data-volume
+      persistentVolumeClaim:
+        claimName: jobplat-pvc
+
+  driver:
+    cores: 1
+    memory: "512m"
+    serviceAccount: spark
+
+    env:
+      - name: CONFIG_PATH
+        value: /opt/jobplat/config/settings.yaml
+      - name: DATA_ROOT
+        value: /opt/jobplat/data
+      - name: METADATA_ROOT
+        value: /opt/jobplat/data/metadata
+
+    volumeMounts:
+      - name: config-volume
+        mountPath: /opt/jobplat/config
+
+      - name: data-volume
+        mountPath: /opt/jobplat/data
+
+  executor:
+    cores: 1
+    instances: 2
+    memory: "512m"
+
+    env:
+      - name: CONFIG_PATH
+        value: /opt/jobplat/config/settings.yaml
+      - name: DATA_ROOT
+        value: /opt/jobplat/data
+      - name: METADATA_ROOT
+        value: /opt/jobplat/data/metadata
+    volumeMounts:
+      - name: config-volume
+        mountPath: /opt/jobplat/config
+
+      - name: data-volume
+        mountPath: /opt/jobplat/data
+

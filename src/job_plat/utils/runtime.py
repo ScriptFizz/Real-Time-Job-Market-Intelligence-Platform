@@ -65,6 +65,7 @@ def build_runtime(
     )
     
     partition_manager = PartitionManager(
+        spark=spark,
         metadata_path=env_config.paths.metadata
     )
     
