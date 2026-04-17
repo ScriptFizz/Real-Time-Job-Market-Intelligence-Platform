@@ -27,7 +27,7 @@ spec:
 
   driver:
     cores: 1
-    memory: "512m"
+    memory: "384m"
     serviceAccount: spark
 
     env:
@@ -47,8 +47,8 @@ spec:
 
   executor:
     cores: 1
-    instances: 2
-    memory: "512m"
+    instances: 1
+    memory: "384m"
 
     env:
       - name: CONFIG_PATH
