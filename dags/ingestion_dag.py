@@ -16,6 +16,10 @@ def ingestion_dag():
         namespace="default",
         application_file="/opt/airflow/dags/spark_ingestion.yaml",
         do_xcom_push=False,
+        env_vars={
+        "ENV": "{{ params.env }}",
+        "EXECUTION_DATE": "{{ ds }}",
+        },
     )
         
     daily_gate = ShortCircuitOperator(

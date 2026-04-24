@@ -11,6 +11,10 @@ def ml_dag():
         namespace="default",
         application_file="/opt/airflow/dags/spark_features.yaml",
         do_xcom_push=False,
+        env_vars={
+        "ENV": "{{ params.env }}",
+        "EXECUTION_DATE": "{{ ds }}",
+        },
     )
     
     run_ml = SparkKubernetesOperator(
@@ -18,6 +22,10 @@ def ml_dag():
         namespace="default",
         application_file="/opt/airflow/dags/spark_ml.yaml",
         do_xcom_push=False,
+        env_vars={
+        "ENV": "{{ params.env }}",
+        "EXECUTION_DATE": "{{ ds }}",
+        },
     )
     
     

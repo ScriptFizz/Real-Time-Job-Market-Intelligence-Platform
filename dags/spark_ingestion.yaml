@@ -6,10 +6,20 @@ metadata:
 spec:
   type: Python
   mode: cluster
-  image: jobplat-spark:latest
-  imagePullPolicy: Never
+  image: k3d-jobplat-registry.localhost:5000/jobplat-spark:latest
+  imagePullPolicy: Always
 
   mainApplicationFile: local:///opt/jobplat/src/job_plat/runners/data/bronze_runner.py
+
+  #
+  arguments:
+    - --env
+    - $(ENV)
+    - --execution-date
+    - $(EXECUTION_DATE)
+    - --config
+    - /opt/jobplat/config/settings.yaml
+  #
 
   sparkVersion: 3.5.0
 
@@ -20,10 +30,9 @@ spec:
     - name: config-volume
       configMap:
         name: jobplat-config
-
     - name: data-volume
       persistentVolumeClaim:
-        claimName: jobplat-pvc
+        claimName: jobplat-data-pvc
 
   driver:
     cores: 1
@@ -37,11 +46,18 @@ spec:
         value: /opt/jobplat/data
       - name: METADATA_ROOT
         value: /opt/jobplat/data/metadata
+      #
+      - name: ENV
+        value: "dev"
+      - name: EXECUTION_DATE
+        value: "1970-01-01"
+      - name: CONFIG_PATH
+        value: /opt/jobplat/config/settings.yaml
+      #
 
     volumeMounts:
       - name: config-volume
         mountPath: /opt/jobplat/config
-
       - name: data-volume
         mountPath: /opt/jobplat/data
 
@@ -57,10 +73,17 @@ spec:
         value: /opt/jobplat/data
       - name: METADATA_ROOT
         value: /opt/jobplat/data/metadata
+      #
+      - name: ENV
+        value: "dev"
+      - name: EXECUTION_DATE
+        value: "1970-01-01"
+      - name: CONFIG_PATH
+        value: /opt/jobplat/config/settings.yaml
+      #
     volumeMounts:
       - name: config-volume
         mountPath: /opt/jobplat/config
-
       - name: data-volume
         mountPath: /opt/jobplat/data
 

@@ -26,9 +26,3 @@ COPY settings.yaml /opt/jobplat/config/settings.yaml
 
 CMD ["sleep", "infinity"]
 
-
-#COPY src /opt/jobplat/src
-#COPY settings.yaml /opt/jobplat/config/settings.yaml
-#RUN pip install -e /opt/jobplat/src
-
-#CMD ["sleep", "infinity"]

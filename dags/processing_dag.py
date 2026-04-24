@@ -16,6 +16,10 @@ def processing_dag():
         namespace="default",
         application_file="/opt/airflow/dags/spark_silver.yaml",
         do_xcom_push=False,
+        env_vars={
+        "ENV": "{{ params.env }}",
+        "EXECUTION_DATE": "{{ ds }}",
+        },
     )
     
     run_gold = SparkKubernetesOperator(
@@ -23,6 +27,10 @@ def processing_dag():
         namespace="default",
         application_file="/opt/airflow/dags/spark_gold.yaml",
         do_xcom_push=False,
+        env_vars={
+        "ENV": "{{ params.env }}",
+        "EXECUTION_DATE": "{{ ds }}",
+        },
     )
     
     
