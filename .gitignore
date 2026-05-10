@@ -10,6 +10,10 @@ metadata/*
 # Logs
 /logs/
 
+values.local.yaml
+*.secret.yaml
+fernet-secret.yaml
+
 # Mac OS-specific storage files
 .DS_Store
 

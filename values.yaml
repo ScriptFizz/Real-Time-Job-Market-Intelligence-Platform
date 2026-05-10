@@ -1,0 +1,156 @@
+executor: CeleryExecutor #KubernetesExecutor #LocalExecutor
+
+postgresql:
+  enabled: true
+
+  auth:
+    postgresPassword: postgres
+    username: airflow
+    password: airflow
+    database: airflow
+
+  image:
+    repository: postgres
+    tag: 15-alpine
+
+  primary:
+
+    persistence:
+      enabled: true
+      existingClaim: jobplat-data-pvc
+
+    podSecurityContext:
+      enabled: true
+      fsGroup: 999
+
+    containerSecurityContext:
+      enabled: true
+      runAsUser: 999
+
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+
+      limits:
+        memory: "512Mi"
+        cpu: "300m"
+
+
+#postgresql:
+#  enabled: true
+#  image:
+#    repository: postgres
+#    tag: 15-alpine
+#  primary:
+#    persistence:
+#      enabled: false
+#    podSecurityContext:
+#      fsGroup: 1001
+#    containerSecurityContext:
+#      runAsUser: 1001
+#    resources:
+#      requests:
+#        memory: "256Mi"
+#        cpu: "100m"
+#      limits:
+#        memory: "512Mi"
+#        cpu: "300m"
+
+airflow:
+  image:
+    repository: k3d-jobplat-registry:5000/airflow-custom #localhost:5000/airflow-custom #k3d-jobplat-registry:5000/airflow-custom
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  config:
+    AIRFLOW__WEBSERVER__WORKERS: "1"
+    AIRFLOW__CORE__LOAD__EXAMPLES: "False"
+    AIRFLOW__SCHEDULER__PARALLELISM: "1"
+    AIRFLOW__CORE__PARALLELISM: "2"
+    AIRFLOW__CORE__DAG_CONCURRENCY: "1"
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CELERY__WORKER_CONCURRENCY: "1"
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: "300"
+    AIRFLOW__API_SERVER__WORKER_TIMEOUT: "120"
+    AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT: "120"
+    AIRFLOW__WEBSERVER__WEB_SERVER_WORKER_TIMEOUT: "120"
+
+fernetKey: airflow-fernet-key
+
+webserver:
+  replicas: 1
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "300m"
+
+
+scheduler:
+  replicas: 1
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "300m"
+
+workers:
+  replicas: 1
+  kubernetes:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        memory: "512Mi"
+        cpu: "300m"
+
+redis:
+  enabled: true
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "100m"
+
+triggerer:
+  enabled: false
+
+flower:
+  enabled: false
+
+statsd:
+  enabled: false
+
+
+
+createUserJob:
+  useHelmHooks: true
+
+migrateDatabaseJob:
+  useHelmHooks: true
+  resources:
+    requests:
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+serviceAccount:
+  create: false
+  name: airflow-sa
+
+
+#extraInitContainers:
+#  - name: volume-permissions
+#    image: busybox
+#    command: ["sh", "-c", "chown -R 1001:1001 /bitnami"]
+#    volumeMounts:
+#      - name: airflow-data
+#        mountPath: /bitnami
