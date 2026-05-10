@@ -14,12 +14,12 @@ def ingestion_dag():
     ingest_jobs = SparkKubernetesOperator(
         task_id="spark_ingestion",
         namespace="default",
-        application_file="/opt/airflow/dags/spark_ingestion.yaml",
+        application_file="spark_ingestion.yaml",    #"/opt/airflow/dags/spark_ingestion.yaml",
         do_xcom_push=False,
-        env_vars={
-        "ENV": "{{ params.env }}",
-        "EXECUTION_DATE": "{{ ds }}",
-        },
+        #env_vars={
+        #"ENV": "{{ params.env }}",
+        #"EXECUTION_DATE": "{{ ds }}",
+        #},
     )
         
     daily_gate = ShortCircuitOperator(

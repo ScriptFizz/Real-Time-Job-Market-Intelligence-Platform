@@ -1,22 +1,22 @@
 apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
 metadata:
-  name: silver-job
+  name: silver-job-{{ ts_nodash }}
   namespace: default
 spec:
   type: Python
   mode: cluster
-  image: k3d-jobplat-registry.localhost:5000/jobplat-spark:latest
-  imagePullPolicy: Always
+  image: k3d-jobplat-registry:5000/jobplat-spark:latest #localhost:5000/jobplat-spark:latest #k3d-jobplat-registry:5000/jobplat-spark:latest
+  imagePullPolicy: IfNotPresent
 
   mainApplicationFile: local:///opt/jobplat/src/job_plat/runners/data/silver_runner.py
 
   #
   arguments:
     - --env
-    - $(ENV)
+    - "{{ params.env }}" 
     - --execution-date
-    - $(EXECUTION_DATE)
+    - "{{ ds }}"
     - --config
     - /opt/jobplat/config/settings.yaml
   #
@@ -25,6 +25,17 @@ spec:
 
   restartPolicy:
     type: Never
+
+  sparkConf:
+    spark.sql.shuffle.partitions: "4"
+    spark.default.parallelism: "4"
+    spark.ui.enabled: "false"
+    spark.sql.adaptive.enabled: "false"
+    spark.driver.memoryOverhead: "128m"
+    spark.executor.memoryOverhead: "128m"
+    spark.serializer: "org.apache.spark.serializer.KryoSerializer"
+    spark.sql.catalogImplementation: "in-memory"
+    spark.local.dir: "/opt/jobplat/data/tmp"
 
   volumes:
     - name: config-volume
@@ -77,11 +88,9 @@ spec:
         value: /opt/jobplat/data/metadata
       #
       - name: ENV
-        value: "dev"
+        value: "{{ params.env }}"
       - name: EXECUTION_DATE
-        value: "1970-01-01"
-      - name: CONFIG_PATH
-        value: /opt/jobplat/config/settings.yaml
+        value: "{{ ds }}"
       #
     volumeMounts:
       - name: config-volume

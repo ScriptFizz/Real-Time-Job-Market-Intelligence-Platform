@@ -22,7 +22,7 @@ COPY src/ ./src/
 # install your package
 RUN pip install -e . --no-deps
 
-COPY settings.yaml /opt/jobplat/config/settings.yaml
+# COPY settings.yaml /opt/jobplat/config/settings.yaml
 
 CMD ["sleep", "infinity"]
 
