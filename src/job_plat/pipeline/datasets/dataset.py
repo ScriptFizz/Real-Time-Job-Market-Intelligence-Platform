@@ -5,7 +5,7 @@ from typing import List, Literal, Optional
 from pyspark.sql import SparkSession, DataFrame
 from job_plat.storage.storages import Storage
 from job_plat.partitioning.partition_manager import PartitionManager
-
+from pyspark.sql.functions import col
 
 @dataclass
 class Dataset:

@@ -10,6 +10,8 @@ from job_plat.schemas.output_schemas import GoldOutputs
 from job_plat.pipeline.datasets.dataset_definitions import SilverJobSkills, SilverJobs
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.utils.helpers import StageSkip
+
 
 class GoldStage(BaseStage):
     

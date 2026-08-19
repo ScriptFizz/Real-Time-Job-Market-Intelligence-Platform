@@ -1,4 +1,5 @@
-import pytest
+from datetime import date
+
 from job_plat.storage.storages import LocalStorage
 from job_plat.pipeline.datasets.dataset import Dataset
 
@@ -24,3 +25,28 @@ def test_list_partitions(spark, tmp_path):
     partitions = ds.list_partitions()
     
     assert len(partitions) == 2
+
+
+def test_read_partitions_with_filters(spark, tmp_path):
+    dataset = Dataset(
+        name="jobs",
+        path=tmp_path,
+        storage=LocalStorage(),
+        partition_columns=["ingestion_date"],
+    )
+
+    source = spark.createDataFrame(
+        [
+            (1, date(2025, 3, 1)),
+            (2, date(2025, 3, 2))
+        ],
+        ["job_id", "ingestion_date"],
+    )
+    dataset.write(source)
+
+    result = dataset.read_partitions(
+        spark=spark,
+        filters=[date(2025, 3, 2)],
+    )
+
+    assert [row.job_id for row in result.collect()] == [2]
