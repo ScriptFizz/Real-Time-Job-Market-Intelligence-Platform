@@ -1,22 +1,23 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
 
 class CanonicalJobV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     
-    source: str
-    source_job_id: str
+    source: Literal["adzuna", "usajobs"]
+    source_job_id: str = Field(min_length=1)
     
-    job_title_raw: Optional[str]
-    company_raw: Optional[str]
-    location_raw: Optional[str]
-    description_raw: Optional[str]
-    url: Optional[str]
+    job_title_raw: str | None = None
+    company_raw: str | None = None
+    location_raw: str | None = None
+    description_raw: str | None = None
+    url: str | None = None
     
-    employment_type_raw: Optional[str]
-    contract_type_raw: Optional[str]
+    employment_type_raw: str | None = None
+    contract_type_raw: str | None = None
     
-    salary_min_raw: Optional[float]
-    salary_max_raw: Optional[float]
-    currency_raw: Optional[str]
+    salary_min_raw: float | None = None
+    salary_max_raw: float | None = None
+    currency_raw: str | None = None
     
-    posted_at_raw: Optional[str]
+    posted_at_raw: str | None = None

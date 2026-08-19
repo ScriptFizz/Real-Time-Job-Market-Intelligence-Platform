@@ -1,9 +1,6 @@
-from dataclasses import dataclass
-from pathlib import Path
-from datetime import date
+from dataclasses import dataclass, field
 from pyspark.sql import SparkSession
-from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 #  EXECUTION PARAMS
@@ -84,5 +81,7 @@ class MLPipelineContext(BaseContext):
 class StageExecutionContext:
     stage: str
     pipeline_version: str
-    run_id: str = str(uuid.uuid4())
-    started_at: datetime = datetime.utcnow()
+    run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    started_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )

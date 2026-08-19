@@ -23,6 +23,7 @@ rich = "^13.7"
 tenacity = "^8.3"
 pydantic = "^2.7"
 sentence-transformers = "^5.2.3"
+torch = {version = "2.10.0+cpu", source = "pytorch-cpu"}
 
 [tool.poetry.group.spark.dependencies]
 pyspark = ">=3.5.1,<4.0.0"
@@ -44,6 +45,12 @@ types-requests = ">=2.32.4.20250913,<3.0.0.0"
 [tool.poetry.group.viz.dependencies]
 matplotlib = "^3.10.8"
 seaborn = "^0.13.2"
+
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
