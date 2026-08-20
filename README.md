@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
 [![Poetry](https://img.shields.io/badge/poetry-managed-brightgreen.svg)](https://python-poetry.org/)
 [![PySpark](https://img.shields.io/badge/Spark-3.5-orange.svg)](https://spark.apache.org/)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)]
+[![CI](https://github.com/ScriptFizz/Real-Time-Job-Market-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/ScriptFizz/Real-Time-Job-Market-Intelligence-Platform/actions/workflows/ci.yml)
 
 A production-style **data engineering and ML platform** that ingests job postings from ADZuna and USAJobs, cleans, enriches, and transforms the data into an analytics-ready star schema. Includes ML pipelines for **skill/job embeddings** and **dynamic job clustering**. Built with **PySpark**, **Poetry**, **pytest**, and a Typer CLI for flexible execution.
 
