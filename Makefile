@@ -24,7 +24,7 @@ init:
 	pyenv install -s $(PYTHON_VERSION)
 	pyenv local $(PYTHON_VERSION)
 	poetry env use $$(pyenv which python)
-	poetry install --with viz
+	poetry install --with dev
 	@if [ -d .git ]; then \
 		poetry run pre-commit install; \
 	else \
