@@ -10,13 +10,11 @@ def test_gold_stage_runs(
     partition_manager,
     silver_jobs_data,
     silver_job_skills_data,
-    silver_ctx,
     gold_ctx
 ):
     
     stage = GoldStage(
         gold_ctx=gold_ctx,
-        silver_ctx=silver_ctx,
         datasets=dataset_registry,
         partition_manager=partition_manager
     )

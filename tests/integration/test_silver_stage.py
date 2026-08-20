@@ -1,4 +1,3 @@
-import pytest
 from job_plat.pipeline.stages.data.silver_stage import SilverStage
 from job_plat.pipeline.datasets.dataset_definitions import SilverJobs, SilverJobSkills, BronzeJobs
 
@@ -8,22 +7,14 @@ def test_silver_stage_runs(
     dataset_registry,
     partition_manager,
     bronze_jobs_data,
-    bronze_ctx,
     silver_ctx
 ):
     
     
     ds = dataset_registry.get(BronzeJobs)
-
-    print("DATASET PATH:", ds.path)
-    print("PARTITIONS:", ds.list_partitions())
-
-    spark.read.format("json").load(str(ds.path)).printSchema()
     
     stage = SilverStage(
         silver_ctx=silver_ctx,
-        bronze_ctx=bronze_ctx,
-        #spark=spark,
         datasets=dataset_registry,
         partition_manager=partition_manager
     )

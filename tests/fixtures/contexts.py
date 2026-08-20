@@ -1,20 +1,29 @@
+from datetime import datetime, timezone
+
 import pytest
-from job_plat.context.contexts import (
-    BronzeContext,
-    SilverContext,
-    GoldContext
-)
+
+from job_plat.context.contexts import SilverContext,  GoldContext
+
 
 @pytest.fixture
-def bronze_ctx(tmp_path):
-    return BronzeContext(root_path=tmp_path)
+def execution_date():
+    return datetime(2025, 3, 2, tzinfo=timezone.utc)
+
 
 @pytest.fixture
-def silver_ctx(spark):
-    return SilverContext(spark=spark)
+def silver_ctx(spark, execution_date):
+    return SilverContext(
+        spark=spark,
+        execution_date=execution_date,
+        )
+
 
 @pytest.fixture
-def gold_ctx(spark):
-    return GoldContext(spark=spark, fact_per_job_ratio_threshold=100)
+def gold_ctx(spark, execution_date):
+    return GoldContext(
+        spark=spark, 
+        execution_date=execution_date,
+        fact_per_job_ratio_threshold=100,
+        )
 
 
