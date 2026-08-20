@@ -7,16 +7,19 @@ class DatasetRegistry:
     
     def __init__(
         self,
-        root: str,
+        root: str | Path,
         storage: Storage,
         dataset_defs: list[type]
         ):
             
         self._datasets = {}
+        root_text = str(root).rstrip("/")
         for ds in dataset_defs:
+            relative_path = ds.RELATIVE_PATH.lstrip("/")
+            dataset_path=f"{root_text}/{relative_path}"
             dataset = Dataset(
                 name = ds.NAME,
-                path= root.rstrip("/") + "/" + ds.RELATIVE_PATH.lstrip("/"),
+                path=dataset_path,
                 storage=storage,
                 partition_columns=getattr(ds, "PARTITION_COLUMNS", ["ingestion_date"]),
                 time_window_column=getattr(ds, "TIME_WINDOW_COLUMN", ""),

@@ -1,7 +1,8 @@
-import pytest
 from datetime import date
 from types import SimpleNamespace
+
 from job_plat.pipeline.core.read_strategy import IncrementalReadStrategy
+
 
 class FakeDataset:
     partition_columns = ["ingestion_date"]
@@ -28,6 +29,11 @@ def test_incremental_read_strategy(spark):
         STAGE_NAME="test_stage"
     )
     
-    df, partitions = strategy.read(stage, dataset, "jobs")
+    df, partitions = strategy.read(
+        stage=stage, 
+        dataset=dataset, 
+        input_name="jobs",
+        execution_date=None,)
     
     assert df.count() == 1
+    assert partitions == [date(2025, 3, 1)]

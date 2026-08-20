@@ -62,7 +62,7 @@ def union_all(dfs: list[DataFrame]) -> DataFrame:
     """
     
     if not dfs:
-        raise ValuerError("No DataFrames to union")
+        raise ValueError("No DataFrames to union")
     
     return reduce(
         lambda df1, df2: df1.unionByName(df2, allowMissingColumns=True),
