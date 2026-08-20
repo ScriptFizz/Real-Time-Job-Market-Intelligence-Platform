@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 import shutil
-#from google.cloud import storage
+from importlib import import_module
 from pyspark.sql import SparkSession, DataFrame
 
 class Storage(ABC):
@@ -83,7 +83,14 @@ class LocalStorage(Storage):
 class GCStorage(Storage):
     
     def __init__(self):
-        self.client = storage.Client()
+        try:
+            storage_module = import_module("google.cloud.storage")
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "GCS support is not installed. "
+            "Install it with `poetry install --with cloud`."
+            ) from exc
+        self.client = storage_module.Client()
         
     def read_parquet(self, spark: SparkSession, base_path: str, paths: List[str]) -> DataFrame:
         return spark.read.option("basePath", base_path).parquet(*paths)

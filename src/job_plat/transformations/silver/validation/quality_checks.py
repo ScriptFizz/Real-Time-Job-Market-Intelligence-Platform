@@ -1,5 +1,5 @@
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, count, countDistinct
+from pyspark.sql.functions import col, unix_timestamp
 from datetime import date
 
 def check_row_count(
@@ -38,14 +38,18 @@ def check_freshness(
     df: DataFrame,
     max_hours: int = 24
 ) -> None:
+
+    if max_hours <= 0:
+        raise ValueError("max_hours must be greater than zero")
     
     max_seconds = max_hours * 3600
-    old_hours = df.filter( unix_timestamp() - unix_timestap(col("scraped_at"))  
+    old_rows = df.filter( unix_timestamp() - unix_timestamp(col("scraped_at"))  
         > max_seconds
         ).count()
-    if old_hours > 0:
-        raise ValueError(f"{old_hours} rows are older than {max_hours} hours")
+    if old_rows > 0:
+        raise ValueError(f"{old_rows} rows are older than {max_hours} hours")
     
+
 def run_quality_checks(df: DataFrame) -> None:
     
     check_row_count(df)
@@ -53,3 +57,6 @@ def run_quality_checks(df: DataFrame) -> None:
         df,
         ["job_title", "description", "company"]
     )
+
+
+

@@ -13,7 +13,7 @@ def test_connector_throttle(monkeypatch):
         name = "fake"
         
         def _api_call(self, criteria, page):
-            return responses[page]
+            return {}
         
         def _extract_results(self, data):
             return data["results"]
