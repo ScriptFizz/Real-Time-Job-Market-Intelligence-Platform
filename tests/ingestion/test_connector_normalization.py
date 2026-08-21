@@ -1,7 +1,11 @@
 import pytest
 from pydantic import ValidationError
 
-from job_plat.ingestion.connectors import ADZunaConnector, USAJobConnector
+from job_plat.ingestion.connectors import (
+    ADZunaConnector,
+    USAJobConnector,
+    require_environment_variable,
+)
 from job_plat.ingestion.job_schema import CanonicalJobV1
 
 
@@ -111,3 +115,43 @@ def test_usajobs_normalization_handles_empty_optional_arrays():
     assert result.contract_type_raw is None
     assert result.salary_min_raw is None
     assert result.salary_max_raw is None
+
+
+def test_adzuna_normalization_reject_missing_source_job_id():
+    connector = ADZunaConnector(
+        api_key="test-key",
+        app_id="test-app",
+    )
+
+    with pytest.raises(ValueError, match="id"):
+        connector.normalize(
+            {
+                "title": "Data Engineer",
+            }
+        )
+
+
+def test_adzuna_normalization_rejects_blank_source_job_id():
+    connector = ADZunaConnector(
+        api_key="test-key",
+        app_id="test-app",
+    )
+
+    with pytest.raises(ValueError, match="id"):
+        connector.normalize({"id": "   "})
+
+
+def test_required_environment_variable_rejects_missing_value(monkeypatch):
+    monkeypatch.delenv("ADZUNA_API_KEY", raising=False)
+
+    with pytest.raises(
+        RuntimeError,
+        match="ADZUNA_API_KEY",
+    ):
+        require_environment_variable("ADZUNA_API_KEY")
+
+
+def test_required_environment_variable_returns_value(monkeypatch):
+    monkeypatch.setenv("ADZUNA_API_KEY", "test-key")
+
+    assert require_environment_variable("ADZUNA_API_KEY") == "test-key"

@@ -2,11 +2,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+JobSource = Literal["adzuna", "usajobs"]
+
 
 class CanonicalJobV1(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    source: Literal["adzuna", "usajobs"]
+    source: JobSource
     source_job_id: str = Field(min_length=1)
 
     job_title_raw: str | None = None

@@ -9,7 +9,7 @@ from typing import Any
 import requests
 
 from job_plat.config.env_config import EnvironmentConfig
-from job_plat.ingestion.job_schema import CanonicalJobV1
+from job_plat.ingestion.job_schema import CanonicalJobV1, JobSource
 from job_plat.ingestion.search_criteria import JobSearchCriteria
 
 logger = logging.getLogger(__name__)
@@ -21,25 +21,46 @@ def first_mapping(value: object) -> dict[str, Any]:
     return {}
 
 
+def require_nonempty_string(
+    mapping: dict[str, Any],
+    key: str,
+) -> str:
+    value = mapping.get(key)
+
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Expected non-empty string field: {key}")
+
+    return value
+
+
+def require_environment_variable(name: str) -> str:
+    value = os.getenv(name)
+
+    if value is None or not value.strip():
+        raise RuntimeError(f"Required environment variable is not set: {name}")
+
+    return value
+
+
 SUPPORTED_COUNTRIES = {"us", "gb", "de", "fr", "it", "nl", "ca", "au"}
 
 
 class JobConnector(ABC):
-    name: str
+    name: JobSource
 
     @abstractmethod
-    def fetch(self, **kwargs) -> Iterator[dict]:
+    def fetch(self, criteria: JobSearchCriteria) -> Iterator[dict[str, Any]]:
         """
         Stream raw jobs from the source (handles pagination internally).
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
-    def normalize(self, raw_job: dict) -> CanonicalJobV1:
+    def normalize(self, raw_job: dict[str, Any]) -> CanonicalJobV1:
         """
         Convert source-specific job schema into unified schema.
         """
-        pass
+        raise NotImplementedError
 
 
 class PaginatedAPIConnector(JobConnector):
@@ -116,7 +137,7 @@ class PaginatedAPIConnector(JobConnector):
         pass
 
     @abstractmethod
-    def _extract_results(self, data: dict) -> list[dict]:
+    def _extract_results(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         pass
 
     def fetch(self, criteria: JobSearchCriteria) -> Iterator[dict]:
@@ -202,6 +223,8 @@ class PaginatedAPIConnector(JobConnector):
 
 
 class USAJobConnector(PaginatedAPIConnector):
+    name: JobSource = "usajobs"
+
     def __init__(
         self,
         api_key: str,
@@ -210,7 +233,6 @@ class USAJobConnector(PaginatedAPIConnector):
     ):
         super().__init__(max_pages=max_pages, min_interval_seconds=min_interval_seconds)
 
-        self.name = "usajobs"
         self.base_url = "https://data.usajobs.gov/api/search"
         self.headers = {
             "Host": "data.usajobs.gov",
@@ -229,10 +251,10 @@ class USAJobConnector(PaginatedAPIConnector):
             url=self.base_url, params=params, headers=self.headers, meta=meta
         )
 
-    def _extract_results(self, data: dict) -> list[dict]:
+    def _extract_results(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         return data["SearchResult"]["SearchResultItems"]
 
-    def normalize(self, raw_job: dict) -> CanonicalJobV1:
+    def normalize(self, raw_job: dict[str, Any]) -> CanonicalJobV1:
         desc = raw_job["MatchedObjectDescriptor"]
 
         schedule = first_mapping(desc.get("PositionSchedule"))
@@ -241,7 +263,7 @@ class USAJobConnector(PaginatedAPIConnector):
 
         return CanonicalJobV1(
             source=self.name,
-            source_job_id=desc["PositionID"],
+            source_job_id=require_nonempty_string(desc, "PositionID"),
             url=desc.get("PositionURI"),
             job_title_raw=desc["PositionTitle"],
             company_raw=desc["OrganizationName"],
@@ -259,6 +281,8 @@ class USAJobConnector(PaginatedAPIConnector):
 
 
 class ADZunaConnector(PaginatedAPIConnector):
+    name: JobSource = "adzuna"
+
     def __init__(
         self,
         api_key: str,
@@ -268,7 +292,6 @@ class ADZunaConnector(PaginatedAPIConnector):
     ):
         super().__init__(max_pages=max_pages, min_interval_seconds=min_interval_seconds)
 
-        self.name = "adzuna"
         self.base_url = "https://api.adzuna.com/v1/api/jobs"
         self.app_id = app_id
         self.api_key = api_key
@@ -299,7 +322,7 @@ class ADZunaConnector(PaginatedAPIConnector):
     def normalize(self, raw_job: dict) -> CanonicalJobV1:
         return CanonicalJobV1(
             source=self.name,
-            source_job_id=raw_job.get("id"),
+            source_job_id=require_nonempty_string(raw_job, "id"),
             job_title_raw=raw_job.get("title"),
             company_raw=raw_job.get("company", {}).get("display_name"),
             url=raw_job.get("redirect_url"),
@@ -322,8 +345,8 @@ def build_connectors(config: EnvironmentConfig) -> list[JobConnector]:
         # min_interval_seconds = config.bronze.min_interval_seconds
         # ),
         ADZunaConnector(
-            api_key=os.getenv("ADZUNA_API_KEY"),
-            app_id=os.getenv("ADZUNA_APP_ID"),
+            api_key=require_environment_variable("ADZUNA_API_KEY"),
+            app_id=require_environment_variable("ADZUNA_APP_ID"),
             max_pages=config.bronze.max_pages,
             min_interval_seconds=config.bronze.min_interval_seconds,
         )
