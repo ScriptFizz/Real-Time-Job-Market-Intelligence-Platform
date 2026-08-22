@@ -6,7 +6,6 @@ from pyspark.sql import DataFrame, SparkSession
 
 from job_plat.config.env_config import SparkConfig
 
-# from job_plat.utils.helpers import create_spark, parse_date
 
 
 class StageSkip(Exception):
@@ -69,29 +68,3 @@ def path_exists(spark: SparkSession, path: str | Path) -> bool:
 
 def assert_df_equality(df1, df2):
     assert sorted(df1.collect()) == sorted(df2.collect())
-
-
-# def build_common(env: str = "dev", config_path: str = "settings.yaml"):
-
-# config_loader = ConfigLoader(config_path=config_path, env=env)
-# env_config = config_loader.load_env()
-
-# log_level = getattr(logging, env_config.logging_level.upper(), logging.INFO)
-# setup_logging(log_level=log_level)
-
-# spark = create_spark(env_config.spark)
-# storage = get_storage(env_config.storage.type)
-
-# datasets = DatasetRegistry(
-# root = env_config.paths.root,
-# storage = storage,
-# dataset_defs = DATASET_DEFS
-# )
-
-# partition_manager = PartitionManager(
-# metadata_path = env_config.paths.metadata
-# )
-
-# connectors = build_connectors(env_config)
-
-# return env_config, spark, storage, datasets, partition_manager, connectors

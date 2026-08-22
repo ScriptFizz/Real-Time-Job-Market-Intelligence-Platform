@@ -1,6 +1,8 @@
+import json
 from unittest.mock import MagicMock
 
 import pytest
+from pyspark.sql import DataFrame
 
 from job_plat.transformations.ml.clusters.build_job_clusters import (
     build_job_clusters,
@@ -82,3 +84,82 @@ def test_build_job_clusters_rejects_k_larger_than_training_set(spark):
             job_embeddings_df=embeddings,
             k_values=(3,),
         )
+
+
+def test_build_job_clusters_ignores_k_larger_than_training_set(spark):
+    embeddings = spark.createDataFrame(
+        [
+            ("job-1", [1.0, 0.0], 2),
+            ("job-2", [0.9, 0.1], 2),
+            ("job-3", [0.0, 1.0], 2),
+            ("job-4", [0.1, 0.9], 2),
+        ],
+        [
+            "job_id",
+            "embedding_normalized",
+            "embedding_dim",
+        ],
+    )
+
+    _, clusters, _, metadata = build_job_clusters(
+        spark=spark,
+        job_embeddings_df=embeddings,
+        k_values=(2, 100),
+    )
+
+    assert clusters.count() == 2
+
+    metadata_row = metadata.first()
+    assert metadata_row is not None
+
+    hyperparameters = json.loads(metadata_row.hyperparameters)
+
+    assert hyperparameters["k"] == 2
+
+
+def test_build_job_clusters_unpersists_training_data_on_failure(
+    spark,
+    monkeypatch,
+):
+    embeddings = spark.createDataFrame(
+        [
+            ("job-1", [1.0, 0.0], 2),
+            ("job-2", [0.0, 1.0], 2),
+        ],
+        [
+            "job_id",
+            "embedding_normalized",
+            "embedding_dim",
+        ],
+    )
+
+    unpersisted: list[DataFrame] = []
+    original_unpersist = DataFrame.unpersist
+
+    def track_unpersist(
+        dataframe: DataFrame,
+        blocking: bool = False,
+    ) -> DataFrame:
+        unpersisted.append(dataframe)
+        return original_unpersist(
+            dataframe,
+            blocking=blocking,
+        )
+
+    monkeypatch.setattr(
+        DataFrame,
+        "unpersist",
+        track_unpersist,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="No valid k values",
+    ):
+        build_job_clusters(
+            spark=spark,
+            job_embeddings_df=embeddings,
+            k_values=(3,),
+        )
+
+    assert len(unpersisted) == 1

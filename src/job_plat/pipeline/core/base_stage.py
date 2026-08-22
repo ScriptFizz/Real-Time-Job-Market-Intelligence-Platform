@@ -4,12 +4,16 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from pyspark.sql import DataFrame
-
 from job_plat.config.logconfig import ContextLogger
 from job_plat.context.contexts import SparkStageContext, StageExecutionContext
 from job_plat.partitioning.partition_manager import PartitionManager
-from job_plat.pipeline.core.read_strategy import IncrementalReadStrategy, ReadStrategy
+from job_plat.pipeline.core.read_strategy import (
+    IncrementalReadStrategy,
+    PartitionBatch,
+    ReadResult,
+    ReadStrategy,
+    StageInputs,
+)
 from job_plat.pipeline.datasets.dataset_definitions import DatasetDef
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.schemas.output_schemas import StageOutput
@@ -18,7 +22,6 @@ from job_plat.utils.helpers import StageSkip
 ContextT = TypeVar("ContextT", bound=SparkStageContext)
 OutputT = TypeVar("OutputT", bound=StageOutput)
 
-StageInputs = dict[str, DataFrame | None]
 Metrics = dict[str, Any]
 
 
@@ -61,8 +64,8 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
         self.logger.info("stage_started")
 
         try:
-            inputs = self.read()
-            outputs = self.transform(inputs)
+            read_result = self.read()
+            outputs = self.transform(read_result.inputs)
             self.validate_outputs(outputs)
             metrics = self.compute_metrics(outputs)
             if metrics:
@@ -71,6 +74,7 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
                 )
                 self.evaluate_metrics(metrics)
             self.write(outputs)
+            self.acknowledge(read_result.batch)
 
             duration = round(time.time() - start, 2)
             self.logger.info(
@@ -93,24 +97,17 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
     # READ
     # ---------------------
 
-    def read(self) -> StageInputs:
-        inputs: StageInputs = {}
-        self._input_partitions = {}
+    def read(self) -> ReadResult:
+        datasets = {
+            name: self.datasets.get(dataset_definition)
+            for name, dataset_definition in self.INPUT_MAP.items()
+        }
 
-        for name, dataset_cls in self.INPUT_MAP.items():
-            ds = self.datasets.get(dataset_cls)
-
-            df, partitions = self.READ_STRATEGY.read(
-                stage=self,
-                dataset=ds,
-                input_name=name,
-                execution_date=self.ctx.execution_date,
-            )
-
-            inputs[name] = df
-            self._input_partitions[name] = partitions
-
-        return inputs
+        return self.READ_STRATEGY.read(
+            stage=self,
+            datasets=datasets,
+            execution_date=self.ctx.execution_date,
+        )
 
     # ------------------------
     # WRITE
@@ -132,15 +129,28 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
 
         self.logger.info("write_strategy", extra=write_strategy)
 
-        all_partitions = set()
-        for partitions in self._input_partitions.values():
-            if partitions:
-                all_partitions.update(partitions)
+    # ------------------------
+    # ACKNOWLEDGE
+    # -----------------------
 
-        if all_partitions:
-            self.partition_manager.mark_processed(
-                stage_name=self.STAGE_NAME, partitions=sorted(all_partitions)
-            )
+    def acknowledge(
+        self,
+        batch: PartitionBatch,
+    ) -> None:
+        if batch.is_empty:
+            return
+
+        self.partition_manager.mark_processed(
+            stage_name=self.STAGE_NAME,
+            partitions=batch.partitions,
+        )
+
+        self.logger.info(
+            "partition_batch_processed",
+            extra={
+                "partitions": [partition.isoformat() for partition in batch.partitions]
+            },
+        )
 
     # ------------------------
     # VALIDATION IO

@@ -6,8 +6,6 @@ from job_plat.config.logconfig import ContextLogger
 from job_plat.ingestion.metadata import IngestionRun
 from job_plat.storage.storages import Storage
 
-# from typing import Iterator, Dict
-
 
 class BaseSourceStage(ABC):
     def __init__(self, storage: Storage):
@@ -58,10 +56,6 @@ class BaseSourceStage(ABC):
     @abstractmethod
     def validate_config(self) -> None:
         raise NotImplementedError
-
-    # @abstractmethod
-    # def _enrich_with_ingestion_metadata(self, records: Iterator[Dict], run: IngestionRun) -> Iterator[Dict]:
-    #     pass
 
     @abstractmethod
     def produce(self, run: IngestionRun, logger: ContextLogger) -> int:

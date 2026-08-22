@@ -20,13 +20,6 @@ class BronzeStage(BaseSourceStage):
 
     def validate_config(self) -> None:
         self._validate_search_config()
-        # missing = []
-        # if not self.bronze_ctx.query:
-        #     missing.append("Query must not be empty")
-        # if not self.bronze_ctx.location:
-        #     missing.append("Location must not be empty")
-        # if missing:
-        #     raise ValueError(", ".join(missing))
 
     def create_context(self) -> IngestionRun:
         query, country, location = self._validate_search_config()

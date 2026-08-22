@@ -1,5 +1,3 @@
-# from job_plat.transformations.gold.v2_intelligence.clusters.build_job_clusters import build_job_clusters
-
 from job_plat.context.contexts import FeatureContext, StageExecutionContext
 from job_plat.partitioning.partition_manager import PartitionManager
 from job_plat.pipeline.core.base_stage import (

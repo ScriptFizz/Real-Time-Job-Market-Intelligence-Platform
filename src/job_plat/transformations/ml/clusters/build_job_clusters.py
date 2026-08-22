@@ -76,106 +76,112 @@ def build_job_clusters(
     model_id = str(uuid.uuid4())
 
     # Filter valid embeddings
-    df = job_embeddings_df.filter(col("embedding_normalized").isNotNull()).filter(
-        ~expr("exists(embedding_normalized, x -> isnan(x) OR x IS NULL)")
+    training_df = (
+        job_embeddings_df.filter(col("embedding_normalized").isNotNull())
+        .filter(~expr("exists(embedding_normalized, x -> isnan(x) OR x IS NULL)"))
+        .filter(col("embedding_dim") > 0)
+        .withColumn(
+            "features",
+            array_to_vector(col("embedding_normalized")),
+        )
+        .cache()
     )
 
-    df = df.filter(col("embedding_dim") > 0)
+    try:
+        training_size = training_df.count()
 
-    if df.rdd.isEmpty():
-        raise ValueError("No embeddings available for clustering.")
+        if training_size == 0:
+            raise ValueError("No embeddings available for clustering.")
 
-    df = df.withColumn("features", array_to_vector(col("embedding_normalized")))
+        valid_k_values = tuple(k for k in k_values if 2 <= k <= training_size)
 
-    df = df.cache()
-    training_size = df.count()
+        if not valid_k_values:
+            raise ValueError(
+                f"No valid k values for clustering: training_size={training_size}"
+            )
 
-    valid_k_values = tuple(k for k in k_values if 2 <= k <= training_size)
-
-    if not valid_k_values:
-        raise ValueError(
-            f"No valid k values for clustering: training_size={training_size}"
+        k, silhouette_score, model, predictions = find_optimal_fit(
+            df=training_df,
+            k_values=valid_k_values,
         )
 
-    k, silhouette_score, model, predictions = find_optimal_fit(df=df, k_values=k_values)
+        # Compute distance to centroid (cosine-style for normalized embeddings)
+        centroids = model.clusterCenters()
 
-    # Compute distance to centroid (cosine-style for normalized embeddings)
-    centroids = model.clusterCenters()
+        def cosine_distance(vec, cluster_id):
+            centroid = centroids[cluster_id]
+            return float(1 - float(np.dot(vec, centroid)))
 
-    def cosine_distance(vec, cluster_id):
-        centroid = centroids[cluster_id]
-        return float(1 - float(np.dot(vec, centroid)))
+        cosine_distance_udf = udf(cosine_distance, DoubleType())
 
-    cosine_distance_udf = udf(cosine_distance, DoubleType())
-
-    predictions = predictions.withColumn(
-        "distance_to_centroid",
-        cosine_distance_udf(vector_to_array(col("features")), col("cluster_id")),
-    )
-
-    # Membership table
-    membership_df = (
-        predictions.select("job_id", "cluster_id", "distance_to_centroid")
-        .withColumn("model_id", lit(model_id))
-        .withColumn("model_version", lit(model_version))
-        .withColumn("assigned_at", lit(training_ts))
-    )
-
-    # Cluster statistics
-    cluster_df = (
-        membership_df.groupBy("cluster_id")
-        .agg(
-            count("job_id").alias("cluster_size"),
-            avg("distance_to_centroid").alias("avg_distance_to_centroid"),
+        predictions = predictions.withColumn(
+            "distance_to_centroid",
+            cosine_distance_udf(vector_to_array(col("features")), col("cluster_id")),
         )
-        .withColumn("model_id", lit(model_id))
-        .withColumn("model_version", lit(model_version))
-        .withColumn("created_at", lit(training_ts))
-    )
 
-    # Store centroids
-    centroids_data = [
-        (idx, model_id, model_version, centroid.tolist(), len(centroid), training_ts)
-        for idx, centroid in enumerate(centroids)
-    ]
+        # Membership table
+        membership_df = (
+            predictions.select("job_id", "cluster_id", "distance_to_centroid")
+            .withColumn("model_id", lit(model_id))
+            .withColumn("model_version", lit(model_version))
+            .withColumn("assigned_at", lit(training_ts))
+        )
 
-    centroids_schema = StructType(
-        [
-            StructField("cluster_id", IntegerType(), False),
-            StructField("model_id", StringType(), False),
-            StructField("model_version", StringType(), False),
-            StructField("centroid_vector", ArrayType(DoubleType()), False),
-            StructField("embedding_dim", IntegerType(), False),
-            StructField("created_at", TimestampType(), False),
+        # Cluster statistics
+        cluster_df = (
+            membership_df.groupBy("cluster_id")
+            .agg(
+                count("job_id").alias("cluster_size"),
+                avg("distance_to_centroid").alias("avg_distance_to_centroid"),
+            )
+            .withColumn("model_id", lit(model_id))
+            .withColumn("model_version", lit(model_version))
+            .withColumn("created_at", lit(training_ts))
+        )
+
+        # Store centroids
+        centroids_data = [
+            (
+                idx,
+                model_id,
+                model_version,
+                centroid.tolist(),
+                len(centroid),
+                training_ts,
+            )
+            for idx, centroid in enumerate(centroids)
         ]
-    )
 
-    centroids_df = spark.createDataFrame(centroids_data, schema=centroids_schema)
+        centroids_schema = StructType(
+            [
+                StructField("cluster_id", IntegerType(), False),
+                StructField("model_id", StringType(), False),
+                StructField("model_version", StringType(), False),
+                StructField("centroid_vector", ArrayType(DoubleType()), False),
+                StructField("embedding_dim", IntegerType(), False),
+                StructField("created_at", TimestampType(), False),
+            ]
+        )
 
-    # # Silhouette score
-    # evaluator = ClusteringEvaluator(
-    # featuresCol="features",
-    # predictionCol="cluster_id",
-    # metricName="silhouette",
-    # distanceMeasure="cosine"
-    # )
+        centroids_df = spark.createDataFrame(centroids_data, schema=centroids_schema)
 
-    # silhouette_score = evaluator.evaluate(predictions)
+        # Metadata table
+        metadata_df = spark.createDataFrame(
+            [
+                {
+                    "model_id": model_id,
+                    "model_name": "job_clustering",
+                    "model_version": model_version,
+                    "algorithm": "spark_ml_kmeans",
+                    "hyperparameters": json.dumps({"k": k, "seed": 42}),
+                    "training_size": training_size,
+                    "silhouette_score": float(silhouette_score),
+                    "created_at": training_ts,
+                }
+            ]
+        )
 
-    # Metadata table
-    metadata_df = spark.createDataFrame(
-        [
-            {
-                "model_id": model_id,
-                "model_name": "job_clustering",
-                "model_version": model_version,
-                "algorithm": "spark_ml_kmeans",
-                "hyperparameters": json.dumps({"k": k, "seed": 42}),
-                "training_size": training_size,
-                "silhouette_score": float(silhouette_score),
-                "created_at": training_ts,
-            }
-        ]
-    )
+        return membership_df, cluster_df, centroids_df, metadata_df
 
-    return membership_df, cluster_df, centroids_df, metadata_df
+    finally:
+        training_df.unpersist()

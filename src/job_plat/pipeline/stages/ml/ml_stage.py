@@ -72,31 +72,35 @@ class MLStage(BaseStage):
         job_membership_df.cache()
         job_clusters_df.cache()
 
-        # Cluster metrics
-        cluster_stats = (
-            job_membership_df.groupBy()
-            .agg(
-                countDistinct("cluster_id").alias("num_clusters"),
-                avg("distance_to_centroid").alias("avg_distance"),
+        try:
+            # Cluster metrics
+            cluster_stats = (
+                job_membership_df.groupBy()
+                .agg(
+                    countDistinct("cluster_id").alias("num_clusters"),
+                    avg("distance_to_centroid").alias("avg_distance"),
+                )
+                .first()
             )
-            .first()
-        )
 
-        if cluster_stats is None:
-            raise RuntimeError("ML cluster aggregation returned no result")
+            if cluster_stats is None:
+                raise RuntimeError("ML cluster aggregation returned no result")
 
-        # Silhouette score from metadata
-        silhouette_row = job_metadata_df.select("silhouette_score").first()
-        silhouette = silhouette_row["silhouette_score"] if silhouette_row else None
+            # Silhouette score from metadata
+            silhouette_row = job_metadata_df.select("silhouette_score").first()
+            silhouette = silhouette_row["silhouette_score"] if silhouette_row else None
 
-        job_membership_df.unpersist()
-        job_clusters_df.unpersist()
+            job_membership_df.unpersist()
+            job_clusters_df.unpersist()
 
-        return {
-            "num_clusters": cluster_stats["num_clusters"],
-            "avg_distance_to_centroid": cluster_stats["avg_distance"],
-            "silhouette_score": silhouette,
-        }
+            return {
+                "num_clusters": cluster_stats["num_clusters"],
+                "avg_distance_to_centroid": cluster_stats["avg_distance"],
+                "silhouette_score": silhouette,
+            }
+        finally:
+            job_membership_df.unpersist()
+            job_clusters_df.unpersist()
 
     def evaluate_metrics(self, metrics: Metrics) -> None:
         if metrics["num_clusters"] < self.ctx.min_clusters:

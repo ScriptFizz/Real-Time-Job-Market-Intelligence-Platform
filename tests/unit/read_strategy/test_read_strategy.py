@@ -1,39 +1,165 @@
 from datetime import date
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
-from job_plat.pipeline.core.read_strategy import IncrementalReadStrategy
+from job_plat.pipeline.core.read_strategy import IncrementalReadStrategy, PartitionBatch
+from job_plat.pipeline.stages.data.gold_stage import GoldStage
 
 
 class FakeDataset:
     partition_columns = ["ingestion_date"]
-    
-    def get_available_partitions(self, partition_manager, stage_name):
-        return [date(2025, 3, 1)]
-    
+
+    def __init__(self, available):
+        self.available = available
+        self.requested_partitions = None
+
+    def list_partitions(self):
+        return self.available
+
     def read_partitions(self, spark, partitions):
-        return spark.createDataFrame(
-            [(1, "2025-03-01")],
-            ["job_id", "ingestion_date"]
-        )
+        del spark
+        self.requested_partitions = partitions
+        return MagicMock()
 
 
-def test_incremental_read_strategy(spark):
-    
-    dataset = FakeDataset()
-    
-    strategy = IncrementalReadStrategy()
-    
-    stage = SimpleNamespace(
-        spark=spark,
-        partition_manager=None,
-        STAGE_NAME="test_stage"
+def test_incremental_strategy_reads_only_common_partitions():
+    jobs = FakeDataset(
+        [
+            date(2025, 3, 1),
+            date(2025, 3, 2),
+        ]
     )
-    
-    df, partitions = strategy.read(
-        stage=stage, 
-        dataset=dataset, 
-        input_name="jobs",
-        execution_date=None,)
-    
-    assert df.count() == 1
-    assert partitions == [date(2025, 3, 1)]
+
+    skills = FakeDataset(
+        [
+            date(2025, 3, 1),
+        ]
+    )
+
+    partition_manager = MagicMock()
+    partition_manager.get_processed.return_value = set()
+
+    stage = SimpleNamespace(
+        spark=MagicMock(),
+        partition_manager=partition_manager,
+        STAGE_NAME="gold",
+    )
+
+    result = IncrementalReadStrategy().read(
+        stage=stage,
+        datasets={
+            "jobs": jobs,
+            "skills": skills,
+        },
+        execution_date=None,
+    )
+
+    assert result.batch.partitions == (date(2025, 3, 1),)
+
+    assert jobs.requested_partitions == [
+        date(2025, 3, 1),
+    ]
+
+    assert skills.requested_partitions == [
+        date(2025, 3, 1),
+    ]
+
+    assert result.inputs["jobs"] is not None
+    assert result.inputs["skills"] is not None
+
+
+def test_incremental_strategy_excludes_processed_partitions():
+    jobs = FakeDataset(
+        [
+            date(2025, 3, 1),
+            date(2025, 3, 2),
+        ]
+    )
+    skills = FakeDataset(
+        [
+            date(2025, 3, 1),
+            date(2025, 3, 2),
+        ]
+    )
+
+    partition_manager = MagicMock()
+    partition_manager.get_processed.return_value = {date(2025, 3, 1)}
+
+    stage = SimpleNamespace(
+        spark=MagicMock(),
+        partition_manager=partition_manager,
+        STAGE_NAME="gold",
+    )
+
+    result = IncrementalReadStrategy().read(
+        stage=stage,
+        datasets={
+            "jobs": jobs,
+            "skills": skills,
+        },
+        execution_date=None,
+    )
+
+    assert result.batch.partitions == (date(2025, 3, 2),)
+
+
+def test_incremental_strategy_waits_for_aligned_inputs():
+    jobs = FakeDataset([date(2025, 3, 2)])
+    skills = FakeDataset([date(2025, 3, 1)])
+
+    partition_manager = MagicMock()
+    partition_manager.get_processed.return_value = set()
+
+    stage = SimpleNamespace(
+        spark=MagicMock(),
+        partition_manager=partition_manager,
+        STAGE_NAME="gold",
+    )
+
+    result = IncrementalReadStrategy().read(
+        stage=stage,
+        datasets={
+            "jobs": jobs,
+            "skills": skills,
+        },
+        execution_date=None,
+    )
+
+    assert result.batch.is_empty
+    assert result.inputs == {
+        "jobs": None,
+        "skills": None,
+    }
+    assert jobs.requested_partitions is None
+    assert skills.requested_partitions is None
+
+
+def test_acknowledge_marks_exact_batch():
+    stage = object.__new__(GoldStage)
+    stage.STAGE_NAME = "gold"
+    stage.partition_manager = MagicMock()
+    stage.logger = MagicMock()
+
+    batch = PartitionBatch(
+        partitions=(
+            date(2025, 3, 1),
+            date(2025, 3, 2),
+        )
+    )
+
+    stage.acknowledge(batch)
+
+    stage.partition_manager.mark_processed.assert_called_once_with(
+        stage_name="gold",
+        partitions=batch.partitions,
+    )
+
+
+def test_acknowledge_ignores_empty_batch():
+    stage = object.__new__(GoldStage)
+    stage.partition_manager = MagicMock()
+    stage.logger = MagicMock()
+
+    stage.acknowledge(PartitionBatch(partitions=()))
+
+    stage.partition_manager.mark_processed.assert_not_called()

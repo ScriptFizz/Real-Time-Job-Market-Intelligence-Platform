@@ -74,26 +74,31 @@ class GoldStage(BaseStage[GoldContext, GoldOutputs]):
         dim_skills_df.cache()
         fact_df.cache()
 
-        jobs = dim_jobs_df.count()
-        skills = dim_skills_df.count()
-        fact_rows = fact_df.count()
-        orphan_facts_detected = (
-            fact_df.join(dim_jobs_df.select("job_id"), "job_id", "left_anti")
-            .limit(1)
-            .count()
-        ) > 0
+        try:
+            jobs = dim_jobs_df.count()
+            skills = dim_skills_df.count()
+            fact_rows = fact_df.count()
+            orphan_facts_detected = (
+                fact_df.join(dim_jobs_df.select("job_id"), "job_id", "left_anti")
+                .limit(1)
+                .count()
+            ) > 0
 
-        dim_jobs_df.unpersist()
-        dim_skills_df.unpersist()
-        fact_df.unpersist()
+            dim_jobs_df.unpersist()
+            dim_skills_df.unpersist()
+            fact_df.unpersist()
 
-        return {
-            "jobs": jobs,
-            "skills": skills,
-            "fact_rows": fact_rows,
-            "fact_per_job_ratio": round(fact_rows / jobs, 2) if jobs else 0,
-            "orphan_facts_detected": orphan_facts_detected,
-        }
+            return {
+                "jobs": jobs,
+                "skills": skills,
+                "fact_rows": fact_rows,
+                "fact_per_job_ratio": round(fact_rows / jobs, 2) if jobs else 0,
+                "orphan_facts_detected": orphan_facts_detected,
+            }
+        finally:
+            dim_jobs_df.unpersist()
+            dim_skills_df.unpersist()
+            fact_df.unpersist()
 
     def evaluate_metrics(self, metrics: Metrics) -> None:
         if not metrics:
