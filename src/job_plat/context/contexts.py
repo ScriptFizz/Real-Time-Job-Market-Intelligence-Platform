@@ -1,20 +1,28 @@
-from dataclasses import dataclass, field
-from pyspark.sql import SparkSession
-from datetime import datetime, timezone
 import uuid
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+
+from pyspark.sql import SparkSession
 
 #  EXECUTION PARAMS
+
 
 @dataclass
 class ExecutionParams:
     query: str | None = None
     location: str | None = None
     country: str | None = None
-    
+
 
 @dataclass
 class BaseContext:
     execution_date: datetime | None
+
+
+@dataclass
+class SparkStageContext(BaseContext):
+    spark: SparkSession
+
 
 @dataclass
 class BronzeContext(BaseContext):
@@ -26,36 +34,39 @@ class BronzeContext(BaseContext):
 
 # SILVER CONTEXT
 
+
 @dataclass
-class SilverContext(BaseContext):
-    spark: SparkSession
-    
+class SilverContext(SparkStageContext):
+    pass
+
 
 # GOLD CONTEXT
 
+
 @dataclass
-class GoldContext(BaseContext):
+class GoldContext(SparkStageContext):
     fact_per_job_ratio_threshold: int
-    spark: SparkSession
 
 
 # FEATURE CONTEXT
 
+
 @dataclass
-class FeatureContext(BaseContext):
-    spark: SparkSession
-    window_days: int        
+class FeatureContext(SparkStageContext):
+    window_days: int
+
 
 # ML CONTEXT
 
+
 @dataclass
-class MLContext(BaseContext):
+class MLContext(SparkStageContext):
     min_clusters: int
     min_silhouette: float
-    spark: SparkSession
-        
+
 
 # DATA PIPELINE CONTEXT
+
 
 @dataclass
 class DataPipelineContext(BaseContext):
@@ -68,6 +79,7 @@ class DataPipelineContext(BaseContext):
 
 # ML PIPELINE CONTEXT
 
+
 @dataclass
 class MLPipelineContext(BaseContext):
     env: str
@@ -76,12 +88,9 @@ class MLPipelineContext(BaseContext):
     ml: MLContext
 
 
-
 @dataclass(kw_only=True)
 class StageExecutionContext:
     stage: str
     pipeline_version: str
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    started_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))

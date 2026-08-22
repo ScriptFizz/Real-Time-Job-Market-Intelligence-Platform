@@ -1,8 +1,7 @@
 import pytest
 
-from job_plat.pipeline.stages.data.gold_stage import GoldStage 
-from job_plat.utils.helpers import StageSkip 
-
+from job_plat.pipeline.stages.data.gold_stage import GoldStage
+from job_plat.utils.helpers import StageSkip
 
 
 @pytest.mark.parametrize(
@@ -19,6 +18,8 @@ def test_gold_transform_skips_when_an_input_is_missing(jobs, skills):
 
     with pytest.raises(StageSkip, match="no new partitions"):
         stage.transform(
-            job_silver_df=jobs,
-            job_skills_silver_df=skills,
+            {
+                "job_silver_df": jobs,
+                "job_skills_silver_df": skills,
+            }
         )

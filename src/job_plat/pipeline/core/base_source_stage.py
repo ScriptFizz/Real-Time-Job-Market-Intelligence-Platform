@@ -1,28 +1,26 @@
-from abc import ABC, abstractmethod
-from pyspark.sql import DataFrame, SparkSession
 import logging
 import time
-from job_plat.storage.storages import Storage
+from abc import ABC, abstractmethod
+
 from job_plat.config.logconfig import ContextLogger
-from job_plat.context.contexts import StageExecutionContext
 from job_plat.ingestion.metadata import IngestionRun
-from typing import Iterator, Dict
+from job_plat.storage.storages import Storage
+
+# from typing import Iterator, Dict
 
 
 class BaseSourceStage(ABC):
-    
     def __init__(self, storage: Storage):
         self.storage = storage
         self._base_logger = logging.getLogger(
             f"pipeline.{self.__module__}.{self.__class__.__name__}"
         )
-        
+
     def execute(self) -> None:
-        
         self.validate_config()
-        
+
         run_context = self.create_context()
-        
+
         # Bind logger to execution
         logger = ContextLogger(
             self._base_logger,
@@ -31,17 +29,13 @@ class BaseSourceStage(ABC):
                 "stage": run_context.stage,
             },
         )
-        
+
         start = time.time()
         logger.info("stage_started")
-        
-        try:
-            count = self.produce(
-                run=run_context,
-                logger=logger
-                )
 
-        
+        try:
+            count = self.produce(run=run_context, logger=logger)
+
             duration = round(time.time() - start, 2)
             logger.info(
                 "stage_completed",
@@ -60,20 +54,19 @@ class BaseSourceStage(ABC):
                 exc_info=True,
             )
             raise
-    
+
     @abstractmethod
     def validate_config(self) -> None:
-        pass
-    
+        raise NotImplementedError
+
+    # @abstractmethod
+    # def _enrich_with_ingestion_metadata(self, records: Iterator[Dict], run: IngestionRun) -> Iterator[Dict]:
+    #     pass
+
     @abstractmethod
-    def _enrich_with_ingestion_metadata(self, records: Iterator[Dict], run: IngestionRun) -> Iterator[Dict]:
-        pass
-    
-    @abstractmethod
-    def produce(self, run: IngestionRun, logger: logging.Logger) -> int:
-        pass
-    
+    def produce(self, run: IngestionRun, logger: ContextLogger) -> int:
+        raise NotImplementedError
+
     @abstractmethod
     def create_context(self) -> IngestionRun:
-        pass
-
+        raise NotImplementedError

@@ -1,7 +1,7 @@
-import logging
 from collections.abc import Iterator
 from pathlib import Path
 
+from job_plat.config.logconfig import ContextLogger
 from job_plat.context.contexts import BronzeContext
 from job_plat.ingestion.connectors import JobConnector
 from job_plat.ingestion.metadata import IngestionRun, write_metadata
@@ -19,20 +19,22 @@ class BronzeStage(BaseSourceStage):
         self.connector = connector
 
     def validate_config(self) -> None:
-        missing = []
-        if not self.bronze_ctx.query:
-            missing.append("Query must not be empty")
-        if not self.bronze_ctx.location:
-            missing.append("Location must not be empty")
-        if missing:
-            raise ValueError(", ".join(missing))
+        self._validate_search_config()
+        # missing = []
+        # if not self.bronze_ctx.query:
+        #     missing.append("Query must not be empty")
+        # if not self.bronze_ctx.location:
+        #     missing.append("Location must not be empty")
+        # if missing:
+        #     raise ValueError(", ".join(missing))
 
     def create_context(self) -> IngestionRun:
+        query, country, location = self._validate_search_config()
         run_context = IngestionRun(
             source=self.connector.name,
-            query=self.bronze_ctx.query,
-            country=self.bronze_ctx.country,
-            location=self.bronze_ctx.location,
+            query=query,
+            country=country,
+            location=location,
             pipeline_version="1.0.0",
         )
         return run_context
@@ -54,7 +56,7 @@ class BronzeStage(BaseSourceStage):
                 "payload": self.connector.normalize(record).model_dump(),
             }
 
-    def produce(self, run: IngestionRun, logger: logging.Logger) -> int:
+    def produce(self, run: IngestionRun, logger: ContextLogger) -> int:
         logger.info(
             "bronze_run_started",
             extra={"source": run.source},
@@ -112,3 +114,22 @@ class BronzeStage(BaseSourceStage):
             },
         )
         return row_count
+
+    def _validate_search_config(self) -> tuple[str, str, str]:
+        query = self.bronze_ctx.query
+        country = self.bronze_ctx.country
+        location = self.bronze_ctx.location
+
+        if query and country and location:
+            return query, country, location
+
+        missing = []
+
+        if not query:
+            missing.append("Query must not be empty")
+        if not country:
+            missing.append("Country must not be empty")
+        if not location:
+            missing.append("Location must not be empty")
+
+        raise ValueError(", ".join(missing))

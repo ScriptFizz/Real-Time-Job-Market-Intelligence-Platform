@@ -2,10 +2,12 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, Generic, TypeVar
+
+from pyspark.sql import DataFrame
 
 from job_plat.config.logconfig import ContextLogger
-from job_plat.context.contexts import BaseContext, StageExecutionContext
+from job_plat.context.contexts import SparkStageContext, StageExecutionContext
 from job_plat.partitioning.partition_manager import PartitionManager
 from job_plat.pipeline.core.read_strategy import IncrementalReadStrategy, ReadStrategy
 from job_plat.pipeline.datasets.dataset_definitions import DatasetDef
@@ -13,18 +15,24 @@ from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.schemas.output_schemas import StageOutput
 from job_plat.utils.helpers import StageSkip
 
+ContextT = TypeVar("ContextT", bound=SparkStageContext)
+OutputT = TypeVar("OutputT", bound=StageOutput)
 
-class BaseStage(ABC):
+StageInputs = dict[str, DataFrame | None]
+Metrics = dict[str, Any]
+
+
+class BaseStage(ABC, Generic[ContextT, OutputT]):
     STAGE_NAME: str
     INPUT_MAP: dict[str, type[DatasetDef]]
-    OUTPUT_TYPE: type[StageOutput]
+    OUTPUT_TYPE: type[OutputT]
     READ_STRATEGY: ReadStrategy = IncrementalReadStrategy()
 
     def __init__(
         self,
         datasets: DatasetRegistry,
         partition_manager: PartitionManager,
-        ctx: BaseContext,
+        ctx: ContextT,
     ):
         self.spark = ctx.spark
         self.datasets = datasets
@@ -54,7 +62,7 @@ class BaseStage(ABC):
 
         try:
             inputs = self.read()
-            outputs = self.transform(**inputs)
+            outputs = self.transform(inputs)
             self.validate_outputs(outputs)
             metrics = self.compute_metrics(outputs)
             if metrics:
@@ -85,8 +93,8 @@ class BaseStage(ABC):
     # READ
     # ---------------------
 
-    def read(self) -> dict:
-        inputs = {}
+    def read(self) -> StageInputs:
+        inputs: StageInputs = {}
         self._input_partitions = {}
 
         for name, dataset_cls in self.INPUT_MAP.items():
@@ -108,7 +116,7 @@ class BaseStage(ABC):
     # WRITE
     # ------------------------
 
-    def write(self, outputs: StageOutput) -> None:
+    def write(self, outputs: OutputT) -> None:
         if not outputs:
             self.logger.info("No outputs to write", extra={"stage": self.STAGE_NAME})
             return
@@ -148,7 +156,7 @@ class BaseStage(ABC):
         if missing:
             raise FileNotFoundError(f"Missing input dataset(s): {', '.join(missing)}")
 
-    def validate_outputs(self, outputs: StageOutput) -> None:
+    def validate_outputs(self, outputs: OutputT) -> None:
         if not isinstance(outputs, self.OUTPUT_TYPE):
             raise TypeError(
                 f"{self.STAGE_NAME}: expected output {self.OUTPUT_TYPE.__name__}, "
@@ -165,10 +173,10 @@ class BaseStage(ABC):
     # OPTIONAL METHODS
     # --------------------
 
-    def compute_metrics(self, _outputs: StageOutput) -> dict:
+    def compute_metrics(self, _outputs: OutputT) -> Metrics:
         return {}
 
-    def evaluate_metrics(self, _metrics: dict) -> None:  # noqa: B027
+    def evaluate_metrics(self, _metrics: Metrics) -> None:  # noqa: B027
         pass
 
     # ---------------------
@@ -176,8 +184,8 @@ class BaseStage(ABC):
     # ---------------------
 
     @abstractmethod
-    def transform(self, **kwargs: Any) -> StageOutput:
-        pass
+    def transform(self, inputs: StageInputs) -> OutputT:
+        raise NotImplementedError
 
     @abstractmethod
     def create_context(self) -> StageExecutionContext:
