@@ -104,12 +104,17 @@ class GoldStage(BaseStage[GoldContext, GoldOutputs]):
                 "data_quality_issue", extra={"issue": "orphan_facts_detected"}
             )
 
-        if metrics.get("fact_per_job_ratio") > self.ctx.fact_per_job_ratio_threshold:
+        fact_job_per_ratio = metrics.get("fact_per_job_ratio")
+
+        if (
+            fact_job_per_ratio is not None
+            and fact_job_per_ratio > self.ctx.fact_per_job_ratio_threshold
+        ):
             self.logger.warning(
                 "data_anomaly_detected",
                 extra={
                     "issue": "fact_per_job_ratio_high",
-                    "value": metrics["fact_per_job_ratio"],
+                    "value": fact_job_per_ratio,
                     "threshold": self.ctx.fact_per_job_ratio_threshold,
                 },
             )
