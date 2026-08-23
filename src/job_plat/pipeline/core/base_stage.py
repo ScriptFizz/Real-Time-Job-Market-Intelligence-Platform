@@ -73,7 +73,10 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
                     "stage_metrics", extra={"stage": self.STAGE_NAME, **metrics}
                 )
                 self.evaluate_metrics(metrics)
-            self.write(outputs)
+            self.write(
+                outputs=outputs,
+                batch=read_result.batch,
+            )
             self.acknowledge(read_result.batch)
 
             duration = round(time.time() - start, 2)
@@ -113,7 +116,11 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
     # WRITE
     # ------------------------
 
-    def write(self, outputs: OutputT) -> None:
+    def write(
+        self,
+        outputs: OutputT,
+        batch: PartitionBatch,
+    ) -> None:
         if not outputs:
             self.logger.info("No outputs to write", extra={"stage": self.STAGE_NAME})
             return
@@ -124,7 +131,10 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
         for field_name, df in vars(outputs).items():
             dataset_cls = dataset_map[field_name]
             dataset = self.datasets.get(dataset_cls)
-            dataset.write(df)
+            dataset.write(
+                df,
+                expected_partitions=batch.partitions,
+            )
             write_strategy[field_name] = dataset.write_mode
 
         self.logger.info("write_strategy", extra=write_strategy)

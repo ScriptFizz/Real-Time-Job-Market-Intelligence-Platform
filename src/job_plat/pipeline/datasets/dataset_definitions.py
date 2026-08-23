@@ -1,5 +1,11 @@
 from typing import Literal
 
+WriteMode = Literal[
+    "append",
+    "overwrite",
+    "replace_partitions",
+]
+
 
 class DatasetDef:
     NAME: str
@@ -7,7 +13,7 @@ class DatasetDef:
 
     PARTITION_COLUMNS: list[str] = ["ingestion_date"]
     TIME_WINDOW_COLUMN: str | None = None
-    WRITE_MODE: Literal["overwrite", "append"] = "append"
+    WRITE_MODE: WriteMode = "append"
     FILE_FORMAT: Literal["parquet", "jsonl"] = "parquet"
 
 
@@ -30,11 +36,13 @@ class BronzeJobs(DatasetDef):
 class SilverJobs(DatasetDef):
     NAME = "silver_jobs"
     RELATIVE_PATH = "silver/jobs"
+    WRITE_MODE = "replace_partitions"
 
 
 class SilverJobSkills(DatasetDef):
     NAME = "silver_job_skills"
     RELATIVE_PATH = "silver/job_skills"
+    WRITE_MODE = "replace_partitions"
 
 
 ##################
@@ -59,6 +67,7 @@ class GoldFactJobSkills(DatasetDef):
     NAME = "gold_fact_job_skills"
     RELATIVE_PATH = "gold/fact_job_skills"
     TIME_WINDOW_COLUMN = "posted_at"
+    WRITE_MODE = "replace_partitions"
 
 
 ##################

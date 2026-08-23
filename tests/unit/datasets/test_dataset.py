@@ -1,5 +1,7 @@
 from datetime import date
 
+import pytest
+
 from job_plat.pipeline.datasets.dataset import Dataset
 from job_plat.storage.storages import LocalStorage
 
@@ -45,3 +47,98 @@ def test_read_partitions_with_filters(spark, tmp_path):
     )
 
     assert [row.job_id for row in result.collect()] == [2]
+
+
+def test_replace_partitions_is_retry_idempotent(
+    spark,
+    tmp_path,
+):
+    first = date(2025, 3, 1)
+    second = date(2025, 3, 2)
+
+    dataset = Dataset(
+        name="jobs",
+        path=str(tmp_path / "replace-partitions"),
+        storage=LocalStorage(),
+        partition_columns=["ingestion_date"],
+        write_mode="replace_partitions",
+    )
+
+    initial = spark.createDataFrame(
+        [
+            (1, "original", first),
+            (2, "preserved", second),
+        ],
+        [
+            "job_id",
+            "value",
+            "ingestion_date",
+        ],
+    )
+
+    dataset.write(
+        initial,
+        expected_partitions=(first, second),
+    )
+
+    retry = spark.createDataFrame(
+        [
+            (1, "corrected", first),
+        ],
+        [
+            "job_id",
+            "value",
+            "ingestion_date",
+        ],
+    )
+
+    dataset.write(
+        retry,
+        expected_partitions=(first,),
+    )
+
+    result = dataset.read_all(spark)
+
+    rows = {
+        (
+            row.job_id,
+            row.value,
+            row.ingestion_date,
+        )
+        for row in result.collect()
+    }
+
+    assert rows == {
+        (1, "corrected", first),
+        (2, "preserved", second),
+    }
+
+
+def test_replace_partitions_rejects_output_outside_batch(
+    spark,
+    tmp_path,
+):
+    expected = date(2025, 3, 1)
+    unexpected = date(2025, 3, 2)
+
+    dataset = Dataset(
+        name="jobs",
+        path=str(tmp_path / "protected-partitions"),
+        storage=LocalStorage(),
+        partition_columns=["ingestion_date"],
+        write_mode="replace_partitions",
+    )
+
+    dataframe = spark.createDataFrame(
+        [(1, unexpected)],
+        ["job_id", "ingestion_date"],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="outside the active batch",
+    ):
+        dataset.write(
+            dataframe,
+            expected_partitions=(expected,),
+        )

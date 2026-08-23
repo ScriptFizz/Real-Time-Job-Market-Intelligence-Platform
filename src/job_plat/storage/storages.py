@@ -36,6 +36,7 @@ class Storage(ABC):
         path: str,
         mode: str,
         partition_cols: list[str] | None = None,
+        dynamic_partition_overwrite: bool = False,
     ) -> None:
         raise NotImplementedError
 
@@ -46,6 +47,7 @@ class Storage(ABC):
         path: str,
         mode: str,
         partition_cols: list[str] | None = None,
+        dynamic_partition_overwrite: bool = False,
     ) -> None:
         raise NotImplementedError
 
@@ -70,8 +72,17 @@ class LocalStorage(Storage):
         path: str,
         mode: str,
         partition_cols: list[str] | None = None,
+        dynamic_partition_overwrite: bool = False,
     ) -> None:
-        writer = df.write.mode(mode)
+        writer = df.write
+
+        if dynamic_partition_overwrite:
+            writer = writer.option(
+                "partitionOverwriteMode",
+                "dynamic",
+            )
+
+        writer = writer.mode(mode)
         if partition_cols:
             writer = writer.partitionBy(*partition_cols)
         writer.parquet(path)
@@ -107,8 +118,18 @@ class LocalStorage(Storage):
         path: str,
         mode: str,
         partition_cols: list[str] | None = None,
+        dynamic_partition_overwrite: bool = False,
     ) -> None:
-        writer = df.write.mode(mode).option("compression", "none")
+        writer = df.write.option("compression", "none")
+
+        if dynamic_partition_overwrite:
+            writer = writer.option(
+                "partitionOverwriteMode",
+                "dynamic",
+            )
+
+        writer = writer.mode(mode)
+
         if partition_cols:
             writer = writer.partitionBy(*partition_cols)
         writer.json(path)
@@ -144,8 +165,17 @@ class GCStorage(Storage):
         path: str,
         mode: str,
         partition_cols: list[str] | None = None,
+        dynamic_partition_overwrite: bool = False,
     ) -> None:
-        writer = df.write.mode(mode)
+        writer = df.write
+
+        if dynamic_partition_overwrite:
+            writer = writer.option(
+                "partitionOverwriteMode",
+                "dynamic",
+            )
+
+        writer = writer.mode(mode)
 
         if partition_cols:
             writer = writer.partitionBy(*partition_cols)
@@ -167,8 +197,17 @@ class GCStorage(Storage):
         path: str,
         mode: str,
         partition_cols: list[str] | None = None,
+        dynamic_partition_overwrite: bool = False,
     ) -> None:
-        writer = df.write.mode(mode).option("compression", "none")
+        writer = df.write.option("compression", "none")
+
+        if dynamic_partition_overwrite:
+            writer = writer.option(
+                "partitionOverwriteMode",
+                "dynamic",
+            )
+
+        writer = writer.mode(mode)
 
         if partition_cols:
             writer = writer.partitionBy(*partition_cols)
