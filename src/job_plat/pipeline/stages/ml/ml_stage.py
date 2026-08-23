@@ -47,7 +47,7 @@ class MLStage(BaseStage[MLContext, MLOutputs]):
 
         if job_embeddings_df is None or skill_embeddings_df is None:
             raise StageSkip("no embeddings available for clustering")
-        
+
         training_ts = self.ctx.execution_date
 
         if training_ts is None:
@@ -55,13 +55,13 @@ class MLStage(BaseStage[MLContext, MLOutputs]):
                 "MLStage requires execution_date for deterministic training identity"
             )
 
-
         self.logger.info("building_clusters_data")
         job_membership_df, job_clusters_df, job_centroids_df, job_metadata_df = (
             build_job_clusters(
-                spark=self.spark, 
+                spark=self.spark,
                 job_embeddings_df=job_embeddings_df,
-                training_ts=training_ts)
+                training_ts=training_ts,
+            )
         )
 
         return MLOutputs(

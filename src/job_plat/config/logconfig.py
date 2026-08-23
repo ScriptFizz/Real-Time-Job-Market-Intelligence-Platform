@@ -3,15 +3,16 @@ import logging.config
 import sys
 from pathlib import Path
 
+
 def setup_logging(log_level=logging.INFO):
     """
     Define logging configurations for applications.
     """
-    
+
     project_root = Path(__file__).resolve().parents[3]
     logs_dir = project_root / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
-    
+
     logging_config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -52,7 +53,7 @@ def setup_logging(log_level=logging.INFO):
             "propagate": True,
         },
     }
-    
+
     logging.config.dictConfig(logging_config)
 
 
@@ -62,4 +63,3 @@ class ContextLogger(logging.LoggerAdapter):
         merged_extra = {**self.extra, **extra}
         kwargs["extra"] = merged_extra
         return msg, kwargs
-

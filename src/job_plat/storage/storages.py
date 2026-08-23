@@ -62,6 +62,20 @@ class Storage(ABC):
     @abstractmethod
     def exists(self, path: str) -> bool:
         raise NotImplementedError
+    
+    @abstractmethod
+    def read_json(self, path: str) -> dict[str, Any] | None:
+        """Read one JSON object, or return None when it does not exist."""
+        raise NotImplementedError
+    
+    @abstractmethod
+    def write_json(
+        self,
+        payload: dict[str, Any],
+        path: str,
+    ) -> None:
+        """Write one JSON object."""
+        raise NotImplementedError
 
 
 class LocalStorage(Storage):
@@ -143,6 +157,44 @@ class LocalStorage(Storage):
 
     def exists(self, path: str) -> bool:
         return Path(path).exists()
+    
+    def read_json(self, path: str) -> dict[str, Any] | None:
+        source = Path(path)
+
+        if not source.exists():
+            return None
+        
+        payload = json.load(source.read_text(encoding="utf-8"))
+
+        if not isinstance(payload, dict):
+            raise ValueError(f"Expected JSON object at {path}")
+
+        return payload
+    
+    def write_json(
+        self,
+        payload: dict[str, Any],
+        path: str,
+    ) -> None:
+        destination = Path(path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+        temporary_path: Path | None = None
+        try:
+            with NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=destination.parent,
+                delete=False,
+            ) as temporary:
+                temporary_path = Path(temporary.name)
+                json.dump(payload, temporary, indent=2, sort_keys=True)
+                temporary.flush()
+
+            temporary_path.replace(destination)
+        finally:
+            if temporary_path is not None and temporary_path.exists():
+                temporary_path.unlink()
 
 
 ###############
@@ -262,21 +314,17 @@ class GCStorage(Storage):
                 results.append(f"gs://{bucket_name}/{blob.name}")
 
         return results
-    
+
     def exists(self, path: str) -> bool:
         if not path.startswith("gs://"):
-            raise ValueError(
-                "GCStorage requires gs:// path"
-            )
+            raise ValueError("GCStorage requires gs:// path")
 
         _, rest = path.split("gs://", 1)
         bucket_name, separator, prefix = rest.partition("/")
 
         if not separator or not prefix:
-            raise ValueError(
-                "GCS path must include a bucket and object prefix"
-            )
-        
+            raise ValueError("GCS path must include a bucket and object prefix")
+
         bucket = self.client.bucket(bucket_name)
         normalized_prefix = prefix.rstrip("/") + "/"
 
@@ -287,6 +335,21 @@ class GCStorage(Storage):
         )
 
         return next(iter(blobs), None) is not None
+
+    def _resolve_blob(self, path: str):
+        if not path.startswith("gs://"):
+            raise ValueError("GCStorage requires gs:// path")
+        
+        _, rest = path.split("gs://", 1)
+        bucket_name, separator, blob_path = rest.partition("/")
+
+        if not bucket_name or not separator or not blob_path:
+            raise ValueError(
+                "GCS path must include a bucket and object path"
+            )
+        
+        bucket = self,client.bucket(bucket_name)
+        return bucket.blob(blob_path)
 
 
 def get_storage(storage_type: str | None) -> Storage:
@@ -300,5 +363,3 @@ def get_storage(storage_type: str | None) -> Storage:
         return GCStorage()
     else:
         raise ValueError(f"Type of storage {storage_type} is not recognized")
-
-

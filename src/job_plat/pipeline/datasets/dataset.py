@@ -6,10 +6,7 @@ from typing import Literal
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql.functions import col, lit, row_number, to_date
 
-from job_plat.pipeline.datasets.dataset_definitions import (
-    WriteMode,
-    MergeOrder
-)
+from job_plat.pipeline.datasets.dataset_definitions import MergeOrder, WriteMode
 from job_plat.storage.storages import Storage
 
 
@@ -166,39 +163,33 @@ class Dataset:
     ) -> None:
         if self.partition_columns:
             raise ValueError(
-                f"Dataset {self.name} cannot use merge mode "
-                "because it is partitioned"
+                f"Dataset {self.name} cannot use merge mode because it is partitioned"
             )
-        
+
         if self.file_format != "parquet":
             raise ValueError(
-                f"Dataset {self.name} supports merge mode "
-                "only for Parquet"
+                f"Dataset {self.name} supports merge mode only for Parquet"
             )
-        
+
         if not self.merge_keys:
-            raise ValueError(
-                f"Dataset {self.name} requires merge keys"
-            )
-        
+            raise ValueError(f"Dataset {self.name} requires merge keys")
+
         missing_keys = set(self.merge_keys) - set(incoming.columns)
 
         if missing_keys:
             raise ValueError(
-                f"Dataset {self.name} is missing merge keys: "
-                f"{sorted(missing_keys)}"
+                f"Dataset {self.name} is missing merge keys: {sorted(missing_keys)}"
             )
-        
+
         if (
             self.merge_order_column is not None
-            and self.merge_order_column
-            not in incoming.columns
+            and self.merge_order_column not in incoming.columns
         ):
             raise ValueError(
                 f"Dataset {self.name} is missing merge "
                 f"order column: {self.merge_order_column}"
             )
-        
+
         if not self.storage.exists(str(self.path)):
             self.storage.write_parquet(
                 df=incoming,
@@ -207,22 +198,16 @@ class Dataset:
                 partition_cols=None,
             )
             return
-        
-        existing = self.read_all(
-            spark=incoming.sparkSession
-        )
+
+        existing = self.read_all(spark=incoming.sparkSession)
 
         priority_column = "__job_plat_merge_priority"
         row_number_column = "__job_plat_row_number"
 
-        combined = (
-            existing
-            .withColumn(priority_column, lit(0))
-            .unionByName(
-                incoming.withColumn(
-                    priority_column,
-                    lit(1),
-                )
+        combined = existing.withColumn(priority_column, lit(0)).unionByName(
+            incoming.withColumn(
+                priority_column,
+                lit(1),
             )
         )
 
@@ -232,28 +217,17 @@ class Dataset:
             ordering = col(self.merge_order_column)
 
             if self.merge_order == "asc":
-                order_columns.append(
-                    ordering.asc_nulls_last()
-                )
+                order_columns.append(ordering.asc_nulls_last())
             else:
-                order_columns.append(
-                    ordering.desc_nulls_last()
-                )
-        
-        # On equal ordering values, the incoming row wins.
-        order_columns.append(
-            col(priority_column).desc()
-        )
+                order_columns.append(ordering.desc_nulls_last())
 
-        window = (
-            Window
-            .partitionBy(*self.merge_keys)
-            .orderBy(*order_columns)
-        )
+        # On equal ordering values, the incoming row wins.
+        order_columns.append(col(priority_column).desc())
+
+        window = Window.partitionBy(*self.merge_keys).orderBy(*order_columns)
 
         merged = (
-            combined
-            .withColumn(
+            combined.withColumn(
                 row_number_column,
                 row_number().over(window),
             )
@@ -264,9 +238,7 @@ class Dataset:
             )
         )
 
-        materialized = merged.localCheckpoint(
-            eager=True
-        )
+        materialized = merged.localCheckpoint(eager=True)
 
         try:
             self.storage.write_parquet(
@@ -277,8 +249,6 @@ class Dataset:
             )
         finally:
             materialized.unpersist()
-
-
 
     def _validate_output_partitions(
         self,

@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import Any
-from job_plat.config.env_config import EnvironmentConfig
 
 import yaml
+
+from job_plat.config.env_config import EnvironmentConfig
 
 
 class ConfigLoader:

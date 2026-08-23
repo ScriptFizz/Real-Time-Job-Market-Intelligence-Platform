@@ -146,10 +146,7 @@ def test_ml_stage_retry_is_idempotent(
     first_model_ids = {
         row.model_id
         for dataset in output_datasets.values()
-        for row in dataset.read_all(spark)
-        .select("model_id")
-        .distinct()
-        .collect()
+        for row in dataset.read_all(spark).select("model_id").distinct().collect()
     }
 
     assert len(first_model_ids) == 1
@@ -174,10 +171,7 @@ def test_ml_stage_retry_is_idempotent(
     retried_model_ids = {
         row.model_id
         for dataset in output_datasets.values()
-        for row in dataset.read_all(spark)
-        .select("model_id")
-        .distinct()
-        .collect()
+        for row in dataset.read_all(spark).select("model_id").distinct().collect()
     }
 
     assert retried_model_ids == first_model_ids

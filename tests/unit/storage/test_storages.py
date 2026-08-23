@@ -1,5 +1,8 @@
+from datetime import date
+
 import pytest
 
+from job_plat.pipeline.datasets.dataset import Dataset
 from job_plat.storage import storages
 from job_plat.storage.storages import LocalStorage
 
@@ -33,7 +36,6 @@ def test_local_storage_list_dirs_returns_materialized_strings(tmp_path):
 
 
 def test_local_storage_exists(tmp_path):
-
     storage = LocalStorage()
     dataset_path = tmp_path / "dataset"
 
@@ -48,10 +50,9 @@ def test_merge_is_retry_idempotent(
     spark,
     tmp_path,
 ):
-
     dataset = Dataset(
         name="job_dimension",
-        path=str(temp_path / "job-dimension"),
+        path=str(tmp_path / "job-dimension"),
         storage=LocalStorage(),
         partition_columns=[],
         write_mode="merge",
@@ -99,10 +100,7 @@ def test_merge_is_retry_idempotent(
 
     dataset.write(retry)
 
-    rows = {
-        row.job_id: row_job_title
-        for row in dataset.read_all(spark).collect()
-    }
+    rows = {row.job_id: row.job_title for row in dataset.read_all(spark).collect()}
 
     assert rows == {
         "job-1": "Corrected title",
@@ -114,7 +112,6 @@ def test_merge_preserves_newer_record(
     spark,
     tmp_path,
 ):
-
     dataset = Dataset(
         name="job_dimension",
         path=str(tmp_path / "ordered-job-dimension"),

@@ -21,6 +21,7 @@ from pyspark.sql.types import (
 
 MODEL_NAME = "job_clustering"
 
+
 def build_training_run_id(
     *,
     model_version: str,
@@ -28,10 +29,9 @@ def build_training_run_id(
     k_values: Iterable[int],
     seed: int,
 ) -> str:
-
     if training_ts.tzinfo is None:
         raise ValueError("training_ts must be timezone-aware")
-    
+
     identity = json.dumps(
         {
             "model_name": MODEL_NAME,
@@ -104,7 +104,6 @@ def build_job_clusters(
     k_values: Iterable[int] = (10, 15, 20, 25, 30),
     seed: int = 42,
 ) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
-
     candidate_k_values = tuple(k_values)
     model_id = build_training_run_id(
         model_version=model_version,

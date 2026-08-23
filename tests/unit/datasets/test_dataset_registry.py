@@ -1,11 +1,11 @@
 from job_plat.pipeline.datasets.dataset_definitions import (
     DatasetDef,
-    FeatureSkillEmbeddings,
     FeatureJobEmbeddings,
-    MLJobMembership,
-    MLJobClusters,
+    FeatureSkillEmbeddings,
     MLJobCentroids,
-    MLJobClusterMetadata
+    MLJobClusterMetadata,
+    MLJobClusters,
+    MLJobMembership,
 )
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.storage.storages import LocalStorage

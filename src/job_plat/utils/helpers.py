@@ -7,7 +7,6 @@ from pyspark.sql import DataFrame, SparkSession
 from job_plat.config.env_config import SparkConfig
 
 
-
 class StageSkip(Exception):
     pass
 

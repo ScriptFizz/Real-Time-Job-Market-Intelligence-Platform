@@ -9,6 +9,7 @@ WriteMode = Literal[
 
 MergeOrder = Literal["asc", "desc"]
 
+
 class DatasetDef:
     NAME: str
     RELATIVE_PATH: str
@@ -74,7 +75,7 @@ class GoldDimSkills(DatasetDef):
     WRITE_MODE = "merge"
     MERGE_KEYS = ("skill_id",)
     MERGE_ORDER_COLUMN = "ingestion_date"
-    # A skill dimension’s ingestion date represents when the skill was first observed, 
+    # A skill dimension’s ingestion date represents when the skill was first observed,
     # so the earliest date should survive.
     MERGE_ORDER = "asc"
 

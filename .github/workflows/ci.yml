@@ -66,10 +66,15 @@ jobs:
 
       - name: Verify installed CLI
         run: poetry run job-plat --help
-      
+
+      - name: Check formatting
+        run: poetry run ruff format --check src tests
+
+      - name: Run lint checks
+        run: poetry run ruff check src tests
+
+      - name: Run type checks
+        run: poetry run mypy src --no-incremental
+
       - name: Run test suite
         run: poetry run pytest -p no:cacheprovider -q
-
-
-
-      

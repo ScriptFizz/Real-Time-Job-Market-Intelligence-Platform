@@ -5,6 +5,7 @@ from sentence_transformers import SentenceTransformer
 
 # skill_embeddings: 1 row per (skill_id, model_version)
 
+
 def build_skill_embeddings(
     dim_skills_df: DataFrame,
     spark: SparkSession,
@@ -12,37 +13,33 @@ def build_skill_embeddings(
     generated_at: datetime,
     model_name: str = "all-MiniLM-L6-v2",
     model_version: str = "v1",
-    model_provider: str = "sentence-transformer"
+    model_provider: str = "sentence-transformer",
 ) -> DataFrame:
     """
     Define embedding of normalized skills to store into Gold layer.
     """
-    
+
     # Collect distinct skills
     skills: list[str] = (
-        dim_skills_df
-        .orderBy("skill_id")
+        dim_skills_df.orderBy("skill_id")
         .select("skills")
-        .rdd
-        .map(lambda r:r.skills)
+        .rdd.map(lambda r: r.skills)
         .collect()
     )
-    
+
     model = SentenceTransformer(model_name)
     embeddings = model.encode(skills, show_progress_bar=True)
-    
+
     embedding_dim = embeddings.shape[1] if embeddings.size > 0 else 0
-    
-    records = [(skill, emb.tolist()) for skill, emb in zip(skills, embeddings, strict=True)]
-    
-    embedding_df = spark.createDataFrame(
-        records, 
-        schema=["skills", "embedding"]
-    )
-    
+
+    records = [
+        (skill, emb.tolist()) for skill, emb in zip(skills, embeddings, strict=True)
+    ]
+
+    embedding_df = spark.createDataFrame(records, schema=["skills", "embedding"])
+
     result = (
-        dim_skills_df
-        .join(embedding_df, "skills")
+        dim_skills_df.join(embedding_df, "skills")
         .withColumn("embedding_dim", F.lit(embedding_dim))
         .withColumn("model_name", F.lit(model_name))
         .withColumn("model_version", F.lit(model_version))
@@ -58,9 +55,8 @@ def build_skill_embeddings(
             "model_version",
             "model_provider",
             "generated_at",
-            "is_active"
+            "is_active",
         )
     )
-    
+
     return result
-    
