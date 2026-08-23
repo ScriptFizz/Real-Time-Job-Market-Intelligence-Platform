@@ -19,10 +19,39 @@ from pyspark.sql.types import (
     TimestampType,
 )
 
+MODEL_NAME = "job_clustering"
+
+def build_training_run_id(
+    *,
+    model_version: str,
+    training_ts: datetime,
+    k_values: Iterable[int],
+    seed: int,
+) -> str:
+
+    if training_ts.tzinfo is None:
+        raise ValueError("training_ts must be timezone-aware")
+    
+    identity = json.dumps(
+        {
+            "model_name": MODEL_NAME,
+            "model_version": model_version,
+            "training_ts": training_ts.astimezone(UTC).isoformat(),
+            "k_values": sorted(k_values),
+            "seed": seed,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, identity))
+
 
 def find_optimal_fit(
     df: DataFrame,
-    k_values: Iterable[int],  # =(10,15,20,25,30)
+    k_values: Iterable[int],
+    *,
+    seed: int = 42,
 ) -> tuple[int, float, KMeansModel, DataFrame]:
     candidates = tuple(k_values)
 
@@ -41,9 +70,9 @@ def find_optimal_fit(
     best_model: KMeansModel | None = None
     best_predictions: DataFrame | None = None
 
-    for k in k_values:
+    for k in candidates:
         kmeans = KMeans(
-            k=k, seed=42, featuresCol="features", predictionCol="cluster_id"
+            k=k, seed=seed, featuresCol="features", predictionCol="cluster_id"
         )
 
         model = kmeans.fit(df)
@@ -69,11 +98,20 @@ def find_optimal_fit(
 def build_job_clusters(
     spark: SparkSession,
     job_embeddings_df: DataFrame,
+    *,
+    training_ts: datetime,
     model_version: str = "v1",
     k_values: Iterable[int] = (10, 15, 20, 25, 30),
+    seed: int = 42,
 ) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
-    training_ts = datetime.now(UTC)
-    model_id = str(uuid.uuid4())
+
+    candidate_k_values = tuple(k_values)
+    model_id = build_training_run_id(
+        model_version=model_version,
+        training_ts=training_ts,
+        k_values=candidate_k_values,
+        seed=seed,
+    )
 
     # Filter valid embeddings
     training_df = (
@@ -93,7 +131,7 @@ def build_job_clusters(
         if training_size == 0:
             raise ValueError("No embeddings available for clustering.")
 
-        valid_k_values = tuple(k for k in k_values if 2 <= k <= training_size)
+        valid_k_values = tuple(k for k in candidate_k_values if 2 <= k <= training_size)
 
         if not valid_k_values:
             raise ValueError(
@@ -103,6 +141,7 @@ def build_job_clusters(
         k, silhouette_score, model, predictions = find_optimal_fit(
             df=training_df,
             k_values=valid_k_values,
+            seed=seed,
         )
 
         # Compute distance to centroid (cosine-style for normalized embeddings)
@@ -170,7 +209,7 @@ def build_job_clusters(
             [
                 {
                     "model_id": model_id,
-                    "model_name": "job_clustering",
+                    "model_name": MODEL_NAME,
                     "model_version": model_version,
                     "algorithm": "spark_ml_kmeans",
                     "hyperparameters": json.dumps({"k": k, "seed": 42}),

@@ -1,18 +1,15 @@
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.types import (
-    StructType, StructField,
-    StringType, ArrayType, FloatType
-)
-from pyspark.sql import functions as F
+from datetime import datetime
+
+from pyspark.sql import DataFrame, SparkSession, functions as F
 from sentence_transformers import SentenceTransformer
-from pathlib import Path
-from typing import List
 
 # skill_embeddings: 1 row per (skill_id, model_version)
 
 def build_skill_embeddings(
     dim_skills_df: DataFrame,
     spark: SparkSession,
+    *,
+    generated_at: datetime,
     model_name: str = "all-MiniLM-L6-v2",
     model_version: str = "v1",
     model_provider: str = "sentence-transformer"
@@ -22,7 +19,7 @@ def build_skill_embeddings(
     """
     
     # Collect distinct skills
-    skills: List[str] = (
+    skills: list[str] = (
         dim_skills_df
         .orderBy("skill_id")
         .select("skills")
@@ -36,7 +33,7 @@ def build_skill_embeddings(
     
     embedding_dim = embeddings.shape[1] if embeddings.size > 0 else 0
     
-    records = [(skill, emb.tolist()) for skill, emb in zip(skills, embeddings)]
+    records = [(skill, emb.tolist()) for skill, emb in zip(skills, embeddings, strict=True)]
     
     embedding_df = spark.createDataFrame(
         records, 
@@ -50,7 +47,7 @@ def build_skill_embeddings(
         .withColumn("model_name", F.lit(model_name))
         .withColumn("model_version", F.lit(model_version))
         .withColumn("model_provider", F.lit(model_provider))
-        .withColumn("generated_at", F.current_timestamp())
+        .withColumn("generated_at", F.lit(generated_at))
         .withColumn("is_active", F.lit(True))
         .select(
             "skill_id",

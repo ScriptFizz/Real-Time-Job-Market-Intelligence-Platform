@@ -1,14 +1,14 @@
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql import functions as F
-from pyspark.sql.types import ArrayType, FloatType
-from functools import reduce
+from datetime import datetime
+
+from pyspark.sql import DataFrame, functions as F
 
 # job_embeddings: 1 row per (job_id, model_version)
 
 def build_job_embeddings(
     fact_job_skill_df: DataFrame,
-    #dim_skills_df: DataFrame,
     skill_embeddings_df: DataFrame,
+    *,
+    generated_at: datetime,
     model_version: str = "v1",
     aggregation_method: str = "weighted_mean"
 ) -> DataFrame:
@@ -20,7 +20,7 @@ def build_job_embeddings(
     # Only active embedding
     active_embedding = (
         skill_embeddings_df
-        .filter(F.col("is_active") == True)
+        .filter(F.col("is_active"))
         .filter(F.col("model_version") == model_version)
         .select("skill_id", "embedding", "embedding_dim")
     )
@@ -81,7 +81,7 @@ def build_job_embeddings(
         )
         .withColumn("model_version", F.lit(model_version))
         .withColumn("aggregation_method", F.lit(aggregation_method))
-        .withColumn("generated_at", F.current_timestamp())
+        .withColumn("generated_at", F.lit(generated_at))
         .select(
             "job_id",
             "model_version",

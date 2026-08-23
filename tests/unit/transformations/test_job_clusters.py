@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -6,6 +7,7 @@ from pyspark.sql import DataFrame
 
 from job_plat.transformations.ml.clusters.build_job_clusters import (
     build_job_clusters,
+    build_training_run_id,
     find_optimal_fit,
 )
 
@@ -39,6 +41,7 @@ def test_build_job_clusters_produces_expected_output(spark):
         spark=spark,
         job_embeddings_df=embeddings,
         k_values=(2,),
+        training_ts=datetime(2025, 3, 2, tzinfo=UTC),
     )
 
     assert membership.count() == 4
@@ -60,6 +63,22 @@ def test_build_job_clusters_produces_expected_output(spark):
     assert metadata_row is not None
     assert metadata_row.training_size == 4
     assert metadata_row.silhouette_score is not None
+
+    model_ids = {
+        row.model_id
+        for dataframe in (membership, clusters, centroids, metadata)
+        for row in dataframe.select("model_id").distinct().collect()
+    }
+    assert len(model_ids) == 1
+
+    expected_model_id = build_training_run_id(
+        model_version="v1",
+        training_ts=datetime(2025, 3, 2, tzinfo=UTC),
+        k_values=(2,),
+        seed=42,
+    )
+
+    assert model_ids == {expected_model_id}
 
 
 def test_build_job_clusters_rejects_k_larger_than_training_set(spark):
@@ -83,6 +102,7 @@ def test_build_job_clusters_rejects_k_larger_than_training_set(spark):
             spark=spark,
             job_embeddings_df=embeddings,
             k_values=(3,),
+            training_ts=datetime(2025, 3, 2, tzinfo=UTC),
         )
 
 
@@ -105,6 +125,7 @@ def test_build_job_clusters_ignores_k_larger_than_training_set(spark):
         spark=spark,
         job_embeddings_df=embeddings,
         k_values=(2, 100),
+        training_ts=datetime(2025, 3, 2, tzinfo=UTC),
     )
 
     assert clusters.count() == 2
@@ -160,6 +181,53 @@ def test_build_job_clusters_unpersists_training_data_on_failure(
             spark=spark,
             job_embeddings_df=embeddings,
             k_values=(3,),
+            training_ts=datetime(2025, 3, 2, tzinfo=UTC),
         )
 
     assert len(unpersisted) == 1
+
+
+def test_training_run_id_is_deterministic():
+    training_ts = datetime(2025, 3, 2, tzinfo=UTC)
+
+    first = build_training_run_id(
+        model_version="v1",
+        training_ts=training_ts,
+        k_values=(2, 3),
+        seed=42,
+    )
+    second = build_training_run_id(
+        model_version="v1",
+        training_ts=training_ts,
+        k_values=(3, 2),
+        seed=42,
+    )
+
+    assert first == second
+
+
+def test_training_run_id_changes_for_new_execution():
+    first = build_training_run_id(
+        model_version="v1",
+        training_ts=datetime(2025, 3, 2, tzinfo=UTC),
+        k_values=(2,),
+        seed=42,
+    )
+    second = build_training_run_id(
+        model_version="v1",
+        training_ts=datetime(2025, 3, 3, tzinfo=UTC),
+        k_values=(2,),
+        seed=42,
+    )
+
+    assert first != second
+
+
+def test_training_run_id_rejects_naive_timestamp():
+    with pytest.raises(ValueError, match="timezone-aware"):
+        build_training_run_id(
+            model_version="v1",
+            training_ts=datetime(2025, 3, 2),
+            k_values=(2,),
+            seed=42,
+        )

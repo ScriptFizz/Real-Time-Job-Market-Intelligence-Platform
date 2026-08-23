@@ -55,15 +55,26 @@ class FeatureStage(BaseStage[FeatureContext, FeatureOutputs]):
 
         if dim_jobs_df is None or dim_skills_df is None or fact_job_skill_df is None:
             raise StageSkip("no input data available for feature generation")
+        
+        execution_date = self.ctx.execution_date
+
+        if execution_date is None:
+            raise ValueError(
+                "FeatureStage requires execution_date for deterministic output identity"
+            )
 
         self.logger.info("building_skill_embeddings")
         skill_embeddings_df = build_skill_embeddings(
-            dim_skills_df=dim_skills_df, spark=self.spark
+            dim_skills_df=dim_skills_df, 
+            spark=self.spark,
+            generated_at=execution_date,
         )
 
         self.logger.info("building_job_embeddings")
         job_embeddings_df = build_job_embeddings(
-            fact_job_skill_df=fact_job_skill_df, skill_embeddings_df=skill_embeddings_df
+            fact_job_skill_df=fact_job_skill_df, 
+            skill_embeddings_df=skill_embeddings_df,
+            generated_at=execution_date,
         )
 
         return FeatureOutputs(

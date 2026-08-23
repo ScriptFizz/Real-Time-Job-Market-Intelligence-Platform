@@ -1,4 +1,12 @@
-from job_plat.pipeline.datasets.dataset_definitions import DatasetDef
+from job_plat.pipeline.datasets.dataset_definitions import (
+    DatasetDef,
+    FeatureSkillEmbeddings,
+    FeatureJobEmbeddings,
+    MLJobMembership,
+    MLJobClusters,
+    MLJobCentroids,
+    MLJobClusterMetadata
+)
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.storage.storages import LocalStorage
 
@@ -44,3 +52,18 @@ def test_registry_builds_dataset_from_definition(tmp_path, storage):
     assert dataset.name == "example_jobs"
     assert dataset.partition_columns == ["ingestion_date"]
     assert dataset.file_format == "parquet"
+
+
+def test_feature_embeddings_use_versioned_merge_identity():
+    assert FeatureSkillEmbeddings.WRITE_MODE == "merge"
+    assert FeatureSkillEmbeddings.MERGE_KEYS == ("skill_id", "model_version")
+
+    assert FeatureJobEmbeddings.WRITE_MODE == "merge"
+    assert FeatureJobEmbeddings.MERGE_KEYS == ("job_id", "model_version")
+
+
+def test_ml_outputs_use_training_run_merge_identity():
+    assert MLJobMembership.MERGE_KEYS == ("model_id", "job_id")
+    assert MLJobClusters.MERGE_KEYS == ("model_id", "cluster_id")
+    assert MLJobCentroids.MERGE_KEYS == ("model_id", "cluster_id")
+    assert MLJobClusterMetadata.MERGE_KEYS == ("model_id",)
