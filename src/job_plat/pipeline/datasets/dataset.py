@@ -3,11 +3,12 @@ from datetime import date
 from pathlib import Path
 from typing import Literal
 
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, to_date
+from pyspark.sql import DataFrame, SparkSession, Window
+from pyspark.sql.functions import col, lit, row_number, to_date
 
 from job_plat.pipeline.datasets.dataset_definitions import (
     WriteMode,
+    MergeOrder
 )
 from job_plat.storage.storages import Storage
 
@@ -21,6 +22,9 @@ class Dataset:
     time_window_column: str | None = field(default_factory=lambda: None)
     write_mode: WriteMode = "append"
     file_format: Literal["parquet", "jsonl"] = "parquet"
+    merge_keys: tuple[str, ...] = ()
+    merge_order_column: str | None = None
+    merge_order: MergeOrder = "desc"
 
     def read_all(
         self,
@@ -108,6 +112,10 @@ class Dataset:
     ) -> None:
         actual_mode = mode or self.write_mode
 
+        if actual_mode == "merge":
+            self._merge_and_overwrite(df)
+            return
+
         partition_cols = self.partition_columns if self.partition_columns else None
 
         dynamic_partition_overwrite = actual_mode == "replace_partitions"
@@ -151,6 +159,126 @@ class Dataset:
             )
         else:
             raise ValueError(f"Unsupported format {self.file_format}")
+
+    def _merge_and_overwrite(
+        self,
+        incoming: DataFrame,
+    ) -> None:
+        if self.partition_columns:
+            raise ValueError(
+                f"Dataset {self.name} cannot use merge mode "
+                "because it is partitioned"
+            )
+        
+        if self.file_format != "parquet":
+            raise ValueError(
+                f"Dataset {self.name} supports merge mode "
+                "only for Parquet"
+            )
+        
+        if not self.merge_keys:
+            raise ValueError(
+                f"Dataset {self.name} requires merge keys"
+            )
+        
+        missing_keys = set(self.merge_keys) - set(incoming.columns)
+
+        if missing_keys:
+            raise ValueError(
+                f"Dataset {self.name} is missing merge keys: "
+                f"{sorted(missing_keys)}"
+            )
+        
+        if (
+            self.merge_order_column is not None
+            and self.merge_order_column
+            not in incoming.columns
+        ):
+            raise ValueError(
+                f"Dataset {self.name} is missing merge "
+                f"order column: {self.merge_order_column}"
+            )
+        
+        if not self.storage.exists(str(self.path)):
+            self.storage.write_parquet(
+                df=incoming,
+                path=str(self.path),
+                mode="overwrite",
+                partition_cols=None,
+            )
+            return
+        
+        existing = self.read_all(
+            spark=incoming.sparkSession
+        )
+
+        priority_column = "__job_plat_merge_priority"
+        row_number_column = "__job_plat_row_number"
+
+        combined = (
+            existing
+            .withColumn(priority_column, lit(0))
+            .unionByName(
+                incoming.withColumn(
+                    priority_column,
+                    lit(1),
+                )
+            )
+        )
+
+        order_columns = []
+
+        if self.merge_order_column is not None:
+            ordering = col(self.merge_order_column)
+
+            if self.merge_order == "asc":
+                order_columns.append(
+                    ordering.asc_nulls_last()
+                )
+            else:
+                order_columns.append(
+                    ordering.desc_nulls_last()
+                )
+        
+        # On equal ordering values, the incoming row wins.
+        order_columns.append(
+            col(priority_column).desc()
+        )
+
+        window = (
+            Window
+            .partitionBy(*self.merge_keys)
+            .orderBy(*order_columns)
+        )
+
+        merged = (
+            combined
+            .withColumn(
+                row_number_column,
+                row_number().over(window),
+            )
+            .filter(col(row_number_column) == 1)
+            .drop(
+                row_number_column,
+                priority_column,
+            )
+        )
+
+        materialized = merged.localCheckpoint(
+            eager=True
+        )
+
+        try:
+            self.storage.write_parquet(
+                df=materialized,
+                path=str(self.path),
+                mode="overwrite",
+                partition_cols=None,
+            )
+        finally:
+            materialized.unpersist()
+
+
 
     def _validate_output_partitions(
         self,

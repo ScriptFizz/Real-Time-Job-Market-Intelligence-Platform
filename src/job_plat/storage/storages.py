@@ -59,6 +59,10 @@ class Storage(ABC):
     def list_dirs(self, path: str, pattern: str) -> list[str]:
         raise NotImplementedError
 
+    @abstractmethod
+    def exists(self, path: str) -> bool:
+        raise NotImplementedError
+
 
 class LocalStorage(Storage):
     def read_parquet(
@@ -136,6 +140,9 @@ class LocalStorage(Storage):
 
     def list_dirs(self, path: str, pattern: str) -> list[str]:
         return [str(candidate) for candidate in Path(path).glob(pattern)]
+
+    def exists(self, path: str) -> bool:
+        return Path(path).exists()
 
 
 ###############
@@ -255,6 +262,31 @@ class GCStorage(Storage):
                 results.append(f"gs://{bucket_name}/{blob.name}")
 
         return results
+    
+    def exists(self, path: str) -> bool:
+        if not path.startswith("gs://"):
+            raise ValueError(
+                "GCStorage requires gs:// path"
+            )
+
+        _, rest = path.split("gs://", 1)
+        bucket_name, separator, prefix = rest.partition("/")
+
+        if not separator or not prefix:
+            raise ValueError(
+                "GCS path must include a bucket and object prefix"
+            )
+        
+        bucket = self.client.bucket(bucket_name)
+        normalized_prefix = prefix.rstrip("/") + "/"
+
+        blobs = self.client.list_blobs(
+            bucket,
+            prefix=normalized_prefix,
+            max_results=1,
+        )
+
+        return next(iter(blobs), None) is not None
 
 
 def get_storage(storage_type: str | None) -> Storage:
@@ -268,3 +300,5 @@ def get_storage(storage_type: str | None) -> Storage:
         return GCStorage()
     else:
         raise ValueError(f"Type of storage {storage_type} is not recognized")
+
+

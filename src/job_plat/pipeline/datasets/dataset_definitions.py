@@ -4,8 +4,10 @@ WriteMode = Literal[
     "append",
     "overwrite",
     "replace_partitions",
+    "merge",
 ]
 
+MergeOrder = Literal["asc", "desc"]
 
 class DatasetDef:
     NAME: str
@@ -15,6 +17,9 @@ class DatasetDef:
     TIME_WINDOW_COLUMN: str | None = None
     WRITE_MODE: WriteMode = "append"
     FILE_FORMAT: Literal["parquet", "jsonl"] = "parquet"
+    MERGE_KEYS: tuple[str, ...] = ()
+    MERGE_ORDER_COLUMN: str | None = None
+    MERGE_ORDER: MergeOrder = "desc"
 
 
 ##################
@@ -55,12 +60,23 @@ class GoldDimJobs(DatasetDef):
     RELATIVE_PATH = "gold/dim_jobs"
     PARTITION_COLUMNS = []
     TIME_WINDOW_COLUMN = "posted_at"
+    WRITE_MODE = "merge"
+    MERGE_KEYS = ("job_id",)
+    MERGE_ORDER_COLUMN = "ingestion_date"
+    # A job dimension should reflect the latest observed attributes.
+    MERGE_ORDER = "desc"
 
 
 class GoldDimSkills(DatasetDef):
     NAME = "gold_dim_skills"
     RELATIVE_PATH = "gold/dim_skills"
     PARTITION_COLUMNS = []
+    WRITE_MODE = "merge"
+    MERGE_KEYS = ("skill_id",)
+    MERGE_ORDER_COLUMN = "ingestion_date"
+    # A skill dimension’s ingestion date represents when the skill was first observed, 
+    # so the earliest date should survive.
+    MERGE_ORDER = "asc"
 
 
 class GoldFactJobSkills(DatasetDef):
