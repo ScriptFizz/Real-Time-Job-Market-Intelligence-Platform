@@ -11,6 +11,7 @@ from job_plat.pipeline.datasets.dataset_definitions import (
     MergeOrder,
     WriteMode,
 )
+from job_plat.storage.delta_retry import run_with_delta_retry
 from job_plat.storage.storages import Storage
 
 
@@ -224,24 +225,42 @@ class Dataset:
                     f"Dataset {self.name} exists at {path} but is not a Delta table"
                 )
 
-            source.write.format("delta").mode("errorifexists").save(path)
-            return
+            try:
+                source.write.format("delta").mode("errorifexists").save(path)
+                return
+            except Exception:
+                # A concurrent writer may have initialized the table.
+                if not DeltaTable.isDeltaTable(spark, path):
+                    raise
 
-        target = DeltaTable.forPath(spark, path)
-        merge_condition = self._merge_key_condition(
-            target_alias="target",
-            source_alias="source",
+        run_with_delta_retry(
+            lambda: self._execute_delta_merge(
+                source=source,
+                spark=spark,
+                path=path,
+            )
         )
+
+    def _execute_delta_merge(
+        self,
+        *,
+        source: DataFrame,
+        spark: SparkSession,
+        path: str,
+    ) -> None:
+        target = DeltaTable.forPath(spark, path)
+        merger = target.alias("target").merge(
+            source.alias("source"),
+            self._merge_key_condition(
+                target_alias="target",
+                source_alias="source",
+            ),
+        )
+
         matched_condition = self._matched_update_condition(
             target_alias="target",
             source_alias="source",
         )
-
-        merger = target.alias("target").merge(
-            source.alias("source"),
-            merge_condition,
-        )
-
         if matched_condition is None:
             merger = merger.whenMatchedUpdateAll()
         else:
@@ -334,12 +353,14 @@ class Dataset:
             for partition in expected_partitions
         )
 
-        (
-            dataframe.write.format("delta")
-            .mode("overwrite")
-            .option("replaceWhere", partition_predicate)
-            .partitionBy(*self.partition_columns)
-            .save(str(self.path))
+        run_with_delta_retry(
+            lambda: (
+                dataframe.write.format("delta")
+                .mode("overwrite")
+                .option("replaceWhere", partition_predicate)
+                .partitionBy(*self.partition_columns)
+                .save(str(self.path))
+            )
         )
 
     def _validate_output_partitions(

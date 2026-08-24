@@ -1,7 +1,13 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
+
+import pytest
 
 from job_plat.partitioning.partition_manager import PartitionManager
-from job_plat.partitioning.processing_ledger import ProcessingLedger
+from job_plat.partitioning.processing_ledger import (
+    BatchAlreadyCommittedError,
+    BatchAlreadyRunningError,
+    ProcessingLedger,
+)
 
 
 def start_attempt(
@@ -93,3 +99,79 @@ def test_independent_managers_do_not_lose_commits(spark, tmp_path):
         first_partition,
         second_partition,
     }
+
+
+def test_batch_identity_is_deterministic():
+    first = date(2025, 3, 1)
+    second = date(2025, 3, 2)
+
+    assert ProcessingLedger.build_batch_id("silver", (first, second)) == (
+        ProcessingLedger.build_batch_id("silver", (second, first, second))
+    )
+    assert ProcessingLedger.build_batch_id("silver", (first,)) != (
+        ProcessingLedger.build_batch_id("gold", (first,))
+    )
+
+
+def test_second_active_attempt_for_batch_is_rejected(spark, tmp_path):
+    manager = PartitionManager(ProcessingLedger(spark, str(tmp_path)))
+    partitions = (date(2025, 3, 1),)
+    start_attempt(
+        manager,
+        stage_name="silver",
+        partitions=partitions,
+        attempt_id="attempt-1",
+    )
+
+    with pytest.raises(BatchAlreadyRunningError, match="active attempt"):
+        start_attempt(
+            manager,
+            stage_name="silver",
+            partitions=partitions,
+            attempt_id="attempt-2",
+        )
+
+
+def test_committed_batch_cannot_be_reopened(spark, tmp_path):
+    manager = PartitionManager(ProcessingLedger(spark, str(tmp_path)))
+    partitions = (date(2025, 3, 1),)
+    attempt = start_attempt(
+        manager,
+        stage_name="silver",
+        partitions=partitions,
+        attempt_id="attempt-1",
+    )
+    manager.mark_processed(attempt)
+
+    with pytest.raises(BatchAlreadyCommittedError, match="already committed"):
+        start_attempt(
+            manager,
+            stage_name="silver",
+            partitions=partitions,
+            attempt_id="attempt-2",
+        )
+
+
+def test_expired_attempt_can_be_replaced(spark, tmp_path):
+    ledger = ProcessingLedger(
+        spark,
+        str(tmp_path),
+        lease_duration=timedelta(minutes=5),
+    )
+    partitions = (date(2025, 3, 1),)
+    first = ledger.start_attempt(
+        stage_name="silver",
+        partitions=partitions,
+        attempt_id="attempt-1",
+        started_at=datetime(2025, 3, 3, 10, 0, tzinfo=UTC),
+    )
+    second = ledger.start_attempt(
+        stage_name="silver",
+        partitions=partitions,
+        attempt_id="attempt-2",
+        started_at=datetime(2025, 3, 3, 10, 6, tzinfo=UTC),
+    )
+
+    assert first is not None
+    assert second is not None
+    assert first.batch_id == second.batch_id

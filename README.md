@@ -304,6 +304,24 @@ The platform includes several production-oriented features:
 
 These features ensure robustness and make debugging easier in distributed environments.
 
+### Retry and concurrency contract
+
+- Silver, Gold, Feature, and ML datasets are Delta tables. Keyed merges and
+  partition replacements are atomic at the individual-table level.
+- Incremental partition batches have deterministic identities. The processing
+  ledger admits only one live attempt for a stage and batch; failed or expired
+  attempts can be retried.
+- Safe Delta operations retry recognized optimistic-concurrency conflicts with
+  bounded exponential backoff. Invalid data and other non-conflict failures are
+  not retried automatically.
+- A partition is acknowledged only after every output table write succeeds.
+  Failed acknowledgements leave the batch retryable, and retry-safe writes
+  converge to the same table state.
+- A stage that writes multiple tables is **not** a distributed ACID transaction.
+  Other readers can observe a partially completed attempt. Downstream pipeline
+  scheduling must use committed processing-ledger entries rather than the mere
+  presence of output files.
+
 ---
 
 ## Testing 

@@ -1,7 +1,7 @@
 from datetime import date
 
 import pytest
-from delta.tables import DeltaTable
+from delta.tables import DeltaMergeBuilder, DeltaTable
 from fixtures.storage_contract import assert_storage_discovery_contract
 
 from job_plat.pipeline.datasets.dataset import Dataset
@@ -275,4 +275,74 @@ def test_delta_merge_deduplicates_incoming_keys_deterministically(
     assert rows == {
         "job-1": "Zulu title",
         "job-2": "Other title",
+    }
+
+
+def test_failed_delta_merge_leaves_previous_version_readable(
+    spark,
+    tmp_path,
+    monkeypatch,
+):
+    dataset = Dataset(
+        name="job_dimension",
+        path=str(tmp_path / "failed-job-dimension"),
+        storage=LocalStorage(),
+        partition_columns=[],
+        write_mode="merge",
+        file_format="delta",
+        merge_keys=("job_id",),
+        merge_order_column="ingestion_date",
+    )
+    original = spark.createDataFrame(
+        [("job-1", "Original title", date(2025, 3, 1))],
+        ["job_id", "job_title", "ingestion_date"],
+    )
+    update = spark.createDataFrame(
+        [("job-1", "Updated title", date(2025, 3, 2))],
+        ["job_id", "job_title", "ingestion_date"],
+    )
+    dataset.write(original)
+
+    def fail_before_commit(_merge_builder):
+        raise RuntimeError("injected merge failure")
+
+    monkeypatch.setattr(DeltaMergeBuilder, "execute", fail_before_commit)
+
+    with pytest.raises(RuntimeError, match="injected merge failure"):
+        dataset.write(update)
+
+    result = dataset.read_all(spark).first()
+    assert result is not None
+    assert result.job_title == "Original title"
+
+
+def test_separate_key_updates_preserve_both_commits(spark, tmp_path):
+    dataset = Dataset(
+        name="job_dimension",
+        path=str(tmp_path / "independent-key-updates"),
+        storage=LocalStorage(),
+        partition_columns=[],
+        write_mode="merge",
+        file_format="delta",
+        merge_keys=("job_id",),
+        merge_order_column="ingestion_date",
+    )
+    first = spark.createDataFrame(
+        [("job-1", "First title", date(2025, 3, 1))],
+        ["job_id", "job_title", "ingestion_date"],
+    )
+    second = spark.createDataFrame(
+        [("job-2", "Second title", date(2025, 3, 1))],
+        ["job_id", "job_title", "ingestion_date"],
+    )
+
+    dataset.write(first)
+    dataset.write(second)
+
+    rows = {
+        row.job_id: row.job_title for row in dataset.read_all(spark).collect()
+    }
+    assert rows == {
+        "job-1": "First title",
+        "job-2": "Second title",
     }
