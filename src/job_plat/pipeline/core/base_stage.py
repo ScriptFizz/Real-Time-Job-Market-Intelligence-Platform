@@ -1,7 +1,6 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any, Generic, TypeVar
 
 from job_plat.config.logconfig import ContextLogger
@@ -170,7 +169,7 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
         missing = []
         for dataset_cls in self.INPUT_MAP.values():
             ds = self.datasets.get(dataset_cls)
-            if not Path(ds.path).exists():
+            if not ds.storage.exists(str(ds.path)):
                 missing.append(str(ds.path))
 
         if missing:

@@ -62,12 +62,12 @@ class Storage(ABC):
     @abstractmethod
     def exists(self, path: str) -> bool:
         raise NotImplementedError
-    
+
     @abstractmethod
     def read_json(self, path: str) -> dict[str, Any] | None:
         """Read one JSON object, or return None when it does not exist."""
         raise NotImplementedError
-    
+
     @abstractmethod
     def write_json(
         self,
@@ -157,20 +157,20 @@ class LocalStorage(Storage):
 
     def exists(self, path: str) -> bool:
         return Path(path).exists()
-    
+
     def read_json(self, path: str) -> dict[str, Any] | None:
         source = Path(path)
 
         if not source.exists():
             return None
-        
-        payload = json.load(source.read_text(encoding="utf-8"))
+
+        payload = json.loads(source.read_text(encoding="utf-8"))
 
         if not isinstance(payload, dict):
             raise ValueError(f"Expected JSON object at {path}")
 
         return payload
-    
+
     def write_json(
         self,
         payload: dict[str, Any],
@@ -339,17 +339,39 @@ class GCStorage(Storage):
     def _resolve_blob(self, path: str):
         if not path.startswith("gs://"):
             raise ValueError("GCStorage requires gs:// path")
-        
+
         _, rest = path.split("gs://", 1)
         bucket_name, separator, blob_path = rest.partition("/")
 
         if not bucket_name or not separator or not blob_path:
-            raise ValueError(
-                "GCS path must include a bucket and object path"
-            )
-        
-        bucket = self,client.bucket(bucket_name)
+            raise ValueError("GCS path must include a bucket and object path")
+
+        bucket = self.client.bucket(bucket_name)
         return bucket.blob(blob_path)
+
+    def read_json(self, path: str) -> dict[str, Any] | None:
+        blob = self._resolve_blob(path)
+
+        if not blob.exists(client=self.client):
+            return None
+
+        payload = json.loads(blob.download_as_text())
+
+        if not isinstance(payload, dict):
+            raise ValueError(f"Expected JSON object at {path}")
+
+        return payload
+
+    def write_json(
+        self,
+        payload: dict[str, Any],
+        path: str,
+    ) -> None:
+        blob = self._resolve_blob(path)
+        blob.upload_from_string(
+            json.dumps(payload, indent=2, sort_keys=True),
+            content_type="application/json",
+        )
 
 
 def get_storage(storage_type: str | None) -> Storage:

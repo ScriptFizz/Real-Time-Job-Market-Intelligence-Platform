@@ -27,6 +27,7 @@ from job_plat.orchestration.ml_pipeline import (
     run_ml_pipeline,
 )
 from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.partitioning.state_store import get_state_store
 from job_plat.pipeline.datasets.dataset_definitions import DATASET_DEFS
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.storage.storages import Storage, get_storage
@@ -80,7 +81,15 @@ def build_common(
         root=env_config.paths.root, storage=storage, dataset_defs=DATASET_DEFS
     )
 
-    partition_manager = PartitionManager(metadata_path=env_config.paths.metadata)
+    state_store = get_state_store(
+        storage_type=env_config.storage.type,
+        metadata_path=env_config.paths.metadata,
+        storage=storage,
+    )
+
+    partition_manager = PartitionManager(
+        state_store=state_store,
+    )
 
     return storage, datasets, partition_manager
 

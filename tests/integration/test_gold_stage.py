@@ -1,4 +1,5 @@
 from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.partitioning.state_store import LocalStateStore
 from job_plat.pipeline.datasets.dataset_definitions import (
     GoldDimJobs,
     GoldDimSkills,
@@ -43,8 +44,7 @@ def test_gold_stage_runs(
     assert first_fact_count > 0
 
     retry_metadata = tmp_path / "gold-retry-metadata"
-    retry_metadata.mkdir()
-    retry_partition_manager = PartitionManager(retry_metadata)
+    retry_partition_manager = PartitionManager(LocalStateStore(str(retry_metadata)))
 
     retry_stage = GoldStage(
         gold_ctx=gold_ctx,

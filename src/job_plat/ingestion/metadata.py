@@ -1,16 +1,10 @@
-import json
 from dataclasses import dataclass
-from pathlib import Path
+from datetime import datetime
+from typing import Any
 
 from job_plat.context.contexts import StageExecutionContext
-
-# @dataclass(kw_only=True)
-# class StageExecutionContext:
-# stage: str
-# pipeline_version: str
-# run_id: str = str(uuid.uuid4())
-# started_at: datetime = datetime.utcnow()
-
+from job_plat.storage.paths import join_storage_path
+from job_plat.storage.storages import Storage
 
 @dataclass(kw_only=True)
 class IngestionRun(StageExecutionContext):

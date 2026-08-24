@@ -46,6 +46,41 @@ def test_local_storage_exists(tmp_path):
     assert storage.exists(str(dataset_path))
 
 
+def test_local_storage_json_round_trip(tmp_path):
+    storage = LocalStorage()
+    path = tmp_path / "state" / "metadata.json"
+
+    assert storage.read_json(str(path)) is None
+
+    storage.write_json(
+        {
+            "silver": [
+                "2025-03-01",
+                "2025-03-02",
+            ]
+        },
+        str(path),
+    )
+
+    assert storage.read_json(str(path)) == {
+        "silver": [
+            "2025-03-01",
+            "2025-03-02",
+        ]
+    }
+
+
+def test_local_storage_rejects_non_object_json(tmp_path):
+    path = tmp_path / "invalid.json"
+    path.write_text("[1, 2, 3]", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match="Expected JSON object",
+    ):
+        LocalStorage().read_json(str(path))
+
+
 def test_merge_is_retry_idempotent(
     spark,
     tmp_path,

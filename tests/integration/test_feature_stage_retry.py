@@ -4,6 +4,7 @@ import numpy as np
 
 from job_plat.context.contexts import FeatureContext
 from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.partitioning.state_store import LocalStateStore
 from job_plat.pipeline.datasets.dataset_definitions import (
     FeatureJobEmbeddings,
     FeatureSkillEmbeddings,
@@ -125,12 +126,11 @@ def test_feature_stage_retry_is_idempotent(
     assert first_job_count == 2
 
     retry_metadata = tmp_path / "feature-retry-metadata"
-    retry_metadata.mkdir()
 
     retry_stage = FeatureStage(
         feature_ctx=feature_ctx,
         datasets=dataset_registry,
-        partition_manager=PartitionManager(retry_metadata),
+        partition_manager=PartitionManager(LocalStateStore(str(retry_metadata))),
     )
     retry_stage.execute()
 

@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from job_plat.context.contexts import MLContext
 from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.partitioning.state_store import LocalStateStore
 from job_plat.pipeline.datasets.dataset_definitions import (
     FeatureJobEmbeddings,
     FeatureSkillEmbeddings,
@@ -152,12 +153,11 @@ def test_ml_stage_retry_is_idempotent(
     assert len(first_model_ids) == 1
 
     retry_metadata = tmp_path / "ml-retry-metadata"
-    retry_metadata.mkdir()
 
     retry_stage = MLStage(
         ml_ctx=ml_ctx,
         datasets=dataset_registry,
-        partition_manager=PartitionManager(retry_metadata),
+        partition_manager=PartitionManager(LocalStateStore(str(retry_metadata))),
     )
     retry_stage.execute()
 
