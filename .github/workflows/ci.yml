@@ -36,21 +36,21 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Set up Java for Spark 
+      - name: Set up Java for Spark
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
-      
+
       - name: Install Poetry
         run: pipx install poetry==2.4.1
 
       - name: Verify lockfile
         run: poetry check
-      
+
       - name: Install project
         run: poetry install --with dev,airflow --no-interaction
-      
+
       - name: Verify CPU-only Torch
         run: |
           poetry run python - <<'PY'
@@ -61,7 +61,7 @@ jobs:
           )
           print(f"Torch {torch.__version__}: CPU-only")
           PY
-      
+
       - name: Build package
         run: poetry build
 
