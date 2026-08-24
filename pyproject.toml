@@ -1,9 +1,22 @@
-[tool.poetry]
-name = "Real-Time-Job-Market-Intelligence-Platform"
+[project]
+name = "real-time-job-market-intelligence-platform"
 version = "0.1.0"
 description = "A system that scrapes job postings, processes them at scale, extracts skills using NLP, and stores analytics in a data warehouse."
-authors = ["ScriptFizz <nsimamail@gmail.com>"]
+authors = [{ name = "ScriptFizz", email = "nsimamail@gmail.com" }]
 readme = "README.md"
+requires-python = ">=3.11,<3.12"
+keywords = ["data-engineering", "pyspark", "delta-lake", "mlops"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dynamic = ["dependencies"]
+
+[project.scripts]
+job-plat = "job_plat.cli:app"
+
+[tool.poetry]
 packages = [{ include = "job_plat", from = "src" }]
 
 [tool.poetry.dependencies]
@@ -31,6 +44,7 @@ mkdocs = "^1.6.1"
 black = ">=25.12.0,<26.0.0"
 mypy = ">=1.19.0,<2.0.0"
 pytest = ">=9.0.2,<10.0.0"
+pytest-cov = ">=6.0,<8.0"
 pre-commit = ">=4.5.0,<5.0.0"
 ruff = ">=0.14.8,<0.15.0"
 types-requests = ">=2.32.4.20250913,<3.0.0.0"
@@ -69,6 +83,3 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
-
-[tool.poetry.scripts]
-job-plat = "job_plat.cli:app"

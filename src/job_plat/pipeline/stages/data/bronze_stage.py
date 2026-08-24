@@ -14,7 +14,13 @@ class BronzeStage(BaseSourceStage):
     def __init__(
         self, bronze_ctx: BronzeContext, storage: Storage, connector: JobConnector
     ):
-        super().__init__(storage=storage)
+        super().__init__(
+            storage=storage,
+            metadata_path=(
+                bronze_ctx.metadata_path
+                or join_storage_path(bronze_ctx.root_path, "_metadata")
+            ),
+        )
         self.bronze_ctx = bronze_ctx
         self.connector = connector
 
@@ -137,6 +143,12 @@ class BronzeStage(BaseSourceStage):
             },
         )
         return row_count
+
+    def observability_metrics(self) -> dict[str, int]:
+        return {
+            "rejected_record_count": self.connector.schema_error_count,
+            "dead_letter_count": 0,
+        }
 
     def _validate_search_config(self) -> tuple[str, str, str]:
         query = self.bronze_ctx.query

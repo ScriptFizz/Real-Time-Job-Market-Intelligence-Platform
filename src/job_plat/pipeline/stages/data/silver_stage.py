@@ -88,8 +88,15 @@ class SilverStage(BaseStage[SilverContext, SilverOutputs]):
             silver_job_skills=job_skills_silver_df,
         )
 
-    def compute_metrics(self, _outputs: SilverOutputs) -> Metrics:
-        return self._metrics
+    def compute_metrics(self, outputs: SilverOutputs) -> Metrics:
+        accepted_rows = outputs.silver_jobs.count()
+        input_rows = int(self._metrics.get("total", 0))
+        return {
+            **self._metrics,
+            "accepted_record_count": accepted_rows,
+            "rejected_record_count": max(0, input_rows - accepted_rows),
+            "dead_letter_count": 0,
+        }
 
     def evaluate_metrics(self, metrics: Metrics) -> None:
         if metrics["null_titles"] > 0:

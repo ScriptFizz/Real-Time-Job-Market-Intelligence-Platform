@@ -36,6 +36,7 @@ def build_bronze_context(
 
     return BronzeContext(
         root_path=root_path,
+        metadata_path=config.paths.metadata,
         query=final_query,
         country=final_country,
         location=final_location,
@@ -56,6 +57,7 @@ def build_data_pipeline_context(
 
     bronze_ctx = BronzeContext(
         root_path=root_path,
+        metadata_path=config.paths.metadata,
         query=final_query,
         country=final_country,
         location=final_location,

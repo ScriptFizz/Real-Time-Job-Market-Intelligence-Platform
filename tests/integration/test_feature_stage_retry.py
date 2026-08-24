@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, date, datetime
 
 import numpy as np
@@ -145,6 +146,13 @@ def test_feature_stage_retry_is_idempotent(
     retry_stage.execute()
 
     assert model_load_count == 1
+
+    manifests = list((retry_metadata / "run_manifests" / "feature").glob("*.json"))
+    assert len(manifests) == 1
+    manifest = json.loads(manifests[0].read_text(encoding="utf-8"))
+    assert manifest["status"] == "no_op"
+    assert manifest["outputs"]["skill_embeddings"]["row_count"] == 0
+    assert manifest["outputs"]["job_embeddings"]["row_count"] == 0
 
     retried_skill_embeddings = skill_embeddings.read_all(spark)
     retried_job_embeddings = job_embeddings.read_all(spark)

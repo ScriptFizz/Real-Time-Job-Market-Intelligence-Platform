@@ -7,6 +7,10 @@ class PartitionManager:
     def __init__(self, ledger: ProcessingLedger):
         self.ledger = ledger
 
+    @property
+    def metadata_path(self) -> str:
+        return self.ledger.metadata_path
+
     def get_processed(self, stage_name: str) -> set[date]:
         return self.ledger.get_committed_partitions(stage_name)
 

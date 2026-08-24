@@ -65,6 +65,14 @@ format:
 test:
 	poetry run pytest tests
 
+.PHONY: coverage
+coverage:
+	poetry run pytest -p no:cacheprovider --cov=job_plat --cov-report=term-missing --cov-report=html
+
+.PHONY: docker-build
+docker-build:
+	docker compose build
+
 
 
 

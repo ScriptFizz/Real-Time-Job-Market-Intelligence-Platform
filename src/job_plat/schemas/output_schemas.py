@@ -3,6 +3,7 @@ from dataclasses import dataclass, field, fields
 from pyspark.sql import DataFrame
 
 from job_plat.pipeline.datasets.dataset_definitions import (
+    DatasetDef,
     FeatureJobEmbeddings,
     FeatureSkillEmbeddings,
     GoldDimJobs,
@@ -22,7 +23,7 @@ class StageOutput:
     """Base class for typed stage ouputs."""
 
     @classmethod
-    def dataset_map(cls) -> dict[str, type]:
+    def dataset_map(cls) -> dict[str, type[DatasetDef]]:
         return {
             f.name: f.metadata["dataset"]
             for f in fields(cls)

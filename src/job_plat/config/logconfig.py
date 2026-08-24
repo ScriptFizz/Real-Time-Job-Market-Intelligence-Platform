@@ -27,7 +27,7 @@ def setup_logging(log_level=logging.INFO):
             "console": {
                 "class": "logging.StreamHandler",
                 "stream": sys.stdout,
-                "formatter": "minimal",
+                "formatter": "json",
                 "level": log_level,
             },
             "info": {
@@ -58,8 +58,20 @@ def setup_logging(log_level=logging.INFO):
 
 
 class ContextLogger(logging.LoggerAdapter):
+    def __init__(
+        self,
+        logger: logging.Logger,
+        extra: dict[str, object],
+    ):
+        self.context = extra
+        super().__init__(logger, extra)
+
+    def bind(self, **values: object) -> None:
+        self.context.update(values)
+        self.extra = self.context
+
     def process(self, msg, kwargs):
-        extra = kwargs.get("extra", {})
-        merged_extra = {**self.extra, **extra}
+        extra = kwargs.get("extra", {}) or {}
+        merged_extra = {**self.context, **extra}
         kwargs["extra"] = merged_extra
         return msg, kwargs

@@ -27,6 +27,7 @@ class SparkStageContext(BaseContext):
 @dataclass
 class BronzeContext(BaseContext):
     root_path: str
+    metadata_path: str | None = None
     query: str | None = None
     location: str | None = None
     country: str | None = None

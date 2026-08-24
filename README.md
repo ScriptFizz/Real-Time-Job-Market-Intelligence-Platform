@@ -1,351 +1,257 @@
 # Real-Time Job Market Intelligence Platform
 
-[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
-[![Poetry](https://img.shields.io/badge/poetry-managed-brightgreen.svg)](https://python-poetry.org/)
-[![PySpark](https://img.shields.io/badge/Spark-3.5-orange.svg)](https://spark.apache.org/)
 [![CI](https://github.com/ScriptFizz/Real-Time-Job-Market-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/ScriptFizz/Real-Time-Job-Market-Intelligence-Platform/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/ScriptFizz/Real-Time-Job-Market-Intelligence-Platform/branch/main/graph/badge.svg)](https://codecov.io/gh/ScriptFizz/Real-Time-Job-Market-Intelligence-Platform)
+[![Ruff](https://img.shields.io/badge/lint-ruff-261230.svg)](https://github.com/ScriptFizz/Real-Time-Job-Market-Intelligence-Platform/actions/workflows/ci.yml)
+[![MyPy](https://img.shields.io/badge/types-mypy-blue.svg)](https://github.com/ScriptFizz/Real-Time-Job-Market-Intelligence-Platform/actions/workflows/ci.yml)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
 
-A production-style **data engineering and ML platform** that ingests job postings from ADZuna and USAJobs, cleans, enriches, and transforms the data into an analytics-ready star schema. Includes ML pipelines for **skill/job embeddings** and **dynamic job clustering**. Built with **PySpark**, **Poetry**, **pytest**, and a Typer CLI for flexible execution.
+A production-oriented portfolio platform for ingesting job postings, building a
+Spark medallion pipeline, creating versioned embeddings, and training job-cluster
+models. It emphasizes deterministic retries, transactional Delta tables, data
+contracts, model artifacts, and observable stage execution.
 
----
+This repository demonstrates application and data-platform engineering patterns.
+It is not a turnkey hosted production system; see
+[Local and cloud guarantees](#local-and-cloud-guarantees).
 
-## Table of Contents
+## What it demonstrates
 
-1. [Why This Project](#why-this-project)  
-2. [Overview](#overview)  
-3. [Architecture](#architecture)  
-3. [Medallion Pipeline](#medallion-pipeline)  
-4. [ML Pipeline](#ml-pipeline)  
-5. [Orchestration (Airflow)](#orchestration-(airflow))  
-6. [Project Structure](#project-structure)  
-7. [Getting Started](#getting-started)  
-8. [Configuration](#configuration)  
-9. [Observability & Reliability](#observability-&-reliability)  
-10. [Testing](#testing)  
-11. [Future Improvements](#future-improvements)
-
----
-
-## Why This Project
-
-Modern job markets generate large volumes of unstructured and fast-changing data, making it difficult to extract meaningful insights about skills demand, job trends, and role similarities.
-
-This project was built to simulate a **real-world data platform** that transforms raw job postings into actionable intelligence through scalable data engineering and machine learning workflows.
-
-### Problems Addressed
-
-* **Fragmented and unstructured data**
-  Job postings from different APIs (ADZuna, USAJobs) have inconsistent schemas and formats.
-
-* **Lack of analytics-ready structure**
-  Raw data is not directly usable for analysis or reporting without cleaning, normalization, and modeling.
-
-* **Difficulty in extracting insights from text**
-  Skills and job similarities are embedded in unstructured descriptions and require NLP techniques.
-
-* **Need for reliable and repeatable pipelines**
-  Data workflows must be orchestrated, monitored, and resilient to failures.
-
-### What This Project Demonstrates
-
-This platform showcases end-to-end data engineering capabilities:
-
-* Designing a **medallion architecture** (Bronze → Silver → Gold)
-* Building **modular, testable pipeline stages**
-* Managing **incremental data processing and partitioning**
-* Implementing **Airflow orchestration with dependencies, retries, and scheduling**
-* Creating **environment-aware configurations** for local and production setups
-* Integrating **machine learning pipelines** into a data platform
-* Applying **data validation and observability practices**
-
-### Key Takeaways
-
-Through this project, I focused on writing code that is not just functional, but **production-oriented**:
-
-* Pipelines are **decoupled from orchestration** via a CLI interface
-* Configuration is **centralized and environment-driven**
-* Each stage enforces **input/output validation and quality checks**
-* The system is designed to be **extensible**, allowing new data sources or ML models to be added easily
-
-Overall, the goal was to bridge the gap between **data engineering and machine learning**, building a platform that reflects how modern data systems are designed and operated in practice.
-
----
-
-## Overview
-
-This project demonstrates a full **data engineering workflow**:
-
-- Ingests job postings from multiple APIs
-- Stores raw and processed data with **partitioning**
-- Cleans, deduplicates, and enriches the data
-- Builds a **star-schema** data warehouse (dimensions + fact tables)
-- Performs **feature extraction** and **ML clustering**
-- Uses **PySpark**, **Poetry**, **pytest**, and **Typer** CLI
-
-It is designed with **production-ready patterns**:
-
-- Stage execution framework with input/output validation  
-- Incremental partition processing  
-- Metrics computation and evaluation  
-- Configurable runtime via `settings.yaml`  
-
----
+- Adzuna and USAJobs connectors with bounded retries, `Retry-After`, defensive
+  decoding, schema-error accounting, and credential-safe logging.
+- Bronze JSONL landing data followed by Silver, Gold, Feature, and ML Delta
+  tables.
+- Atomic keyed merges and partition replacement with optimistic-concurrency
+  retries.
+- A concurrency-safe processing ledger and deterministic logical batch IDs.
+- Retry-idempotent multi-output stages with explicit non-transactional boundaries.
+- Logical execution dates for reproducible CLI and Airflow backfills.
+- Versioned skill/job embeddings with bounded driver cardinality and batching.
+- Deterministic KMeans training identities, persisted Spark model artifacts,
+  training fingerprints, and explicit candidate/promotion semantics.
+- JSON logs, run manifests, row counts, completeness/freshness metrics, and
+  pre-write schema/nullability/uniqueness contracts.
+- Ruff, MyPy, pytest, package-build, CLI, DAG, and coverage checks in CI.
 
 ## Architecture
 
 ```mermaid
-flowchart TD
-    subgraph Data Sources
-        A[ADZuna API]
-        B[USAJobs API]
-    end
-
-    subgraph Data Platform
-        C[Bronze Layer]
-        D[Silver Layer]
-        E[Gold Layer]
-    end
-
-    subgraph ML Pipeline
-        F[Feature Engineering]
-        G[ML Clustering]
-    end
-
-    subgraph Orchestration
-        H[Airflow DAGs]
-    end
-
-    A --> C
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    F --> G
-
-    H --> C
-    H --> D
-    H --> E
-    H --> F
-    H --> G
-```
-
----
-
-## Orchestration (Airflow)
-
-The platform is orchestrated using Apache Airflow, with separate DAGs for each pipeline layer:
-
-- **ingestion_dag** (hourly)
-  - Ingests raw job postings into the Bronze layer
-
-- **processing_dag** (daily)
-  - Transforms Bronze → Silver → Gold
-  - Depends on ingestion completion via `ExternalTaskSensor`
-
-- **ml_dag** (weekly)
-  - Runs feature engineering and ML clustering
-  - Depends on Gold layer completion
-
-### Key Features
-
-- **Task dependencies across DAGs** using `ExternalTaskSensor`
-- **Environment parameterization** via Airflow `params`
-- **Retries and timeouts** for production reliability
-- **CLI-based execution** for decoupled orchestration
-
-### Example DAG Flow
-
-```mermaid
 flowchart LR
-    A[Bronze Ingestion] --> B[Silver Processing]
-    B --> C[Gold Layer]
-    C --> D[Feature Engineering]
-    D --> E[ML Clustering]
+    subgraph Sources
+        A[Adzuna]
+        U[USAJobs]
+    end
+    subgraph Data
+        B[Bronze JSONL]
+        S[Silver Delta]
+        G[Gold Delta]
+    end
+    subgraph ML
+        F[Versioned embeddings]
+        M[KMeans outputs]
+        R[Spark ML artifacts]
+    end
+    subgraph Control
+        L[Delta processing ledger]
+        O[JSON run manifests]
+        AF[Optional Airflow DAGs]
+    end
+
+    A --> B
+    U --> B
+    B --> S --> G --> F --> M --> R
+    L -. admission / commit .-> S
+    L -. admission / commit .-> G
+    O -. attempt history .-> S
+    AF -. logical dates .-> B
+    AF -. logical dates .-> S
+    AF -. logical dates .-> F
 ```
 
----
+Detailed guarantees and failure boundaries are documented in
+[Architecture and operational guarantees](docs/architecture.md). The table-format
+decision is recorded in
+[ADR 0001: Delta Lake](docs/adr/0001-delta-lake-table-format.md).
 
-## Medallion Pipeline
+## Pipeline
 
-### Bronze
+| Stage | Responsibility | Persistence |
+|---|---|---|
+| Bronze | Fetch, normalize, retain raw payload and ingestion metadata | Partitioned JSONL |
+| Silver | Clean, deduplicate, normalize, and extract skills | Partitioned Delta |
+| Gold | Produce job/skill dimensions and job-skill facts | Delta |
+| Feature | Build only missing entity/model-version embeddings | Delta |
+| ML | Select K, assign clusters, persist metrics and model artifacts | Delta + Spark ML artifacts |
 
-- Stores **raw JSON payload** from ADZuna and USAJobs
-- Adds metadata such ingestion date and run ID
+Bronze is source-preserving. Managed tables use Delta because application-level
+Parquet overwrite merges were not transaction-safe. Feature merge keys include
+the embedding model version; ML merge keys include a deterministic model ID.
 
-### Silver
+## Retry and concurrency semantics
 
-- Cleans, deduplicates and normalizes job postings 
-- Extracts skills from job descriptions 
-- Ensure data integrity and quality 
+- A logical partition batch has a deterministic identity.
+- Only one live attempt for the same stage and batch is admitted by the Delta
+  processing ledger.
+- Individual Delta writes are atomic and recognized optimistic-concurrency
+  conflicts receive bounded retries.
+- Processing state is acknowledged only after all stage outputs are written.
+- A failed acknowledgement can be retried because table operations are
+  idempotent.
+- Multiple output tables are **not** a distributed transaction. Downstream
+  readiness is defined by committed ledger state, not by file presence.
+- Empty incremental windows are successful `no_op` runs. Stages reject empty
+  outputs unless they explicitly support this behavior.
 
-### Gold 
+## Getting started
 
-- Creates analytics-ready **star schema**:
-  - dim_jobs
-  - dim_skills
-  - fact_job_skills
-- Performs validation and metrics checks 
+Requirements for host execution:
 
-## ML Pipeline 
-
-### Feature Stage 
-
-- Generates embeddings for jobs and skills using **SentenceTransformer** (all-MiniLM-L6-v2) 
-- Stores embeddings for downstream ML tasks 
-
-### ML Stage 
-
-- Performs **job clustering** using PySpark KMeans 
-- Dynamic cluster number search 
-- Evaluates clustering quality using metrics defined in settings.yaml 
-
---- 
-
-## Project Structure 
-
-```
-my_project/
-├── data/ # Raw and processed datasets
-├── docs/ # Documentation (mkdocs)
-├── logs/ # Logs for pipeline runs
-├── models/ # ML models and embeddings
-├── notebooks/ # Exploratory notebooks
-├── reports/ # Figures, metrics, and reports
-├── settings.yaml # Runtime configuration
-├── pyproject.toml # Poetry project config
-├── src/job_plat/ # Main source code
-│ ├── cli.py # CLI entry points
-│ ├── config/ # Config loaders and logging setup
-│ ├── context/ # Stage context builders
-│ ├── ingestion/ # API connectors and raw schema
-│ ├── orchestration/ # Pipeline runners
-│ ├── partitioning/ # Partition management
-│ ├── pipeline/ # Stages (Bronze, Silver, Gold, ML)
-│ ├── transformations/ # ETL and ML transformations
-│ └── utils/ # Helpers and I/O utilities
-└── tests/ # Unit and integration tests
-
-```
-
---- 
-
-## Getting Started 
-
-### Install dependencies 
+- Python 3.11
+- Java 17
+- Poetry 2.4.x
 
 ```bash
-poetry install
+poetry install --with dev
+poetry run job-plat --help
 ```
 
-Install the optional Airflow runtime when developing or validating DAGs:
+Optional dependency groups:
 
 ```bash
-poetry install --with airflow
+poetry install --with dev,airflow  # DAG development and serialization tests
+poetry install --with cloud        # Google Cloud Storage client
 ```
 
-### Running the data pipeline 
+Common commands:
 
 ```bash
-poetry run python -m job_plat.cli bronze
-poetry run python -m job_plat.cli silver
-poetry run python -m job_plat.cli gold
-poetry run python -m job_plat.cli data-pipeline
+poetry run job-plat bronze --env dev --execution-date 2026-08-24T00:00:00Z
+poetry run job-plat silver --env dev --execution-date 2026-08-24T00:00:00Z
+poetry run job-plat gold --env dev --execution-date 2026-08-24T00:00:00Z
+poetry run job-plat feature --env dev --execution-date 2026-08-24T00:00:00Z
+poetry run job-plat ml --env dev --execution-date 2026-08-24T00:00:00Z
 ```
 
-### Running the ML pipeline 
+Live Bronze ingestion requires credentials for each connector enabled in
+`settings.yaml`. Copy `.env.example` to `.env` and supply secrets locally.
+
+## Docker local stack
 
 ```bash
-poetry run python -m job_plat.cli feature
-poetry run python -m job_plat.cli ml
-poetry run python -m job_plat.cli ml-pipeline
+docker compose build
+docker compose run --rm job-platform --help
+docker compose run --rm job-platform silver \
+  --env dev \
+  --execution-date 2026-08-24T00:00:00Z
 ```
 
---- 
+The Compose stack mounts local data, metadata, artifacts, and logs. It packages
+the CPU-only CLI runtime; it intentionally does not pretend to be an Airflow,
+YARN, or cloud production cluster. See [Local stack](docs/local-stack.md).
 
-## Configuration 
+## Airflow orchestration
 
-All runtime parameters are defined in `settings.yaml`, with support for multiple environments:
+Airflow is optional. The repository contains separately scheduled ingestion,
+processing, and ML DAGs that pass Airflow logical dates to the CLI. Cross-DAG
+sensors align logical intervals, and DAG import/serialization is tested.
 
-```yaml
-environments:
-  dev:
-    storage:
-      type: local
-    paths:
-      root: ./data
-      metadata: ./metadata
+The repository does not provision an Airflow metadata database, executor,
+workers, remote logging, or alerting. Those are deployment responsibilities.
 
-  prod:
-    storage:
-      type: gcs
-    paths:
-      root: gs://job-pipeline
-      metadata: gs://job-pipeline/metadata
+## Configuration
+
+`settings.yaml` contains `dev` and illustrative `prod` profiles. Configuration
+controls paths, Spark settings, connectors, HTTP retry policy, embedding model
+identity and batching, clustering parameters, artifacts, and promotion behavior.
+
+Secrets are environment variables, not YAML values:
+
+```dotenv
+ADZUNA_APP_ID=...
+ADZUNA_API_KEY=...
+USAJOBS_EMAIL=...
+USAJOBS_API_KEY=...
 ```
 
-### Key Features
+## Observability and data contracts
 
-- **Environment-aware configuration** (dev, prod)
-- Automatic **path resolution and normalization**
-- Support for **local and cloud storage (GCS)**
-- Centralized configuration via ConfigLoader
+Each stage emits JSON logs correlated with run, batch, partition, and model
+identity. Durable manifests under
+`<metadata>/run_manifests/<stage>/<run_id>.json` record status, timestamps,
+inputs, outputs, metrics, and safe failure details.
 
-Pipeline can be execute with a specific environment:
+Before writes, dataset contracts enforce required columns, selected physical
+types, nullability, and uniqueness. Dataset observations include input/output row
+counts, completeness ratios, freshness values, rejected records, and dead-letter
+counts. The processing ledger remains the scheduling/concurrency source of truth;
+manifests are the attempt-level operational history.
+
+## Local and cloud guarantees
+
+The local profile is executable and tested on a single Spark process. It
+demonstrates transactional table behavior, retries, contracts, artifacts, and
+observability, but not high availability or distributed infrastructure.
+
+The `prod` profile and GCS backend are deployment-ready interfaces, not a hosted
+environment. A real cloud deployment must supply a Spark/YARN runtime, Hadoop GCS
+connector, workload identity, Airflow infrastructure, secret management, remote
+logs, alerting, capacity planning, and backup/restore procedures. GCS control and
+data paths are implemented and contract-tested with fakes; this repository's CI
+does not execute an end-to-end job against a real GCS account.
+
+## Engineering decisions and trade-offs
+
+- **Delta over plain Parquet:** transactions and concurrency are delegated to a
+  table format rather than reimplemented with unsafe read/overwrite cycles.
+- **Delta over Iceberg for now:** the project uses one Spark engine and no shared
+  catalog; Iceberg becomes more attractive for a multi-engine platform.
+- **Processing ledger plus manifests:** the ledger coordinates concurrency;
+  manifests explain individual attempts. Combining both responsibilities would
+  make retries and audit history harder to reason about.
+- **At-least-once execution with idempotent writes:** exactly-once behavior is
+  approached through deterministic identities and convergent writes, not claimed
+  as a distributed guarantee.
+- **Bounded driver embedding:** skills are batched and guarded. This is practical
+  for the project scale; executor-side inference would be the next step for very
+  high cardinality.
+- **Explicit model promotion:** training creates candidates by default. A model is
+  active only after promotion; the newest promoted run wins.
+- **Optional Airflow/cloud dependencies:** the core CLI remains testable without
+  installing deployment-specific runtimes.
+
+## Quality checks
 
 ```bash
-poetry run python -m job_plat.cli silver --env dev
+poetry run ruff format --check src tests
+poetry run ruff check src tests
+poetry run mypy src --no-incremental
+PYTHONDONTWRITEBYTECODE=1 SPARK_LOCAL_IP=127.0.0.1 \
+  poetry run pytest -p no:cacheprovider -q
+poetry build
 ```
 
---- 
+CI performs these checks on Ubuntu with Python 3.11 and Java 17 and publishes a
+coverage report to Codecov.
 
-## Observability & Reliability
+## Repository layout
 
-The platform includes several production-oriented features:
-
-- **Airflow retries and timeouts**
-- Structured logging for each pipeline stage
-- Execution time tracking for tasks
-- Input/output validation in each stage
-- Data quality checks (e.g., non-empty outputs)
-
-These features ensure robustness and make debugging easier in distributed environments.
-
-### Retry and concurrency contract
-
-- Silver, Gold, Feature, and ML datasets are Delta tables. Keyed merges and
-  partition replacements are atomic at the individual-table level.
-- Incremental partition batches have deterministic identities. The processing
-  ledger admits only one live attempt for a stage and batch; failed or expired
-  attempts can be retried.
-- Safe Delta operations retry recognized optimistic-concurrency conflicts with
-  bounded exponential backoff. Invalid data and other non-conflict failures are
-  not retried automatically.
-- A partition is acknowledged only after every output table write succeeds.
-  Failed acknowledgements leave the batch retryable, and retry-safe writes
-  converge to the same table state.
-- A stage that writes multiple tables is **not** a distributed ACID transaction.
-  Other readers can observe a partially completed attempt. Downstream pipeline
-  scheduling must use committed processing-ledger entries rather than the mere
-  presence of output files.
-
----
-
-## Testing 
-
-Automated tests ensure data and ML integrity: 
-
-```bash
-pytest
+```text
+src/job_plat/
+├── config/           # Pydantic configuration and JSON logging
+├── context/          # Typed stage contexts
+├── dags/             # Optional Airflow DAGs
+├── ingestion/        # Connectors, canonical schema, Bronze metadata
+├── observability/    # Run manifests
+├── orchestration/    # CLI-independent pipeline runners
+├── partitioning/     # Delta processing ledger and batch admission
+├── pipeline/         # Dataset contracts, read strategies, stage framework
+├── storage/          # Local/GCS storage and Delta conflict retries
+└── transformations/  # Silver, Gold, Feature, and ML logic
 ```
 
-- Unit tests validate transformations
+## Deferred credential-free demo
 
-- Integration tests validate stage execution and pipeline flow
-
---- 
-
-## Future Improvements 
-
-- Containerization with Docker for reproducibility
-- Integration with cloud orchestration (e.g., GCP Composer)
-- Advanced data quality checks (Great Expectations)
+Captured CLI output and generated data examples are intentionally deferred until
+a deterministic synthetic Bronze-data generator is added. This avoids publishing
+expired credentials, unstable API results, or fabricated output. The intended
+follow-up is a credential-free demo command plus small, license-safe fixtures.

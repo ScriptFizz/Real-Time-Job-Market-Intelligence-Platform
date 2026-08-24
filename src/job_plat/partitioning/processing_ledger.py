@@ -69,6 +69,7 @@ class ProcessingLedger:
             raise ValueError("lease_duration must be greater than zero")
 
         self.spark = spark
+        self.metadata_path = metadata_path
         self.path = join_storage_path(metadata_path, "processing_ledger")
         self.lease_duration = lease_duration
 
