@@ -79,6 +79,7 @@ def test_replace_partitions_is_retry_idempotent(
         storage=LocalStorage(),
         partition_columns=["ingestion_date"],
         write_mode="replace_partitions",
+        file_format="delta",
     )
 
     initial = spark.createDataFrame(
@@ -144,6 +145,7 @@ def test_replace_partitions_rejects_output_outside_batch(
         storage=LocalStorage(),
         partition_columns=["ingestion_date"],
         write_mode="replace_partitions",
+        file_format="delta",
     )
 
     dataframe = spark.createDataFrame(

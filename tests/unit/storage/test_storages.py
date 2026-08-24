@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+from delta.tables import DeltaTable
 from fixtures.storage_contract import assert_storage_discovery_contract
 
 from job_plat.pipeline.datasets.dataset import Dataset
@@ -128,6 +129,7 @@ def test_merge_is_retry_idempotent(
         storage=LocalStorage(),
         partition_columns=[],
         write_mode="merge",
+        file_format="delta",
         merge_keys=("job_id",),
         merge_order_column="ingestion_date",
         merge_order="desc",
@@ -178,6 +180,10 @@ def test_merge_is_retry_idempotent(
         "job-1": "Corrected title",
         "job-2": "Preserved title",
     }
+    latest_commit = DeltaTable.forPath(spark, dataset.path).history(1).first()
+
+    assert latest_commit is not None
+    assert latest_commit.operation == "MERGE"
 
 
 def test_merge_preserves_newer_record(
@@ -190,6 +196,7 @@ def test_merge_preserves_newer_record(
         storage=LocalStorage(),
         partition_columns=[],
         write_mode="merge",
+        file_format="delta",
         merge_keys=("job_id",),
         merge_order_column="ingestion_date",
         merge_order="desc",
@@ -232,3 +239,40 @@ def test_merge_preserves_newer_record(
 
     assert result is not None
     assert result.job_title == "New title"
+
+
+def test_delta_merge_deduplicates_incoming_keys_deterministically(
+    spark,
+    tmp_path,
+):
+    dataset = Dataset(
+        name="job_dimension",
+        path=str(tmp_path / "deduplicated-job-dimension"),
+        storage=LocalStorage(),
+        partition_columns=[],
+        write_mode="merge",
+        file_format="delta",
+        merge_keys=("job_id",),
+        merge_order_column="ingestion_date",
+        merge_order="desc",
+    )
+    incoming = spark.createDataFrame(
+        [
+            ("job-1", "Alpha title", date(2025, 3, 1)),
+            ("job-1", "Zulu title", date(2025, 3, 1)),
+            ("job-2", "Other title", date(2025, 3, 1)),
+        ],
+        ["job_id", "job_title", "ingestion_date"],
+    )
+
+    dataset.write(incoming)
+    dataset.write(incoming.repartition(2))
+
+    rows = {
+        row.job_id: row.job_title for row in dataset.read_all(spark).collect()
+    }
+
+    assert rows == {
+        "job-1": "Zulu title",
+        "job-2": "Other title",
+    }

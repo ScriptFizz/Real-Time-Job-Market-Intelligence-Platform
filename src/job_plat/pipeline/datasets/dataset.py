@@ -2,7 +2,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
-from pyspark.sql import DataFrame, SparkSession, Window
+from delta.tables import DeltaTable
+from pyspark.sql import Column, DataFrame, SparkSession, Window
 from pyspark.sql.functions import col, lit, row_number, to_date
 
 from job_plat.pipeline.datasets.dataset_definitions import (
@@ -121,7 +122,7 @@ class Dataset:
         actual_mode = mode or self.write_mode
 
         if actual_mode == "merge":
-            self._merge_and_overwrite(df)
+            self._merge_delta(df)
             return
 
         partition_cols = self.partition_columns if self.partition_columns else None
@@ -149,11 +150,13 @@ class Dataset:
         else:
             storage_mode = actual_mode
 
-        if self.file_format == "delta":
+        if self.file_format == "delta" and dynamic_partition_overwrite:
+            self._replace_delta_partitions(
+                dataframe=df,
+                expected_partitions=expected_partitions,
+            )
+        elif self.file_format == "delta":
             writer = df.write.format("delta").mode(storage_mode)
-
-            if dynamic_partition_overwrite:
-                writer = writer.option("partitionOverwriteMode", "dynamic")
 
             if partition_cols:
                 writer = writer.partitionBy(*partition_cols)
@@ -178,7 +181,7 @@ class Dataset:
         else:
             raise ValueError(f"Unsupported format {self.file_format}")
 
-    def _merge_and_overwrite(
+    def _merge_delta(
         self,
         incoming: DataFrame,
     ) -> None:
@@ -187,9 +190,9 @@ class Dataset:
                 f"Dataset {self.name} cannot use merge mode because it is partitioned"
             )
 
-        if self.file_format not in {"delta", "parquet"}:
+        if self.file_format != "delta":
             raise ValueError(
-                f"Dataset {self.name} supports merge mode only for Delta or Parquet"
+                f"Dataset {self.name} supports merge mode only for Delta"
             )
 
         if not self.merge_keys:
@@ -211,68 +214,132 @@ class Dataset:
                 f"order column: {self.merge_order_column}"
             )
 
-        if not self.storage.exists(str(self.path)):
-            self._write_merged_table(incoming)
+        source = self._deduplicate_merge_source(incoming)
+        spark = incoming.sparkSession
+        path = str(self.path)
+
+        if not DeltaTable.isDeltaTable(spark, path):
+            if self.storage.exists(path):
+                raise ValueError(
+                    f"Dataset {self.name} exists at {path} but is not a Delta table"
+                )
+
+            source.write.format("delta").mode("errorifexists").save(path)
             return
 
-        existing = self.read_all(spark=incoming.sparkSession)
-
-        priority_column = "__job_plat_merge_priority"
-        row_number_column = "__job_plat_row_number"
-
-        combined = existing.withColumn(priority_column, lit(0)).unionByName(
-            incoming.withColumn(
-                priority_column,
-                lit(1),
-            )
+        target = DeltaTable.forPath(spark, path)
+        merge_condition = self._merge_key_condition(
+            target_alias="target",
+            source_alias="source",
+        )
+        matched_condition = self._matched_update_condition(
+            target_alias="target",
+            source_alias="source",
         )
 
-        order_columns = []
+        merger = target.alias("target").merge(
+            source.alias("source"),
+            merge_condition,
+        )
+
+        if matched_condition is None:
+            merger = merger.whenMatchedUpdateAll()
+        else:
+            merger = merger.whenMatchedUpdateAll(condition=matched_condition)
+
+        merger.whenNotMatchedInsertAll().execute()
+
+    def _deduplicate_merge_source(self, incoming: DataFrame) -> DataFrame:
+        order_columns: list[Column] = []
 
         if self.merge_order_column is not None:
             ordering = col(self.merge_order_column)
-
             if self.merge_order == "asc":
                 order_columns.append(ordering.asc_nulls_last())
             else:
                 order_columns.append(ordering.desc_nulls_last())
 
-        # On equal ordering values, the incoming row wins.
-        order_columns.append(col(priority_column).desc())
-
-        window = Window.partitionBy(*self.merge_keys).orderBy(*order_columns)
-
-        merged = (
-            combined.withColumn(
-                row_number_column,
-                row_number().over(window),
-            )
-            .filter(col(row_number_column) == 1)
-            .drop(
-                row_number_column,
-                priority_column,
-            )
+        tie_breaker_columns = sorted(
+            set(incoming.columns)
+            - set(self.merge_keys)
+            - {self.merge_order_column}
+        )
+        order_columns.extend(
+            col(column_name).cast("string").desc_nulls_last()
+            for column_name in tie_breaker_columns
         )
 
-        materialized = merged.localCheckpoint(eager=True)
+        if not order_columns:
+            order_columns.append(lit(1))
 
-        try:
-            self._write_merged_table(materialized)
-        finally:
-            materialized.unpersist()
+        row_number_column = "__job_plat_merge_row_number"
+        window = Window.partitionBy(*self.merge_keys).orderBy(*order_columns)
 
-    def _write_merged_table(self, dataframe: DataFrame) -> None:
-        if self.file_format == "delta":
-            dataframe.write.format("delta").mode("overwrite").save(
-                str(self.path)
+        return (
+            incoming.withColumn(row_number_column, row_number().over(window))
+            .filter(col(row_number_column) == 1)
+            .drop(row_number_column)
+        )
+
+    def _merge_key_condition(
+        self,
+        target_alias: str,
+        source_alias: str,
+    ) -> Column:
+        condition = col(f"{target_alias}.{self.merge_keys[0]}").eqNullSafe(
+            col(f"{source_alias}.{self.merge_keys[0]}")
+        )
+
+        for key in self.merge_keys[1:]:
+            condition = condition & col(f"{target_alias}.{key}").eqNullSafe(
+                col(f"{source_alias}.{key}")
             )
-            return
 
-        self.storage.write_parquet(
-            df=dataframe,
-            path=str(self.path),
-            mode="overwrite",
-            partition_cols=None,
+        return condition
+
+    def _matched_update_condition(
+        self,
+        target_alias: str,
+        source_alias: str,
+    ) -> Column | None:
+        if self.merge_order_column is None:
+            return None
+
+        target_order = col(f"{target_alias}.{self.merge_order_column}")
+        source_order = col(f"{source_alias}.{self.merge_order_column}")
+        both_null = target_order.isNull() & source_order.isNull()
+
+        if self.merge_order == "asc":
+            preferred = source_order <= target_order
+        else:
+            preferred = source_order >= target_order
+
+        return both_null | (
+            source_order.isNotNull() & (target_order.isNull() | preferred)
+        )
+
+    def _replace_delta_partitions(
+        self,
+        dataframe: DataFrame,
+        expected_partitions: tuple[date, ...] | None,
+    ) -> None:
+        if expected_partitions is None:
+            raise ValueError(
+                f"Dataset {self.name} requires an explicit partition batch"
+            )
+
+        partition_column = self.partition_columns[0]
+        partition_predicate = " OR ".join(
+            f"`{partition_column}` = DATE '{partition.isoformat()}'"
+            for partition in expected_partitions
+        )
+
+        (
+            dataframe.write.format("delta")
+            .mode("overwrite")
+            .option("replaceWhere", partition_predicate)
+            .partitionBy(*self.partition_columns)
+            .save(str(self.path))
         )
 
     def _validate_output_partitions(
