@@ -245,12 +245,16 @@ class Dataset:
         path: str,
     ) -> None:
         target = DeltaTable.forPath(spark, path)
-        merger = target.alias("target").merge(
-            source.alias("source"),
-            self._merge_key_condition(
-                target_alias="target",
-                source_alias="source",
-            ),
+        merger = (
+            target.alias("target")
+            .merge(
+                source.alias("source"),
+                self._merge_key_condition(
+                    target_alias="target",
+                    source_alias="source",
+                ),
+            )
+            .withSchemaEvolution()
         )
 
         matched_condition = self._matched_update_condition(

@@ -1,4 +1,4 @@
-from pyspark.sql.functions import avg, countDistinct
+from pyspark.sql.functions import avg, col, countDistinct
 
 from job_plat.context.contexts import MLContext, StageExecutionContext
 from job_plat.partitioning.partition_manager import PartitionManager
@@ -56,11 +56,19 @@ class MLStage(BaseStage[MLContext, MLOutputs]):
             )
 
         self.logger.info("building_clusters_data")
+        job_embeddings_df = job_embeddings_df.filter(
+            col("model_version") == self.ctx.model_version
+        )
         job_membership_df, job_clusters_df, job_centroids_df, job_metadata_df = (
             build_job_clusters(
                 spark=self.spark,
                 job_embeddings_df=job_embeddings_df,
                 training_ts=training_ts,
+                model_version=self.ctx.model_version,
+                k_values=self.ctx.k_values,
+                seed=self.ctx.seed,
+                artifact_root=self.ctx.artifact_root,
+                promote_model=self.ctx.promote_model,
             )
         )
 

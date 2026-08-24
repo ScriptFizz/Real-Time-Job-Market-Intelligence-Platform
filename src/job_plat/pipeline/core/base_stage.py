@@ -30,6 +30,7 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
     INPUT_MAP: dict[str, type[DatasetDef]]
     OUTPUT_TYPE: type[OutputT]
     READ_STRATEGY: ReadStrategy = IncrementalReadStrategy()
+    ALLOW_EMPTY_OUTPUTS = False
 
     def __init__(
         self,
@@ -212,7 +213,7 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
             if df is None:
                 raise ValueError(f"{self.STAGE_NAME}: output '{name}' is None")
 
-            if df.limit(1).count() == 0:
+            if not self.ALLOW_EMPTY_OUTPUTS and df.limit(1).count() == 0:
                 raise ValueError(f"{self.STAGE_NAME}: output '{name}' is empty")
 
     # --------------------

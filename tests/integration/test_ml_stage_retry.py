@@ -98,12 +98,14 @@ def test_ml_stage_retry_is_idempotent(
         spark,
         job_embeddings_df,
         training_ts,
+        **kwargs,
     ):
+        kwargs["k_values"] = (2,)
         return build_job_clusters(
             spark=spark,
             job_embeddings_df=job_embeddings_df,
             training_ts=training_ts,
-            k_values=(2,),
+            **kwargs,
         )
 
     monkeypatch.setattr(

@@ -13,6 +13,7 @@ from job_plat.context.contexts import (
     MLPipelineContext,
     SilverContext,
 )
+from job_plat.storage.paths import join_storage_path
 
 
 def build_bronze_context(
@@ -83,7 +84,20 @@ def build_ml_pipeline_context(
     config: EnvironmentConfig, spark: SparkSession, execution_date: datetime
 ) -> MLPipelineContext:
     feature_ctx = FeatureContext(
-        spark=spark, window_days=config.ml.window_days, execution_date=execution_date
+        spark=spark,
+        window_days=config.ml.window_days,
+        execution_date=execution_date,
+        embedding_model_name=config.ml.embedding_model_name,
+        embedding_model_version=config.ml.embedding_model_version,
+        embedding_model_provider=config.ml.embedding_model_provider,
+        embedding_batch_size=config.ml.embedding_batch_size,
+        max_driver_skills=config.ml.max_driver_skills,
+        job_embedding_aggregation=config.ml.job_embedding_aggregation,
+    )
+
+    artifact_root = config.paths.artifacts or join_storage_path(
+        config.paths.root,
+        "artifacts",
     )
 
     ml_ctx = MLContext(
@@ -91,6 +105,11 @@ def build_ml_pipeline_context(
         min_silhouette=config.ml.min_silhouette,
         spark=spark,
         execution_date=execution_date,
+        artifact_root=join_storage_path(artifact_root, "models", "job_clustering"),
+        model_version=config.ml.clustering_model_version,
+        k_values=tuple(config.ml.clustering_k_values),
+        seed=config.ml.clustering_seed,
+        promote_model=config.ml.promote_model,
     )
 
     return MLPipelineContext(

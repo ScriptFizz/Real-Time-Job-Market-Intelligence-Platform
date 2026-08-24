@@ -10,6 +10,7 @@ def build_job_embeddings(
     skill_embeddings_df: DataFrame,
     *,
     generated_at: datetime,
+    existing_embeddings_df: DataFrame | None = None,
     model_version: str = "v1",
     aggregation_method: str = "weighted_mean",
 ) -> DataFrame:
@@ -25,8 +26,17 @@ def build_job_embeddings(
         .select("skill_id", "embedding", "embedding_dim")
     )
 
+    candidate_facts = fact_job_skill_df
+    if existing_embeddings_df is not None:
+        existing_keys = (
+            existing_embeddings_df.filter(F.col("model_version") == model_version)
+            .select("job_id")
+            .distinct()
+        )
+        candidate_facts = candidate_facts.join(existing_keys, "job_id", "left_anti")
+
     # Join fact -> skill embeddings
-    joined = fact_job_skill_df.join(active_embedding, "skill_id").select(
+    joined = candidate_facts.join(active_embedding, "skill_id").select(
         "job_id", "skill_confidence", "embedding", "embedding_dim"
     )
 

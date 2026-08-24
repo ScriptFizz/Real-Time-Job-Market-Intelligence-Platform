@@ -16,7 +16,8 @@ from job_plat.pipeline.stages.ml.feature_stage import FeatureStage
 
 
 class FakeEncoder:
-    def encode(self, skills, show_progress_bar=True):
+    def encode(self, skills, batch_size=128, show_progress_bar=True):
+        del batch_size
         del show_progress_bar
         return np.ones((len(skills), 4))
 
@@ -94,10 +95,17 @@ def test_feature_stage_retry_is_idempotent(
         mode="overwrite",
     )
 
+    model_load_count = 0
+
+    def load_model(_model_name):
+        nonlocal model_load_count
+        model_load_count += 1
+        return FakeEncoder()
+
     monkeypatch.setattr(
         "job_plat.transformations.feature.embeddings."
         "build_skill_embeddings.SentenceTransformer",
-        lambda _model_name: FakeEncoder(),
+        load_model,
     )
 
     feature_ctx = FeatureContext(
@@ -135,6 +143,8 @@ def test_feature_stage_retry_is_idempotent(
         ),
     )
     retry_stage.execute()
+
+    assert model_load_count == 1
 
     retried_skill_embeddings = skill_embeddings.read_all(spark)
     retried_job_embeddings = job_embeddings.read_all(spark)

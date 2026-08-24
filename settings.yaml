@@ -10,6 +10,7 @@ environments:
     paths:
       root: ./data
       metadata: ./metadata
+      artifacts: ./artifacts
     bronze:
       connectors:
         - adzuna
@@ -29,6 +30,16 @@ environments:
       min_clusters: 3
       min_silhouette: 0.2
       window_days: 30
+      embedding_model_name: "all-MiniLM-L6-v2"
+      embedding_model_version: "v1"
+      embedding_model_provider: "sentence-transformers"
+      embedding_batch_size: 128
+      max_driver_skills: 50000
+      job_embedding_aggregation: "weighted_mean"
+      clustering_model_version: "v1"
+      clustering_k_values: [10, 15, 20, 25, 30]
+      clustering_seed: 42
+      promote_model: false
     logging_level: "DEBUG"
 
   prod:
@@ -42,6 +53,7 @@ environments:
     paths:
       root: gs://job-pipeline
       metadata: gs://job-pipeline/metadata
+      artifacts: gs://job-pipeline/artifacts
     bronze:
       connectors:
         - adzuna
@@ -60,4 +72,14 @@ environments:
       min_clusters: 3
       min_silhouette: 0.2
       window_days: 30
+      embedding_model_name: "all-MiniLM-L6-v2"
+      embedding_model_version: "v1"
+      embedding_model_provider: "sentence-transformers"
+      embedding_batch_size: 256
+      max_driver_skills: 100000
+      job_embedding_aggregation: "weighted_mean"
+      clustering_model_version: "v1"
+      clustering_k_values: [10, 15, 20, 25, 30]
+      clustering_seed: 42
+      promote_model: false
     logging_level: "INFO"

@@ -54,6 +54,12 @@ class GoldContext(SparkStageContext):
 @dataclass
 class FeatureContext(SparkStageContext):
     window_days: int
+    embedding_model_name: str = "all-MiniLM-L6-v2"
+    embedding_model_version: str = "v1"
+    embedding_model_provider: str = "sentence-transformers"
+    embedding_batch_size: int = 128
+    max_driver_skills: int = 50_000
+    job_embedding_aggregation: str = "weighted_mean"
 
 
 # ML CONTEXT
@@ -63,6 +69,11 @@ class FeatureContext(SparkStageContext):
 class MLContext(SparkStageContext):
     min_clusters: int
     min_silhouette: float
+    artifact_root: str | None = None
+    model_version: str = "v1"
+    k_values: tuple[int, ...] = (10, 15, 20, 25, 30)
+    seed: int = 42
+    promote_model: bool = False
 
 
 # DATA PIPELINE CONTEXT

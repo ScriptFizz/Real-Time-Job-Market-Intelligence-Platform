@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -12,6 +12,7 @@ def default_connectors() -> list[ConnectorName]:
 class PathsConfig(BaseModel):
     root: str
     metadata: str
+    artifacts: str | None = None
     # bronze: str
     # silver: str
     # gold_v1: str
@@ -50,6 +51,19 @@ class MLConfig(BaseModel):
     min_clusters: int
     min_silhouette: float
     window_days: int
+    embedding_model_name: str = "all-MiniLM-L6-v2"
+    embedding_model_version: str = "v1"
+    embedding_model_provider: str = "sentence-transformers"
+    embedding_batch_size: int = Field(default=128, gt=0)
+    max_driver_skills: int = Field(default=50_000, gt=0)
+    job_embedding_aggregation: Literal["weighted_mean"] = "weighted_mean"
+    clustering_model_version: str = "v1"
+    clustering_k_values: list[Annotated[int, Field(ge=2)]] = Field(
+        default_factory=lambda: [10, 15, 20, 25, 30],
+        min_length=1,
+    )
+    clustering_seed: int = 42
+    promote_model: bool = False
 
 
 class EnvironmentConfig(BaseModel):

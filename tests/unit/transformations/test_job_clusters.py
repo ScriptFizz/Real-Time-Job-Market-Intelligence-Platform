@@ -3,12 +3,15 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
+from pyspark.ml.clustering import KMeansModel
 from pyspark.sql import DataFrame
 
 from job_plat.transformations.ml.clusters.build_job_clusters import (
     build_job_clusters,
+    build_training_data_fingerprint,
     build_training_run_id,
     find_optimal_fit,
+    resolve_active_model_id,
 )
 
 
@@ -22,7 +25,7 @@ def test_find_optimal_fir_rejects_empty_candidates():
         find_optimal_fit(dataframe, [])
 
 
-def test_build_job_clusters_produces_expected_output(spark):
+def test_build_job_clusters_produces_expected_output(spark, tmp_path):
     embeddings = spark.createDataFrame(
         [
             ("job-1", [1.0, 0.0], 2),
@@ -42,6 +45,8 @@ def test_build_job_clusters_produces_expected_output(spark):
         job_embeddings_df=embeddings,
         k_values=(2,),
         training_ts=datetime(2025, 3, 2, tzinfo=UTC),
+        artifact_root=str(tmp_path / "models"),
+        promote_model=True,
     )
 
     assert membership.count() == 4
@@ -63,6 +68,10 @@ def test_build_job_clusters_produces_expected_output(spark):
     assert metadata_row is not None
     assert metadata_row.training_size == 4
     assert metadata_row.silhouette_score is not None
+    assert metadata_row.training_data_fingerprint
+    assert metadata_row.lifecycle_status == "promoted"
+    assert metadata_row.promoted_at is not None
+    KMeansModel.load(metadata_row.artifact_uri)
 
     model_ids = {
         row.model_id
@@ -76,9 +85,38 @@ def test_build_job_clusters_produces_expected_output(spark):
         training_ts=datetime(2025, 3, 2, tzinfo=UTC),
         k_values=(2,),
         seed=42,
+        training_data_fingerprint=build_training_data_fingerprint(embeddings),
     )
 
     assert model_ids == {expected_model_id}
+
+
+def test_training_fingerprint_changes_when_training_data_changes(spark):
+    first = spark.createDataFrame(
+        [("job-1", [1.0, 0.0], 2)],
+        ["job_id", "embedding_normalized", "embedding_dim"],
+    )
+    second = spark.createDataFrame(
+        [("job-1", [0.0, 1.0], 2)],
+        ["job_id", "embedding_normalized", "embedding_dim"],
+    )
+
+    assert build_training_data_fingerprint(first) != build_training_data_fingerprint(
+        second
+    )
+
+
+def test_active_model_is_latest_promoted_not_latest_candidate(spark):
+    metadata = spark.createDataFrame(
+        [
+            ("promoted-old", "promoted", datetime(2025, 3, 1, tzinfo=UTC)),
+            ("candidate", "candidate", None),
+            ("promoted-new", "promoted", datetime(2025, 3, 2, tzinfo=UTC)),
+        ],
+        "model_id string, lifecycle_status string, promoted_at timestamp",
+    )
+
+    assert resolve_active_model_id(metadata) == "promoted-new"
 
 
 def test_build_job_clusters_rejects_k_larger_than_training_set(spark):

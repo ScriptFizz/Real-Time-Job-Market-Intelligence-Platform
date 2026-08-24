@@ -6,6 +6,8 @@ from job_plat.pipeline.core.base_stage import (
 )
 from job_plat.pipeline.core.read_strategy import TimeWindowReadStrategy
 from job_plat.pipeline.datasets.dataset_definitions import (
+    FeatureJobEmbeddings,
+    FeatureSkillEmbeddings,
     GoldDimJobs,
     GoldDimSkills,
     GoldFactJobSkills,
@@ -23,6 +25,7 @@ from job_plat.utils.helpers import StageSkip
 
 class FeatureStage(BaseStage[FeatureContext, FeatureOutputs]):
     STAGE_NAME = "feature"
+    ALLOW_EMPTY_OUTPUTS = True
     INPUT_MAP = {
         "dim_jobs_df": GoldDimJobs,
         "dim_skills_df": GoldDimSkills,
@@ -64,17 +67,44 @@ class FeatureStage(BaseStage[FeatureContext, FeatureOutputs]):
             )
 
         self.logger.info("building_skill_embeddings")
+        skill_dataset = self.datasets.get(FeatureSkillEmbeddings)
+        existing_skill_embeddings = (
+            skill_dataset.read_all(self.spark)
+            if skill_dataset.storage.exists(skill_dataset.path)
+            else None
+        )
         skill_embeddings_df = build_skill_embeddings(
             dim_skills_df=dim_skills_df,
             spark=self.spark,
             generated_at=execution_date,
+            existing_embeddings_df=existing_skill_embeddings,
+            model_name=self.ctx.embedding_model_name,
+            model_version=self.ctx.embedding_model_version,
+            model_provider=self.ctx.embedding_model_provider,
+            batch_size=self.ctx.embedding_batch_size,
+            max_driver_skills=self.ctx.max_driver_skills,
         )
 
+        available_skill_embeddings = skill_embeddings_df
+        if existing_skill_embeddings is not None:
+            available_skill_embeddings = existing_skill_embeddings.unionByName(
+                skill_embeddings_df
+            )
+
         self.logger.info("building_job_embeddings")
+        job_dataset = self.datasets.get(FeatureJobEmbeddings)
+        existing_job_embeddings = (
+            job_dataset.read_all(self.spark)
+            if job_dataset.storage.exists(job_dataset.path)
+            else None
+        )
         job_embeddings_df = build_job_embeddings(
             fact_job_skill_df=fact_job_skill_df,
-            skill_embeddings_df=skill_embeddings_df,
+            skill_embeddings_df=available_skill_embeddings,
             generated_at=execution_date,
+            existing_embeddings_df=existing_job_embeddings,
+            model_version=self.ctx.embedding_model_version,
+            aggregation_method=self.ctx.job_embedding_aggregation,
         )
 
         return FeatureOutputs(
@@ -100,4 +130,4 @@ class FeatureStage(BaseStage[FeatureContext, FeatureOutputs]):
 
     def evaluate_metrics(self, metrics: dict) -> None:
         if metrics["jobs_embedded"] == 0:
-            self.logger.error("embedding_failure", extra={"issue": "no_jobs_embedded"})
+            self.logger.info("no_new_job_embeddings")
