@@ -268,9 +268,7 @@ def test_delta_merge_deduplicates_incoming_keys_deterministically(
     dataset.write(incoming)
     dataset.write(incoming.repartition(2))
 
-    rows = {
-        row.job_id: row.job_title for row in dataset.read_all(spark).collect()
-    }
+    rows = {row.job_id: row.job_title for row in dataset.read_all(spark).collect()}
 
     assert rows == {
         "job-1": "Zulu title",
@@ -339,9 +337,7 @@ def test_separate_key_updates_preserve_both_commits(spark, tmp_path):
     dataset.write(first)
     dataset.write(second)
 
-    rows = {
-        row.job_id: row.job_title for row in dataset.read_all(spark).collect()
-    }
+    rows = {row.job_id: row.job_title for row in dataset.read_all(spark).collect()}
     assert rows == {
         "job-1": "First title",
         "job-2": "Second title",

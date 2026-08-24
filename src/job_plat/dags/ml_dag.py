@@ -1,16 +1,16 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
-from airflow.decorators import dag, task
+from airflow.decorators import dag as airflow_dag, task
 from airflow.operators.python import get_current_context
 from airflow.sensors.external_task import ExternalTaskSensor
 
-from job_plat.dags.dag_helpers import run_command
+from job_plat.dags.dag_helpers import build_cli_command, run_command
 
 
-@dag(
+@airflow_dag(
     schedule="@weekly",
     params={"env": "dev"},
-    start_date=datetime(2024, 1, 1),
+    start_date=datetime(2024, 1, 1, tzinfo=UTC),
     catchup=False,
     default_args={
         "retries": 2,
@@ -29,36 +29,12 @@ def ml_dag():
     @task(execution_timeout=timedelta(minutes=30))
     def run_features():
         context = get_current_context()
-        execution_date = context["logical_date"].isoformat()
-        env = context["params"]["env"]
-        run_command(
-            [
-                "-m",
-                "job_plat.cli",
-                "feature",
-                "--execution-date",
-                execution_date,
-                "--env",
-                env,
-            ]
-        )
+        run_command(build_cli_command("feature", context))
 
     @task(execution_timeout=timedelta(minutes=30))
     def run_ml():
         context = get_current_context()
-        execution_date = context["logical_date"].isoformat()
-        env = context["params"]["env"]
-        run_command(
-            [
-                "-m",
-                "job_plat.cli",
-                "ml",
-                "--execution-date",
-                execution_date,
-                "--env",
-                env,
-            ]
-        )
+        run_command(build_cli_command("ml", context))
 
     wait_for_gold >> run_features() >> run_ml()
 

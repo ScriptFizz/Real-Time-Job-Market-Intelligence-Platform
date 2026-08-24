@@ -33,6 +33,7 @@ class BatchAlreadyRunningError(BatchAdmissionError):
 class BatchAlreadyCommittedError(BatchAdmissionError):
     pass
 
+
 LEDGER_SCHEMA = StructType(
     [
         StructField("stage_name", StringType(), nullable=False),
@@ -78,10 +79,7 @@ class ProcessingLedger:
         rows = (
             self.spark.read.format("delta")
             .load(self.path)
-            .filter(
-                (col("stage_name") == stage_name)
-                & (col("status") == "committed")
-            )
+            .filter((col("stage_name") == stage_name) & (col("status") == "committed"))
             .select("partition_date")
             .distinct()
             .collect()

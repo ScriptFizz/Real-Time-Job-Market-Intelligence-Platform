@@ -42,6 +42,12 @@ optional = true
 [tool.poetry.group.cloud.dependencies]
 google-cloud-storage = ">=3.0,<4.0"
 
+[tool.poetry.group.airflow]
+optional = true
+
+[tool.poetry.group.airflow.dependencies]
+apache-airflow = ">=2.10.5,<3.0.0"
+
 [tool.poetry.group.viz]
 optional = true
 

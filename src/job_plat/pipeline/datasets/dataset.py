@@ -94,9 +94,7 @@ class Dataset:
                 )
 
             if self.file_format == "delta":
-                return self.read_all(spark).filter(
-                    col(partition_col).isin(partitions)
-                )
+                return self.read_all(spark).filter(col(partition_col).isin(partitions))
 
             if self.file_format == "jsonl":
                 return self.storage.read_jsonl(
@@ -192,9 +190,7 @@ class Dataset:
             )
 
         if self.file_format != "delta":
-            raise ValueError(
-                f"Dataset {self.name} supports merge mode only for Delta"
-            )
+            raise ValueError(f"Dataset {self.name} supports merge mode only for Delta")
 
         if not self.merge_keys:
             raise ValueError(f"Dataset {self.name} requires merge keys")
@@ -279,9 +275,7 @@ class Dataset:
                 order_columns.append(ordering.desc_nulls_last())
 
         tie_breaker_columns = sorted(
-            set(incoming.columns)
-            - set(self.merge_keys)
-            - {self.merge_order_column}
+            set(incoming.columns) - set(self.merge_keys) - {self.merge_order_column}
         )
         order_columns.extend(
             col(column_name).cast("string").desc_nulls_last()

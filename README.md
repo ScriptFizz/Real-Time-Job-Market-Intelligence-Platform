@@ -237,6 +237,12 @@ my_project/
 poetry install
 ```
 
+Install the optional Airflow runtime when developing or validating DAGs:
+
+```bash
+poetry install --with airflow
+```
+
 ### Running the data pipeline 
 
 ```bash

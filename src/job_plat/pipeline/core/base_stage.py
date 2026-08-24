@@ -175,7 +175,9 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
             return
 
         if attempt is None:
-            raise RuntimeError("Cannot acknowledge a partition batch without an attempt")
+            raise RuntimeError(
+                "Cannot acknowledge a partition batch without an attempt"
+            )
 
         self.partition_manager.mark_processed(attempt)
 
