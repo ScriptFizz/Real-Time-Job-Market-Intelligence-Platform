@@ -2,6 +2,7 @@ from datetime import datetime
 from functools import reduce
 from pathlib import Path
 
+from delta import configure_spark_with_delta_pip
 from pyspark.sql import DataFrame, SparkSession
 
 from job_plat.config.env_config import SparkConfig
@@ -26,14 +27,23 @@ def create_spark(spark_config: SparkConfig) -> SparkSession:
         (SparkSession): Entry point to programming Spark.
     """
 
-    builder = SparkSession.builder.appName(spark_config.app_name).master(
-        spark_config.master
+    builder = (
+        SparkSession.builder.appName(spark_config.app_name)
+        .master(spark_config.master)
+        .config(
+            "spark.sql.extensions",
+            "io.delta.sql.DeltaSparkSessionExtension",
+        )
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        )
     )
 
     for key, value in spark_config.config.items():
         builder = builder.config(key, value)
 
-    return builder.getOrCreate()
+    return configure_spark_with_delta_pip(builder).getOrCreate()
 
 
 def union_all(dfs: list[DataFrame]) -> DataFrame:

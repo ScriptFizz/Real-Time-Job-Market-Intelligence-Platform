@@ -28,10 +28,12 @@ def test_silver_stage_runs(
     stage.execute()
 
     silver_jobs = dataset_registry.get(SilverJobs)
-    silver_jobs_df = spark.read.parquet(str(silver_jobs.path))
+    silver_jobs_df = spark.read.format("delta").load(str(silver_jobs.path))
 
     silver_job_skills = dataset_registry.get(SilverJobSkills)
-    silver_job_skills_df = spark.read.parquet(str(silver_job_skills.path))
+    silver_job_skills_df = spark.read.format("delta").load(
+        str(silver_job_skills.path)
+    )
 
     assert silver_jobs_df.count() > 0
     assert silver_job_skills_df.count() > 0
@@ -52,8 +54,10 @@ def test_silver_stage_runs(
     )
     retry_stage.execute()
 
-    retried_jobs_df = spark.read.parquet(str(silver_jobs.path))
-    retried_skills_df = spark.read.parquet(str(silver_job_skills.path))
+    retried_jobs_df = spark.read.format("delta").load(str(silver_jobs.path))
+    retried_skills_df = spark.read.format("delta").load(
+        str(silver_job_skills.path)
+    )
 
     assert retried_jobs_df.count() == first_jobs_count
     assert retried_skills_df.count() == first_skills_count

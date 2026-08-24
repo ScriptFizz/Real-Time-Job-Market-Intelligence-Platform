@@ -35,7 +35,7 @@ def silver_jobs_dataset(tmp_path, storage):
         path=tmp_path / "silver/jobs",
         storage=storage,
         partition_columns=["ingestion_date"],
-        file_format="parquet",
+        file_format="delta",
     )
 
 
@@ -46,7 +46,7 @@ def silver_job_skills_dataset(tmp_path, storage):
         path=tmp_path / "silver/job_skills",
         storage=storage,
         partition_columns=["ingestion_date"],
-        file_format="parquet",
+        file_format="delta",
     )
 
 
@@ -57,5 +57,5 @@ def gold_dim_skills(tmp_path, storage):
         path=tmp_path / "gold/dim_skills",
         storage=storage,
         partition_columns=[],
-        file_format="parquet",
+        file_format="delta",
     )

@@ -1,10 +1,17 @@
 import pytest
-from pyspark.sql import SparkSession
+
+from job_plat.config.env_config import SparkConfig
+from job_plat.utils.helpers import create_spark
 
 
 @pytest.fixture(scope="session")
 def spark():
-    spark = SparkSession.builder.master("local[*]").appName("test").getOrCreate()
+    spark = create_spark(
+        SparkConfig(
+            app_name="test",
+            master="local[*]",
+        )
+    )
     yield spark
     spark.stop()
 

@@ -51,7 +51,7 @@ def test_registry_builds_dataset_from_definition(tmp_path, storage):
 
     assert dataset.name == "example_jobs"
     assert dataset.partition_columns == ["ingestion_date"]
-    assert dataset.file_format == "parquet"
+    assert dataset.file_format == "delta"
 
 
 def test_feature_embeddings_use_versioned_merge_identity():

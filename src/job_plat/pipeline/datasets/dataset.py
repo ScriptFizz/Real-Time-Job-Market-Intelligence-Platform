@@ -1,12 +1,15 @@
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Literal
 
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql.functions import col, lit, row_number, to_date
 
-from job_plat.pipeline.datasets.dataset_definitions import MergeOrder, WriteMode
+from job_plat.pipeline.datasets.dataset_definitions import (
+    FileFormat,
+    MergeOrder,
+    WriteMode,
+)
 from job_plat.storage.storages import Storage
 
 
@@ -18,7 +21,7 @@ class Dataset:
     partition_columns: list[str] = field(default_factory=lambda: ["ingestion_date"])
     time_window_column: str | None = field(default_factory=lambda: None)
     write_mode: WriteMode = "append"
-    file_format: Literal["parquet", "jsonl"] = "parquet"
+    file_format: FileFormat = "parquet"
     merge_keys: tuple[str, ...] = ()
     merge_order_column: str | None = None
     merge_order: MergeOrder = "desc"
@@ -35,6 +38,9 @@ class Dataset:
                 base_path=base_path,
                 paths=[base_path],
             )
+
+        if self.file_format == "delta":
+            return spark.read.format("delta").load(base_path)
 
         if self.file_format == "jsonl":
             return self.storage.read_jsonl(
@@ -83,6 +89,11 @@ class Dataset:
             if self.file_format == "parquet":
                 return self.storage.read_parquet(
                     spark=spark, base_path=base_path, paths=paths
+                )
+
+            if self.file_format == "delta":
+                return self.read_all(spark).filter(
+                    col(partition_col).isin(partitions)
                 )
 
             if self.file_format == "jsonl":
@@ -138,7 +149,17 @@ class Dataset:
         else:
             storage_mode = actual_mode
 
-        if self.file_format == "parquet":
+        if self.file_format == "delta":
+            writer = df.write.format("delta").mode(storage_mode)
+
+            if dynamic_partition_overwrite:
+                writer = writer.option("partitionOverwriteMode", "dynamic")
+
+            if partition_cols:
+                writer = writer.partitionBy(*partition_cols)
+
+            writer.save(str(self.path))
+        elif self.file_format == "parquet":
             self.storage.write_parquet(
                 df=df,
                 path=str(self.path),
@@ -166,9 +187,9 @@ class Dataset:
                 f"Dataset {self.name} cannot use merge mode because it is partitioned"
             )
 
-        if self.file_format != "parquet":
+        if self.file_format not in {"delta", "parquet"}:
             raise ValueError(
-                f"Dataset {self.name} supports merge mode only for Parquet"
+                f"Dataset {self.name} supports merge mode only for Delta or Parquet"
             )
 
         if not self.merge_keys:
@@ -191,12 +212,7 @@ class Dataset:
             )
 
         if not self.storage.exists(str(self.path)):
-            self.storage.write_parquet(
-                df=incoming,
-                path=str(self.path),
-                mode="overwrite",
-                partition_cols=None,
-            )
+            self._write_merged_table(incoming)
             return
 
         existing = self.read_all(spark=incoming.sparkSession)
@@ -241,14 +257,23 @@ class Dataset:
         materialized = merged.localCheckpoint(eager=True)
 
         try:
-            self.storage.write_parquet(
-                df=materialized,
-                path=str(self.path),
-                mode="overwrite",
-                partition_cols=None,
-            )
+            self._write_merged_table(materialized)
         finally:
             materialized.unpersist()
+
+    def _write_merged_table(self, dataframe: DataFrame) -> None:
+        if self.file_format == "delta":
+            dataframe.write.format("delta").mode("overwrite").save(
+                str(self.path)
+            )
+            return
+
+        self.storage.write_parquet(
+            df=dataframe,
+            path=str(self.path),
+            mode="overwrite",
+            partition_cols=None,
+        )
 
     def _validate_output_partitions(
         self,

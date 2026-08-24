@@ -8,6 +8,7 @@ WriteMode = Literal[
 ]
 
 MergeOrder = Literal["asc", "desc"]
+FileFormat = Literal["delta", "jsonl", "parquet"]
 
 
 class DatasetDef:
@@ -17,7 +18,7 @@ class DatasetDef:
     PARTITION_COLUMNS: list[str] = ["ingestion_date"]
     TIME_WINDOW_COLUMN: str | None = None
     WRITE_MODE: WriteMode = "append"
-    FILE_FORMAT: Literal["parquet", "jsonl"] = "parquet"
+    FILE_FORMAT: FileFormat = "delta"
     MERGE_KEYS: tuple[str, ...] = ()
     MERGE_ORDER_COLUMN: str | None = None
     MERGE_ORDER: MergeOrder = "desc"

@@ -31,9 +31,13 @@ def test_gold_stage_runs(
     gold_dim_skills = dataset_registry.get(GoldDimSkills)
     gold_fact_job_skills = dataset_registry.get(GoldFactJobSkills)
 
-    gold_dim_jobs_df = spark.read.parquet(str(gold_dim_jobs.path))
-    gold_dim_skills_df = spark.read.parquet(str(gold_dim_skills.path))
-    gold_fact_job_skills_df = spark.read.parquet(str(gold_fact_job_skills.path))
+    gold_dim_jobs_df = spark.read.format("delta").load(str(gold_dim_jobs.path))
+    gold_dim_skills_df = spark.read.format("delta").load(
+        str(gold_dim_skills.path)
+    )
+    gold_fact_job_skills_df = spark.read.format("delta").load(
+        str(gold_fact_job_skills.path)
+    )
 
     first_jobs_count = gold_dim_jobs_df.count()
     first_skills_count = gold_dim_skills_df.count()
@@ -53,9 +57,13 @@ def test_gold_stage_runs(
     )
     retry_stage.execute()
 
-    retried_jobs_df = spark.read.parquet(str(gold_dim_jobs.path))
-    retried_skills_df = spark.read.parquet(str(gold_dim_skills.path))
-    retried_fact_df = spark.read.parquet(str(gold_fact_job_skills.path))
+    retried_jobs_df = spark.read.format("delta").load(str(gold_dim_jobs.path))
+    retried_skills_df = spark.read.format("delta").load(
+        str(gold_dim_skills.path)
+    )
+    retried_fact_df = spark.read.format("delta").load(
+        str(gold_fact_job_skills.path)
+    )
 
     assert retried_jobs_df.count() == first_jobs_count
     assert retried_skills_df.count() == first_skills_count

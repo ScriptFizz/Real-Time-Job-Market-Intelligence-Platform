@@ -27,7 +27,7 @@ class DatasetRegistry:
                 ),
                 time_window_column=getattr(dataset_def, "TIME_WINDOW_COLUMN", ""),
                 write_mode=getattr(dataset_def, "WRITE_MODE", "append"),
-                file_format=getattr(dataset_def, "FILE_FORMAT", "parquet"),
+                file_format=getattr(dataset_def, "FILE_FORMAT", "delta"),
                 merge_keys=dataset_def.MERGE_KEYS,
                 merge_order_column=dataset_def.MERGE_ORDER_COLUMN,
                 merge_order=dataset_def.MERGE_ORDER,

@@ -6,6 +6,23 @@ from job_plat.pipeline.datasets.dataset import Dataset
 from job_plat.storage.storages import LocalStorage
 
 
+def test_delta_dataset_round_trip_creates_transaction_log(spark, tmp_path):
+    table_path = tmp_path / "delta-jobs"
+    dataset = Dataset(
+        name="delta_jobs",
+        path=str(table_path),
+        storage=LocalStorage(),
+        partition_columns=[],
+        file_format="delta",
+    )
+    source = spark.createDataFrame([(1, "data engineer")], ["job_id", "title"])
+
+    dataset.write(source)
+
+    assert dataset.read_all(spark).collect() == source.collect()
+    assert (table_path / "_delta_log").is_dir()
+
+
 def test_list_partitions(spark, tmp_path):
     storage = LocalStorage()
 

@@ -21,6 +21,7 @@ scikit-learn = ">=1.4,<2.0"
 sentence-transformers = "^5.2.3"
 torch = { version = "2.10.0+cpu", source = "pytorch-cpu" }
 typer = ">=0.20.0,<0.21.0"
+delta-spark = ">=3.3.0,<3.4.0"
 
 [tool.poetry.group.dev]
 optional = true
