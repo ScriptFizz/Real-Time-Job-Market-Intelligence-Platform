@@ -1,10 +1,13 @@
-# de-project-template documentation!
+# Job Market Intelligence Platform
 
-## Description
+This documentation explains the operational contracts behind the portfolio
+project: transactional datasets, deterministic retries, model lifecycle,
+observability, and the boundary between the reproducible local runtime and a
+real cloud deployment.
 
-A short description of the project.
+Start with:
 
-## Commands
-
-The Makefile contains the central entry points for common tasks related to this project.
-
+- [Getting started](getting-started.md)
+- [Architecture and operational guarantees](../architecture.md)
+- [Reproducible local stack](../local-stack.md)
+- [ADR 0001: Delta Lake](../adr/0001-delta-lake-table-format.md)

@@ -10,18 +10,36 @@ environments:
     paths:
       root: ./data
       metadata: ./metadata
+      artifacts: ./artifacts
     bronze:
+      connectors:
+        - adzuna
       query: "data engineer"
       country: "us"
       location: "Chicago"
       max_pages: 5
       min_interval_seconds: 2.5
+      connect_timeout_seconds: 5
+      read_timeout_seconds: 30
+      retry_total: 3
+      retry_backoff_factor: 0.5
+      retry_backoff_jitter: 0.1
     gold:
       fact_per_job_ratio_threshold: 20
     ml:
       min_clusters: 3
       min_silhouette: 0.2
       window_days: 30
+      embedding_model_name: "all-MiniLM-L6-v2"
+      embedding_model_version: "v1"
+      embedding_model_provider: "sentence-transformers"
+      embedding_batch_size: 128
+      max_driver_skills: 50000
+      job_embedding_aggregation: "weighted_mean"
+      clustering_model_version: "v1"
+      clustering_k_values: [10, 15, 20, 25, 30]
+      clustering_seed: 42
+      promote_model: false
     logging_level: "DEBUG"
 
   prod:
@@ -35,14 +53,33 @@ environments:
     paths:
       root: gs://job-pipeline
       metadata: gs://job-pipeline/metadata
+      artifacts: gs://job-pipeline/artifacts
     bronze:
+      connectors:
+        - adzuna
       query: "data engineer"
+      country: "gb"
       location: "London"
       max_pages: 5
+      connect_timeout_seconds: 5
+      read_timeout_seconds: 30
+      retry_total: 3
+      retry_backoff_factor: 0.5
+      retry_backoff_jitter: 0.1
     gold:
       fact_per_job_ratio_threshold: 20
     ml:
       min_clusters: 3
       min_silhouette: 0.2
       window_days: 30
+      embedding_model_name: "all-MiniLM-L6-v2"
+      embedding_model_version: "v1"
+      embedding_model_provider: "sentence-transformers"
+      embedding_batch_size: 256
+      max_driver_skills: 100000
+      job_embedding_aggregation: "weighted_mean"
+      clustering_model_version: "v1"
+      clustering_k_values: [10, 15, 20, 25, 30]
+      clustering_seed: 42
+      promote_model: false
     logging_level: "INFO"

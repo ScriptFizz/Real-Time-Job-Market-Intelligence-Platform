@@ -24,7 +24,7 @@ init:
 	pyenv install -s $(PYTHON_VERSION)
 	pyenv local $(PYTHON_VERSION)
 	poetry env use $$(pyenv which python)
-	poetry install --with viz
+	poetry install --with dev
 	@if [ -d .git ]; then \
 		poetry run pre-commit install; \
 	else \
@@ -64,6 +64,14 @@ format:
 .PHONY: test
 test:
 	poetry run pytest tests
+
+.PHONY: coverage
+coverage:
+	poetry run pytest -p no:cacheprovider --cov=job_plat --cov-report=term-missing --cov-report=html
+
+.PHONY: docker-build
+docker-build:
+	docker compose build
 
 
 

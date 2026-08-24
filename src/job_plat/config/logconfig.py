@@ -3,15 +3,16 @@ import logging.config
 import sys
 from pathlib import Path
 
+
 def setup_logging(log_level=logging.INFO):
     """
     Define logging configurations for applications.
     """
-    
+
     project_root = Path(__file__).resolve().parents[3]
     logs_dir = project_root / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
-    
+
     logging_config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -26,7 +27,7 @@ def setup_logging(log_level=logging.INFO):
             "console": {
                 "class": "logging.StreamHandler",
                 "stream": sys.stdout,
-                "formatter": "minimal",
+                "formatter": "json",
                 "level": log_level,
             },
             "info": {
@@ -52,14 +53,25 @@ def setup_logging(log_level=logging.INFO):
             "propagate": True,
         },
     }
-    
+
     logging.config.dictConfig(logging_config)
 
 
 class ContextLogger(logging.LoggerAdapter):
+    def __init__(
+        self,
+        logger: logging.Logger,
+        extra: dict[str, object],
+    ):
+        self.context = extra
+        super().__init__(logger, extra)
+
+    def bind(self, **values: object) -> None:
+        self.context.update(values)
+        self.extra = self.context
+
     def process(self, msg, kwargs):
-        extra = kwargs.get("extra", {})
-        merged_extra = {**self.extra, **extra}
+        extra = kwargs.get("extra", {}) or {}
+        merged_extra = {**self.context, **extra}
         kwargs["extra"] = merged_extra
         return msg, kwargs
-

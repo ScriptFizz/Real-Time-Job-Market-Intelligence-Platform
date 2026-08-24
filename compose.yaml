@@ -1,0 +1,16 @@
+services:
+  job-platform:
+    build:
+      context: .
+    image: job-market-platform:local
+    environment:
+      SPARK_LOCAL_IP: 127.0.0.1
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/workspace/data
+      - ./metadata:/workspace/metadata
+      - ./artifacts:/workspace/artifacts
+      - ./logs:/workspace/logs
+    command: ["--help"]

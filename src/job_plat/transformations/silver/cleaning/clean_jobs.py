@@ -1,23 +1,20 @@
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.window import Window
+import logging
+
+from pyspark.sql import DataFrame
 from pyspark.sql.functions import (
+    coalesce,
     col,
-    when,
-    trim,
+    concat_ws,
+    desc,
+    expr,
+    lit,
     lower,
     regexp_replace,
-    to_timestamp,
-    lit,
-    sha2,
-    concat_ws,
     row_number,
-    coalesce,
-    desc, 
-    expr
+    sha2,
+    trim,
 )
-from pyspark.sql.types import StringType
-from pathlib import Path
-import logging
+from pyspark.sql.window import Window
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +22,10 @@ logger = logging.getLogger(__name__)
 def clean_jobs(df: DataFrame) -> DataFrame:
     """
     Clean and normalize Bronze job data into a Silver-layer schema.
-    
+
     Args:
       df (DataFrame): Spark DataFrame of the Bronze layer data.
-    
+
     Returns:
       (DataFrame): Cleaned and normalized Spark DataFrame (Silver candidate).
     """
@@ -39,18 +36,15 @@ def clean_jobs(df: DataFrame) -> DataFrame:
         .filter(col("description_raw").isNotNull())
         .filter(trim(col("job_title_raw")) != "")
         .filter(trim(col("description_raw")) != "")
-        
         # Normalize text
         .withColumn("job_title", lower(trim(col("job_title_raw"))))
         .withColumn("company", trim(col("company_raw")))
         .withColumn("location", trim(col("location_raw")))
-        
         # Clean description text
         .withColumn(
             "description",
-            lower(trim(regexp_replace(col("description_raw"), r"\s+", " ")))
+            lower(trim(regexp_replace(col("description_raw"), r"\s+", " "))),
         )
-        
         # Standardize timestamp
         .withColumn(
             "ingested_at",
@@ -60,7 +54,7 @@ def clean_jobs(df: DataFrame) -> DataFrame:
                     try_to_timestamp(ingested_at, "yyyy-MM-dd'T'HH:mm:ssXXX"),
                     try_to_timestamp(ingested_at)
                     )
-        """)
+        """),
         )
         .withColumn(
             "posted_at",
@@ -70,7 +64,7 @@ def clean_jobs(df: DataFrame) -> DataFrame:
                     try_to_timestamp(posted_at_raw, "yyyy-MM-dd'T'HH:mm:ssXXX"),
                     try_to_timestamp(posted_at_raw)
                     )
-        """)
+        """),
         )
         # Unified schema
         .select(
@@ -83,9 +77,10 @@ def clean_jobs(df: DataFrame) -> DataFrame:
             col("url"),
             col("ingested_at"),
             col("ingestion_date"),
-            col("posted_at")
+            col("posted_at"),
         )
     )
+
 
 def deduplicate_jobs(df: DataFrame) -> DataFrame:
     """
@@ -98,70 +93,43 @@ def deduplicate_jobs(df: DataFrame) -> DataFrame:
         DataFrame: Deduplicated Spark DataFrame (Silver layer).
     """
     df_valid = df.filter(col("job_id").isNotNull())
-    
+
     # If the same job appears multiple times, keep the most recent ingestion
-    window_spec = (
-        Window
-        .partitionBy("source", "job_id")
-        .orderBy(desc("ingested_at"))
-    )
-    
-    df_ranked = df_valid.withColumn(
-        "row_num",
-        row_number().over(window_spec)
-    )
-    
-    df_dedup = (
-        df_ranked
-        .filter(col("row_num") == 1)
-        .drop("row_num")
-    )
-    
+    window_spec = Window.partitionBy("source", "job_id").orderBy(desc("ingested_at"))
+
+    df_ranked = df_valid.withColumn("row_num", row_number().over(window_spec))
+
+    df_dedup = df_ranked.filter(col("row_num") == 1).drop("row_num")
+
     return df_dedup
 
 
-
 def robust_deduplicate_jobs(df: DataFrame) -> DataFrame:
-
     fallback_key = sha2(
         concat_ws(
-                    "||",
-                    lower(coalesce(col("source"), lit(""))),
-                    lower(coalesce(col("job_title"), lit(""))),
-                    lower(coalesce(col("company"), lit(""))),
-                    lower(coalesce(col("location"), lit(""))),
-                    lower(coalesce(col("url"), lit("")))
-                    
-                ),
-                256
-            )
-    
+            "||",
+            lower(coalesce(col("source"), lit(""))),
+            lower(coalesce(col("job_title"), lit(""))),
+            lower(coalesce(col("company"), lit(""))),
+            lower(coalesce(col("location"), lit(""))),
+            lower(coalesce(col("url"), lit(""))),
+        ),
+        256,
+    )
+
     dedup_key = sha2(
         concat_ws(
             "||",
             lower(coalesce(col("source"), lit(""))),
-            coalesce(col("job_id"), fallback_key)
+            coalesce(col("job_id"), fallback_key),
         ),
-        256
+        256,
     )
-    
+
     df_with_key = df.withColumn("dedup_key", dedup_key)
 
-    window_spec = (
-        Window
-        .partitionBy("dedup_key")
-        .orderBy(desc("ingested_at"))
-    )
+    window_spec = Window.partitionBy("dedup_key").orderBy(desc("ingested_at"))
 
-    df_ranked = df_with_key.withColumn(
-        "row_num",
-        row_number().over(window_spec)
-    )
+    df_ranked = df_with_key.withColumn("row_num", row_number().over(window_spec))
 
-    return (
-        df_ranked
-        .filter(col("row_num") == 1)
-        .drop("row_num", "dedup_key")
-    )
-
-
+    return df_ranked.filter(col("row_num") == 1).drop("row_num", "dedup_key")

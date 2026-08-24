@@ -1,16 +1,10 @@
 from dataclasses import dataclass
 from datetime import datetime
-import uuid
-import json
-from pathlib import Path
-from job_plat.context.contexts import StageExecutionContext
+from typing import Any
 
-# @dataclass(kw_only=True)
-# class StageExecutionContext:
-    # stage: str
-    # pipeline_version: str
-    # run_id: str = str(uuid.uuid4())
-    # started_at: datetime = datetime.utcnow()
+from job_plat.context.contexts import StageExecutionContext
+from job_plat.storage.paths import join_storage_path
+from job_plat.storage.storages import Storage
 
 
 @dataclass(kw_only=True)
@@ -20,27 +14,54 @@ class IngestionRun(StageExecutionContext):
     query: str
     country: str
     location: str
+    execution_date: datetime
 
 
-def write_metadata(
-    path: Path, 
-    run: IngestionRun, 
+def build_ingestion_metadata(
+    *,
+    run: IngestionRun,
     row_count: int,
-    filename: str = "_metadata.json"
-    ):
-    
-    metadata = {
+    schema_error_count: int = 0,
+) -> dict[str, Any]:
+    if row_count < 0:
+        raise ValueError("row_count must not be negative")
+    if schema_error_count < 0:
+        raise ValueError("schema_error_count must not be negative")
+
+    return {
         "run_id": run.run_id,
         "source": run.source,
         "query": run.query,
+        "country": run.country,
         "location": run.location,
+        "execution_date": run.execution_date.isoformat(),
+        "ingestion_date": run.execution_date.date().isoformat(),
         "started_at": run.started_at.isoformat(),
         "pipeline_version": run.pipeline_version,
         "row_count": row_count,
+        "schema_error_count": schema_error_count,
     }
-    
-    path.mkdir(parents=True, exist_ok=True)
-    
-    with open(path / filename, "w") as f:
-        json.dump(metadata, f, indent=2)
 
+
+def write_metadata(
+    *,
+    storage: Storage,
+    path: str,
+    run: IngestionRun,
+    row_count: int,
+    schema_error_count: int = 0,
+    filename: str = "_metadata.json",
+) -> None:
+    metadata_path = join_storage_path(
+        path,
+        filename,
+    )
+
+    storage.write_json(
+        build_ingestion_metadata(
+            run=run,
+            row_count=row_count,
+            schema_error_count=schema_error_count,
+        ),
+        metadata_path,
+    )
