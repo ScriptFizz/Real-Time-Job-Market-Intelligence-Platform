@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+from fixtures.storage_contract import assert_storage_discovery_contract
 
 from job_plat.pipeline.datasets.dataset import Dataset
 from job_plat.storage import storages
@@ -33,6 +34,42 @@ def test_local_storage_list_dirs_returns_materialized_strings(tmp_path):
 
     assert results == [str(first), str(second)]
     assert all(isinstance(result, str) for result in results)
+
+
+def test_local_storage_list_dirs_excludes_files(tmp_path):
+    directory = tmp_path / "ingestion_date=2025-03-01"
+    matching_file = tmp_path / "ingestion_date=not-a-directory"
+
+    directory.mkdir()
+    matching_file.write_text("data", encoding="utf-8")
+
+    assert LocalStorage().list_dirs(
+        path=str(tmp_path),
+        pattern="ingestion_date=*",
+    ) == [str(directory)]
+
+
+def test_local_storage_list_dirs_is_sorted(tmp_path):
+    later = tmp_path / "ingestion_date=2025-03-02"
+    earlier = tmp_path / "ingestion_date=2025-03-01"
+
+    later.mkdir()
+    earlier.mkdir()
+
+    assert LocalStorage().list_dirs(
+        path=str(tmp_path),
+        pattern="ingestion_date=*",
+    ) == [
+        str(earlier),
+        str(later),
+    ]
+
+
+def test_local_storage_satisfies_discovery_contract(tmp_path):
+    assert_storage_discovery_contract(
+        storage=LocalStorage(),
+        root=str(tmp_path / "bronze" / "jobs"),
+    )
 
 
 def test_local_storage_exists(tmp_path):

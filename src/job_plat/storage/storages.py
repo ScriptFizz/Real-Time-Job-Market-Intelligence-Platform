@@ -2,6 +2,7 @@ import json
 import shutil
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from fnmatch import fnmatchcase
 from importlib import import_module
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -57,10 +58,18 @@ class Storage(ABC):
 
     @abstractmethod
     def list_dirs(self, path: str, pattern: str) -> list[str]:
+        """
+        Return sorted, unique, immediate child directories whose
+        names match pattern.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def exists(self, path: str) -> bool:
+        """
+        Return whether path identifies an existing object or a
+        non-empty dataset prefix.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -153,7 +162,13 @@ class LocalStorage(Storage):
         writer.json(path)
 
     def list_dirs(self, path: str, pattern: str) -> list[str]:
-        return [str(candidate) for candidate in Path(path).glob(pattern)]
+        return sorted(
+            {
+                str(candidate)
+                for candidate in Path(path).glob(pattern)
+                if candidate.is_dir()
+            }
+        )
 
     def exists(self, path: str) -> bool:
         return Path(path).exists()
@@ -212,6 +227,22 @@ class GCStorage(Storage):
                 "Install it with `poetry install --with cloud`."
             ) from exc
         self.client = storage_module.Client()
+
+    @staticmethod
+    def _split_gcs_path(path: str) -> tuple[str, str]:
+        if not path.startswith("gs://"):
+            raise ValueError("GCStorage requires gs:// path")
+
+        _, rest = path.split("gs://", 1)
+        bucket_name, separator, object_path = rest.partition("/")
+
+        if not bucket_name:
+            raise ValueError("GCS path must include a bucket")
+
+        if not separator or not object_path.strip("/"):
+            raise ValueError("GCS path must include a bucket and object path")
+
+        return bucket_name, object_path.strip("/")
 
     def read_parquet(
         self, spark: SparkSession, base_path: str, paths: list[str]
@@ -274,12 +305,7 @@ class GCStorage(Storage):
         writer.json(path)
 
     def write_jsonl(self, records: Iterable[dict[str, Any]], path: str) -> int:
-        if not path.startswith("gs://"):
-            raise ValueError("GCStorage requires gs:// path")
-
-        _, rest = path.split("gs://", 1)
-        bucket_name, blob_path = rest.split("/", 1)
-
+        bucket_name, blob_path = self._split_gcs_path(path)
         bucket = self.client.bucket(bucket_name)
         blob = bucket.blob(blob_path)
 
@@ -295,38 +321,37 @@ class GCStorage(Storage):
         return count
 
     def list_dirs(self, path: str, pattern: str) -> list[str]:
-        if not path.startswith("gs://"):
-            raise ValueError("GCStorage requires gs:// path")
-
-        _, rest = path.split("gs://", 1)
-        bucket_name, prefix = rest.split("/", 1)
-
+        bucket_name, object_path = self._split_gcs_path(path)
         bucket = self.client.bucket(bucket_name)
+        parent_prefix = object_path.rstrip("/") + "/"
 
-        blobs = self.client.list_blobs(bucket, prefix=prefix)
+        blob_iterator = self.client.list_blobs(
+            bucket,
+            prefix=parent_prefix,
+            delimiter="/",
+        )
 
-        results = []
+        matching_prefixes: set[str] = set()
 
-        for blob in blobs:
-            blob_path = Path(blob.name)
+        for page in blob_iterator.pages:
+            for child_prefix in page.prefixes:
+                normalized_prefix = child_prefix.rstrip("/")
+                child_name = normalized_prefix.rsplit("/", 1)[-1]
 
-            if blob_path.match(pattern):
-                results.append(f"gs://{bucket_name}/{blob.name}")
+                if fnmatchcase(child_name, pattern):
+                    matching_prefixes.add(f"gs://{bucket_name}/{normalized_prefix}")
 
-        return results
+        return sorted(matching_prefixes)
 
     def exists(self, path: str) -> bool:
-        if not path.startswith("gs://"):
-            raise ValueError("GCStorage requires gs:// path")
-
-        _, rest = path.split("gs://", 1)
-        bucket_name, separator, prefix = rest.partition("/")
-
-        if not separator or not prefix:
-            raise ValueError("GCS path must include a bucket and object prefix")
-
+        bucket_name, object_path = self._split_gcs_path(path)
         bucket = self.client.bucket(bucket_name)
-        normalized_prefix = prefix.rstrip("/") + "/"
+        exact_blob = bucket.blob(object_path)
+
+        if exact_blob.exists(client=self.client):
+            return True
+
+        normalized_prefix = object_path.rstrip("/") + "/"
 
         blobs = self.client.list_blobs(
             bucket,
@@ -337,15 +362,7 @@ class GCStorage(Storage):
         return next(iter(blobs), None) is not None
 
     def _resolve_blob(self, path: str):
-        if not path.startswith("gs://"):
-            raise ValueError("GCStorage requires gs:// path")
-
-        _, rest = path.split("gs://", 1)
-        bucket_name, separator, blob_path = rest.partition("/")
-
-        if not bucket_name or not separator or not blob_path:
-            raise ValueError("GCS path must include a bucket and object path")
-
+        bucket_name, blob_path = self._split_gcs_path(path)
         bucket = self.client.bucket(bucket_name)
         return bucket.blob(blob_path)
 
