@@ -1,5 +1,4 @@
 from collections.abc import Iterator
-from pathlib import Path
 
 from job_plat.config.logconfig import ContextLogger
 from job_plat.context.contexts import BronzeContext
@@ -7,6 +6,7 @@ from job_plat.ingestion.connectors import JobConnector
 from job_plat.ingestion.metadata import IngestionRun, write_metadata
 from job_plat.ingestion.search_criteria import JobSearchCriteria
 from job_plat.pipeline.core.base_source_stage import BaseSourceStage
+from job_plat.storage.paths import join_storage_path
 from job_plat.storage.storages import Storage
 
 
@@ -23,11 +23,17 @@ class BronzeStage(BaseSourceStage):
 
     def create_context(self) -> IngestionRun:
         query, country, location = self._validate_search_config()
+        execution_date = self.bronze_ctx.execution_date
+        if execution_date is None:
+            raise ValueError(
+                "BronzeStage requires execution_date for deterministic partition identity"
+            )
         run_context = IngestionRun(
             source=self.connector.name,
             query=query,
             country=country,
             location=location,
+            execution_date=execution_date,
             pipeline_version="1.0.0",
         )
         return run_context
@@ -42,6 +48,8 @@ class BronzeStage(BaseSourceStage):
                     "source": run.source,
                     "query": run.query,
                     "location": run.location,
+                    "execution_date": run.execution_date.isoformat(),
+                    "ingestion_date": run.execution_date.date().isoformat(),
                     "started_at": run.started_at.isoformat(),
                     "canonical_schema_version": "1.0.0",
                 },
@@ -70,31 +78,45 @@ class BronzeStage(BaseSourceStage):
             run=run,
         )
 
-        base_path = (
-            Path(self.bronze_ctx.root_path)
-            / "bronze"
-            / "jobs"
-            / f"ingestion_date={run.started_at.date()}"
-            / f"source={run.source}"
-            / f"run_id={run.run_id}"
+        base_path = join_storage_path(
+            self.bronze_ctx.root_path,
+            "bronze",
+            "jobs",
+            f"ingestion_date={run.execution_date.date().isoformat()}",
+            f"source={run.source}",
+            f"run_id={run.run_id}",
         )
 
-        data_path = base_path / "part-000.jsonl"
+        data_path = join_storage_path(
+            base_path,
+            "part-000.jsonl",
+        )
 
         row_count = self.storage.write_jsonl(
             records=enriched_stream,
-            path=str(data_path),
+            path=data_path,
         )
 
-        write_metadata(path=base_path, run=run, row_count=row_count)
+        write_metadata(
+            storage=self.storage,
+            path=base_path,
+            run=run,
+            row_count=row_count,
+        )
 
         # Save runs metadata in metadata registry
 
-        runs_dir = Path(self.bronze_ctx.root_path) / "_runs"
+        runs_path = join_storage_path(
+            self.bronze_ctx.root_path,
+            "_runs",
+        )
 
-        runs_dir.mkdir(parents=True, exist_ok=True)
         write_metadata(
-            path=runs_dir, run=run, row_count=row_count, filename=f"{run.run_id}.json"
+            storage=self.storage,
+            path=runs_path,
+            run=run,
+            row_count=row_count,
+            filename=f"{run.run_id}.json",
         )
 
         # Log bronze run stats

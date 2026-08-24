@@ -30,8 +30,10 @@ def test_bronze_stage_rejects_missing_country():
 
 
 def test_bronze_stage_builds_run_from_validate_config():
+    execution_date = datetime(2025, 3, 2, tzinfo=UTC)
+
     context = BronzeContext(
-        execution_date=datetime.now(UTC),
+        execution_date=execution_date,
         root_path="/tmp/job-platform",
         query="data engineer",
         country="it",
@@ -53,3 +55,29 @@ def test_bronze_stage_builds_run_from_validate_config():
     assert run.country == "it"
     assert run.location == "Rome"
     assert run.source == "adzuna"
+    assert run.execution_date == execution_date
+
+
+def test_bronze_stage_requires_execution_date():
+    context = BronzeContext(
+        execution_date=None,
+        root_path="/tmp/job-platform",
+        query="data engineer",
+        country="it",
+        location="Rome",
+    )
+
+    connector = MagicMock()
+    connector.name = "adzuna"
+
+    stage = BronzeStage(
+        bronze_ctx=context,
+        storage=MagicMock(),
+        connector=connector,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="requires execution_date",
+    ):
+        stage.create_context()
