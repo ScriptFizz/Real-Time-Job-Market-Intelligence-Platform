@@ -1,21 +1,32 @@
-from collections.abc import Iterable
-from datetime import date
+from datetime import date, datetime
 
-from job_plat.partitioning.state_store import StateStore
+from job_plat.partitioning.processing_ledger import ProcessingAttempt, ProcessingLedger
 
 
 class PartitionManager:
-    def __init__(self, state_store: StateStore):
-        self.state_store = state_store
+    def __init__(self, ledger: ProcessingLedger):
+        self.ledger = ledger
 
     def get_processed(self, stage_name: str) -> set[date]:
-        state = self.state_store.load()
-        values = state.get(stage_name, [])
-        return {date.fromisoformat(v) for v in values}
+        return self.ledger.get_committed_partitions(stage_name)
 
-    def mark_processed(self, stage_name: str, partitions: Iterable[date]) -> None:
-        state = self.state_store.load()
-        existing = set(state.get(stage_name, []))
-        new_values = {p.isoformat() for p in partitions}
-        state[stage_name] = sorted(existing | new_values)
-        self.state_store.save(state)
+    def start_attempt(
+        self,
+        *,
+        stage_name: str,
+        partitions: tuple[date, ...],
+        attempt_id: str,
+        started_at: datetime,
+    ) -> ProcessingAttempt | None:
+        return self.ledger.start_attempt(
+            stage_name=stage_name,
+            partitions=partitions,
+            attempt_id=attempt_id,
+            started_at=started_at,
+        )
+
+    def mark_processed(self, attempt: ProcessingAttempt) -> None:
+        self.ledger.mark_committed(attempt)
+
+    def mark_failed(self, attempt: ProcessingAttempt, error: BaseException) -> None:
+        self.ledger.mark_failed(attempt, error)

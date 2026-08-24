@@ -146,13 +146,11 @@ def test_acknowledge_marks_exact_batch():
             date(2025, 3, 2),
         )
     )
+    attempt = MagicMock()
 
-    stage.acknowledge(batch)
+    stage.acknowledge(batch, attempt)
 
-    stage.partition_manager.mark_processed.assert_called_once_with(
-        stage_name="gold",
-        partitions=batch.partitions,
-    )
+    stage.partition_manager.mark_processed.assert_called_once_with(attempt)
 
 
 def test_acknowledge_ignores_empty_batch():
@@ -160,6 +158,6 @@ def test_acknowledge_ignores_empty_batch():
     stage.partition_manager = MagicMock()
     stage.logger = MagicMock()
 
-    stage.acknowledge(PartitionBatch(partitions=()))
+    stage.acknowledge(PartitionBatch(partitions=()), None)
 
     stage.partition_manager.mark_processed.assert_not_called()

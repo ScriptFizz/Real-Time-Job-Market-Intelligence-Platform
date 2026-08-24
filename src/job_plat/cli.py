@@ -27,7 +27,7 @@ from job_plat.orchestration.ml_pipeline import (
     run_ml_pipeline,
 )
 from job_plat.partitioning.partition_manager import PartitionManager
-from job_plat.partitioning.state_store import get_state_store
+from job_plat.partitioning.processing_ledger import ProcessingLedger
 from job_plat.pipeline.datasets.dataset_definitions import DATASET_DEFS
 from job_plat.pipeline.datasets.dataset_registry import DatasetRegistry
 from job_plat.storage.storages import Storage, get_storage
@@ -74,6 +74,7 @@ def setup_run(
 
 def build_common(
     env_config: EnvironmentConfig,
+    spark: SparkSession,
 ) -> tuple[Storage, DatasetRegistry, PartitionManager]:
     storage = get_storage(env_config.storage.type)
 
@@ -81,14 +82,13 @@ def build_common(
         root=env_config.paths.root, storage=storage, dataset_defs=DATASET_DEFS
     )
 
-    state_store = get_state_store(
-        storage_type=env_config.storage.type,
+    ledger = ProcessingLedger(
+        spark=spark,
         metadata_path=env_config.paths.metadata,
-        storage=storage,
     )
 
     partition_manager = PartitionManager(
-        state_store=state_store,
+        ledger=ledger,
     )
 
     return storage, datasets, partition_manager
@@ -154,7 +154,9 @@ def silver(
             execution_date=run_date,
         )
 
-        storage, datasets, partition_manager = build_common(env_config=env_config)
+        storage, datasets, partition_manager = build_common(
+            env_config=env_config, spark=spark
+        )
 
         run_silver_pipeline(
             ctx=pipeline_ctx, datasets=datasets, partition_manager=partition_manager
@@ -183,7 +185,9 @@ def gold(
             execution=execution, config=env_config, spark=spark, execution_date=run_date
         )
 
-        storage, datasets, partition_manager = build_common(env_config=env_config)
+        storage, datasets, partition_manager = build_common(
+            env_config=env_config, spark=spark
+        )
 
         run_gold_pipeline(
             ctx=pipeline_ctx, datasets=datasets, partition_manager=partition_manager
@@ -222,7 +226,9 @@ def data_pipeline(
 
         connectors = build_connectors(env_config)
 
-        storage, datasets, partition_manager = build_common(env_config=env_config)
+        storage, datasets, partition_manager = build_common(
+            env_config=env_config, spark=spark
+        )
 
         run_data_pipeline(
             ctx=pipeline_ctx,
@@ -262,7 +268,9 @@ def feature(
             config=env_config, spark=spark, execution_date=run_date
         )
 
-        storage, datasets, partition_manager = build_common(env_config=env_config)
+        storage, datasets, partition_manager = build_common(
+            env_config=env_config, spark=spark
+        )
 
         run_feature_pipeline(
             ctx=pipeline_ctx, datasets=datasets, partition_manager=partition_manager
@@ -294,7 +302,9 @@ def ml(
             config=env_config, spark=spark, execution_date=run_date
         )
 
-        storage, datasets, partition_manager = build_common(env_config=env_config)
+        storage, datasets, partition_manager = build_common(
+            env_config=env_config, spark=spark
+        )
 
         run_ml_pipeline(
             ctx=pipeline_ctx, datasets=datasets, partition_manager=partition_manager
@@ -326,7 +336,9 @@ def ml_pipeline(
             config=env_config, spark=spark, execution_date=run_date
         )
 
-        storage, datasets, partition_manager = build_common(env_config=env_config)
+        storage, datasets, partition_manager = build_common(
+            env_config=env_config, spark=spark
+        )
 
         run_full_ml_pipeline(
             ctx=pipeline_ctx, datasets=datasets, partition_manager=partition_manager

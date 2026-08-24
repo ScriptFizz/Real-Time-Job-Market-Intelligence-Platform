@@ -1,5 +1,5 @@
 from job_plat.partitioning.partition_manager import PartitionManager
-from job_plat.partitioning.state_store import LocalStateStore
+from job_plat.partitioning.processing_ledger import ProcessingLedger
 from job_plat.pipeline.datasets.dataset_definitions import (
     BronzeJobs,
     SilverJobs,
@@ -45,7 +45,9 @@ def test_silver_stage_runs(
     first_skills_count = silver_job_skills_df.count()
 
     retry_metadata = tmp_path / "retry-metadata"
-    retry_partition_manager = PartitionManager(LocalStateStore(str(retry_metadata)))
+    retry_partition_manager = PartitionManager(
+        ProcessingLedger(spark, str(retry_metadata))
+    )
 
     retry_stage = SilverStage(
         silver_ctx=silver_ctx,

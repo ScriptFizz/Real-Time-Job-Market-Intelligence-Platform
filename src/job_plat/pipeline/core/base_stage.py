@@ -6,6 +6,7 @@ from typing import Any, Generic, TypeVar
 from job_plat.config.logconfig import ContextLogger
 from job_plat.context.contexts import SparkStageContext, StageExecutionContext
 from job_plat.partitioning.partition_manager import PartitionManager
+from job_plat.partitioning.processing_ledger import ProcessingAttempt
 from job_plat.pipeline.core.read_strategy import (
     IncrementalReadStrategy,
     PartitionBatch,
@@ -59,11 +60,18 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
         )
 
         start = time.time()
+        attempt: ProcessingAttempt | None = None
 
         self.logger.info("stage_started")
 
         try:
             read_result = self.read()
+            attempt = self.partition_manager.start_attempt(
+                stage_name=self.STAGE_NAME,
+                partitions=read_result.batch.partitions,
+                attempt_id=run_context.run_id,
+                started_at=run_context.started_at,
+            )
             outputs = self.transform(read_result.inputs)
             self.validate_outputs(outputs)
             metrics = self.compute_metrics(outputs)
@@ -76,7 +84,7 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
                 outputs=outputs,
                 batch=read_result.batch,
             )
-            self.acknowledge(read_result.batch)
+            self.acknowledge(read_result.batch, attempt)
 
             duration = round(time.time() - start, 2)
             self.logger.info(
@@ -85,15 +93,31 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
             )
 
         except StageSkip as e:
+            self._mark_attempt_failed(attempt, e)
             self.logger.info("stage_skipped", extra={"reason": str(e)})
 
-        except Exception:
+        except Exception as error:
             duration = round(time.time() - start, 2)
+
+            self._mark_attempt_failed(attempt, error)
 
             self.logger.error(
                 "stage_failed", extra={"duration_seconds": duration}, exc_info=True
             )
             raise
+
+    def _mark_attempt_failed(
+        self,
+        attempt: ProcessingAttempt | None,
+        error: BaseException,
+    ) -> None:
+        if attempt is None:
+            return
+
+        try:
+            self.partition_manager.mark_failed(attempt, error)
+        except Exception:
+            self.logger.error("processing_ledger_update_failed", exc_info=True)
 
     # ---------------------
     # READ
@@ -145,14 +169,15 @@ class BaseStage(ABC, Generic[ContextT, OutputT]):
     def acknowledge(
         self,
         batch: PartitionBatch,
+        attempt: ProcessingAttempt | None,
     ) -> None:
         if batch.is_empty:
             return
 
-        self.partition_manager.mark_processed(
-            stage_name=self.STAGE_NAME,
-            partitions=batch.partitions,
-        )
+        if attempt is None:
+            raise RuntimeError("Cannot acknowledge a partition batch without an attempt")
+
+        self.partition_manager.mark_processed(attempt)
 
         self.logger.info(
             "partition_batch_processed",
