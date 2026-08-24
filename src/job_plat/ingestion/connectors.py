@@ -7,6 +7,8 @@ from collections.abc import Iterator
 from typing import Any
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from job_plat.config.env_config import EnvironmentConfig
 from job_plat.ingestion.job_schema import CanonicalJobV1, JobSource
@@ -43,10 +45,50 @@ def require_environment_variable(name: str) -> str:
 
 
 SUPPORTED_COUNTRIES = {"us", "gb", "de", "fr", "it", "nl", "ca", "au"}
+RETRYABLE_STATUS_CODES = (429, 500, 502, 503, 504)
+
+
+class ConnectorRequestError(RuntimeError):
+    """Credential-safe error raised when an HTTP request cannot complete."""
+
+
+class ConnectorHTTPError(ConnectorRequestError):
+    def __init__(self, source: JobSource, status_code: int):
+        self.source = source
+        self.status_code = status_code
+        super().__init__(f"{source} API returned HTTP {status_code}")
+
+
+class ConnectorResponseError(RuntimeError):
+    """Raised when a successful response does not contain the expected JSON."""
 
 
 class JobConnector(ABC):
     name: JobSource
+    schema_error_count: int
+
+    @abstractmethod
+    def close(self) -> None:
+        """Release connector-owned resources, if any."""
+        raise NotImplementedError
+
+    def normalize_with_accounting(
+        self,
+        raw_job: dict[str, Any],
+    ) -> CanonicalJobV1 | None:
+        try:
+            return self.normalize(raw_job)
+        except (KeyError, TypeError, ValueError) as error:
+            self.schema_error_count += 1
+            logger.warning(
+                "connector_schema_error",
+                extra={
+                    "source": self.name,
+                    "error_type": type(error).__name__,
+                    "schema_error_count": self.schema_error_count,
+                },
+            )
+            return None
 
     @abstractmethod
     def fetch(self, criteria: JobSearchCriteria) -> Iterator[dict[str, Any]]:
@@ -70,10 +112,58 @@ class PaginatedAPIConnector(JobConnector):
         self,
         max_pages: int | None = None,
         min_interval_seconds: float | None = None,
+        connect_timeout_seconds: float = 5.0,
+        read_timeout_seconds: float = 30.0,
+        retry_total: int = 3,
+        retry_backoff_factor: float = 0.5,
+        retry_backoff_jitter: float = 0.1,
+        session: requests.Session | None = None,
     ):
+        if connect_timeout_seconds <= 0 or read_timeout_seconds <= 0:
+            raise ValueError("HTTP timeouts must be greater than zero")
+        if retry_total < 0:
+            raise ValueError("retry_total must not be negative")
+        if retry_backoff_factor < 0 or retry_backoff_jitter < 0:
+            raise ValueError("retry backoff values must not be negative")
+
         self.max_pages = max_pages
         self.min_interval_seconds = min_interval_seconds
+        self.timeout = (connect_timeout_seconds, read_timeout_seconds)
+        self.schema_error_count = 0
         self._last_request_ts: float | None = None
+        self.session = session or self._build_session(
+            retry_total=retry_total,
+            backoff_factor=retry_backoff_factor,
+            backoff_jitter=retry_backoff_jitter,
+        )
+
+    @staticmethod
+    def _build_session(
+        *,
+        retry_total: int,
+        backoff_factor: float,
+        backoff_jitter: float,
+    ) -> requests.Session:
+        retry_policy = Retry(
+            total=retry_total,
+            connect=retry_total,
+            read=retry_total,
+            status=retry_total,
+            allowed_methods=frozenset({"GET"}),
+            status_forcelist=RETRYABLE_STATUS_CODES,
+            backoff_factor=backoff_factor,
+            backoff_jitter=backoff_jitter,
+            respect_retry_after_header=True,
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry_policy)
+        session = requests.Session()
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
+
+    def close(self) -> None:
+        self.session.close()
 
     def _throttle(self) -> None:
         if not self.min_interval_seconds:
@@ -91,46 +181,71 @@ class PaginatedAPIConnector(JobConnector):
     def _api_get_response(
         self,
         url: str,
-        params: dict,
-        headers: dict | None = None,
-        timeout: int = 30,
-        meta: dict | None = None,
-    ) -> dict:
+        params: dict[str, Any],
+        headers: dict[str, str] | None = None,
+        meta: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         start = time.time()
         try:
-            response = requests.get(
+            response = self.session.get(
                 url,
                 params=params,
                 headers=headers,
-                timeout=timeout,
+                timeout=self.timeout,
             )
-
-            duration = round(time.time() - start, 3)
-
-            logger.info(
-                f"{self.name}_api_call",
-                extra={
-                    "source": self.name,
-                    "page": meta.get("page") if meta else None,
-                    "status_code": response.status_code,
-                    "duration_sec": duration,
-                },
-            )
-
-            response.raise_for_status()
-
-            return response.json()
-
-        except requests.RequestException:
+        except requests.RequestException as error:
             logger.error(
                 f"{self.name}_api_call_failed",
                 extra={
                     "source": self.name,
                     "page": meta.get("page") if meta else None,
+                    "error_type": type(error).__name__,
                 },
-                exc_info=True,
             )
-            raise
+            raise ConnectorRequestError(
+                f"{self.name} API request failed: {type(error).__name__}"
+            ) from None
+
+        duration = round(time.time() - start, 3)
+        retries = getattr(getattr(response, "raw", None), "retries", None)
+        retry_history = getattr(retries, "history", ())
+        retry_count = len(retry_history) if retry_history is not None else 0
+
+        logger.info(
+            f"{self.name}_api_call",
+            extra={
+                "source": self.name,
+                "page": meta.get("page") if meta else None,
+                "status_code": response.status_code,
+                "duration_sec": duration,
+                "retry_count": retry_count,
+            },
+        )
+
+        if response.status_code >= 400:
+            raise ConnectorHTTPError(self.name, response.status_code)
+
+        try:
+            payload = response.json()
+        except ValueError as error:
+            logger.error(
+                f"{self.name}_api_invalid_json",
+                extra={
+                    "source": self.name,
+                    "page": meta.get("page") if meta else None,
+                    "error_type": type(error).__name__,
+                },
+            )
+            raise ConnectorResponseError(
+                f"{self.name} API returned invalid JSON"
+            ) from None
+
+        if not isinstance(payload, dict):
+            raise ConnectorResponseError(
+                f"{self.name} API returned a non-object JSON payload"
+            )
+
+        return payload
 
     @abstractmethod
     def _api_call(self, criteria: JobSearchCriteria, page: int) -> dict:
@@ -179,11 +294,11 @@ class PaginatedAPIConnector(JobConnector):
                     api_max_pages = math.ceil(total / len(results))
 
                     logger.info(
-                        "connnector_total_results_detected",
+                        "connector_total_results_detected",
                         extra={
                             "source": self.name,
                             "total_results": total,
-                            "extimated_pages": api_max_pages,
+                            "estimated_pages": api_max_pages,
                         },
                     )
 
@@ -228,15 +343,31 @@ class USAJobConnector(PaginatedAPIConnector):
     def __init__(
         self,
         api_key: str,
+        user_agent_email: str = "your_email@example.com",
         max_pages: int | None = None,
         min_interval_seconds: float | None = None,
+        connect_timeout_seconds: float = 5.0,
+        read_timeout_seconds: float = 30.0,
+        retry_total: int = 3,
+        retry_backoff_factor: float = 0.5,
+        retry_backoff_jitter: float = 0.1,
+        session: requests.Session | None = None,
     ):
-        super().__init__(max_pages=max_pages, min_interval_seconds=min_interval_seconds)
+        super().__init__(
+            max_pages=max_pages,
+            min_interval_seconds=min_interval_seconds,
+            connect_timeout_seconds=connect_timeout_seconds,
+            read_timeout_seconds=read_timeout_seconds,
+            retry_total=retry_total,
+            retry_backoff_factor=retry_backoff_factor,
+            retry_backoff_jitter=retry_backoff_jitter,
+            session=session,
+        )
 
         self.base_url = "https://data.usajobs.gov/api/search"
         self.headers = {
             "Host": "data.usajobs.gov",
-            "User-Agent": "your_email@example.com",
+            "User-Agent": user_agent_email,
             "Authorization-Key": api_key,
         }
 
@@ -252,7 +383,19 @@ class USAJobConnector(PaginatedAPIConnector):
         )
 
     def _extract_results(self, data: dict[str, Any]) -> list[dict[str, Any]]:
-        return data["SearchResult"]["SearchResultItems"]
+        search_result = data.get("SearchResult")
+        if not isinstance(search_result, dict):
+            raise ConnectorResponseError("USAJobs response is missing SearchResult")
+
+        results = search_result.get("SearchResultItems")
+        if not isinstance(results, list) or not all(
+            isinstance(item, dict) for item in results
+        ):
+            raise ConnectorResponseError(
+                "USAJobs response contains invalid SearchResultItems"
+            )
+
+        return results
 
     def normalize(self, raw_job: dict[str, Any]) -> CanonicalJobV1:
         desc = raw_job["MatchedObjectDescriptor"]
@@ -289,8 +432,23 @@ class ADZunaConnector(PaginatedAPIConnector):
         app_id: str,
         max_pages: int | None = None,
         min_interval_seconds: float | None = None,
+        connect_timeout_seconds: float = 5.0,
+        read_timeout_seconds: float = 30.0,
+        retry_total: int = 3,
+        retry_backoff_factor: float = 0.5,
+        retry_backoff_jitter: float = 0.1,
+        session: requests.Session | None = None,
     ):
-        super().__init__(max_pages=max_pages, min_interval_seconds=min_interval_seconds)
+        super().__init__(
+            max_pages=max_pages,
+            min_interval_seconds=min_interval_seconds,
+            connect_timeout_seconds=connect_timeout_seconds,
+            read_timeout_seconds=read_timeout_seconds,
+            retry_total=retry_total,
+            retry_backoff_factor=retry_backoff_factor,
+            retry_backoff_jitter=retry_backoff_jitter,
+            session=session,
+        )
 
         self.base_url = "https://api.adzuna.com/v1/api/jobs"
         self.app_id = app_id
@@ -316,8 +474,13 @@ class ADZunaConnector(PaginatedAPIConnector):
         meta = {"page": page}
         return self._api_get_response(url=url, params=params, meta=meta)
 
-    def _extract_results(self, data: dict) -> list[dict]:
-        return data.get("results", [])
+    def _extract_results(self, data: dict[str, Any]) -> list[dict[str, Any]]:
+        results = data.get("results", [])
+        if not isinstance(results, list) or not all(
+            isinstance(item, dict) for item in results
+        ):
+            raise ConnectorResponseError("Adzuna response contains invalid results")
+        return results
 
     def normalize(self, raw_job: dict) -> CanonicalJobV1:
         return CanonicalJobV1(
@@ -338,16 +501,36 @@ class ADZunaConnector(PaginatedAPIConnector):
 
 
 def build_connectors(config: EnvironmentConfig) -> list[JobConnector]:
-    return [
-        # USAJobConnector(
-        # api_key=os.getenv("USAJOBS_API_KEY"),
-        # max_pages=config.bronze.max_pages,
-        # min_interval_seconds = config.bronze.min_interval_seconds
-        # ),
-        ADZunaConnector(
-            api_key=require_environment_variable("ADZUNA_API_KEY"),
-            app_id=require_environment_variable("ADZUNA_APP_ID"),
-            max_pages=config.bronze.max_pages,
-            min_interval_seconds=config.bronze.min_interval_seconds,
-        )
-    ]
+    connectors: list[JobConnector] = []
+
+    for connector_name in config.bronze.connectors:
+        if connector_name == "adzuna":
+            connectors.append(
+                ADZunaConnector(
+                    api_key=require_environment_variable("ADZUNA_API_KEY"),
+                    app_id=require_environment_variable("ADZUNA_APP_ID"),
+                    max_pages=config.bronze.max_pages,
+                    min_interval_seconds=config.bronze.min_interval_seconds,
+                    connect_timeout_seconds=config.bronze.connect_timeout_seconds,
+                    read_timeout_seconds=config.bronze.read_timeout_seconds,
+                    retry_total=config.bronze.retry_total,
+                    retry_backoff_factor=config.bronze.retry_backoff_factor,
+                    retry_backoff_jitter=config.bronze.retry_backoff_jitter,
+                )
+            )
+        elif connector_name == "usajobs":
+            connectors.append(
+                USAJobConnector(
+                    api_key=require_environment_variable("USAJOBS_API_KEY"),
+                    user_agent_email=require_environment_variable("USAJOBS_EMAIL"),
+                    max_pages=config.bronze.max_pages,
+                    min_interval_seconds=config.bronze.min_interval_seconds,
+                    connect_timeout_seconds=config.bronze.connect_timeout_seconds,
+                    read_timeout_seconds=config.bronze.read_timeout_seconds,
+                    retry_total=config.bronze.retry_total,
+                    retry_backoff_factor=config.bronze.retry_backoff_factor,
+                    retry_backoff_jitter=config.bronze.retry_backoff_jitter,
+                )
+            )
+
+    return connectors

@@ -14,7 +14,7 @@ from job_plat.context.context_builders import (
     build_ml_pipeline_context,
 )
 from job_plat.context.contexts import ExecutionParams
-from job_plat.ingestion.connectors import build_connectors
+from job_plat.ingestion.connectors import JobConnector, build_connectors
 from job_plat.orchestration.data_pipeline import (
     run_bronze_pipeline,
     run_data_pipeline,
@@ -36,6 +36,11 @@ from job_plat.utils.helpers import create_spark
 load_dotenv()
 
 app = typer.Typer(help="Job postings data pipeline CLI")
+
+
+def close_connectors(connectors: list[JobConnector]) -> None:
+    for connector in connectors:
+        connector.close()
 
 
 def resolve_execution_date(value: str | None) -> datetime:
@@ -116,6 +121,7 @@ def bronze(
         location=location,
     )
 
+    connectors: list[JobConnector] = []
     try:
         bronze_ctx = build_bronze_context(
             config=env_config, execution=execution, execution_date=run_date
@@ -129,6 +135,7 @@ def bronze(
             run_bronze_pipeline(ctx=bronze_ctx, storage=storage, connector=connector)
 
     finally:
+        close_connectors(connectors)
         spark.stop()
 
 
@@ -219,6 +226,7 @@ def data_pipeline(
         location=location,
     )
 
+    connectors: list[JobConnector] = []
     try:
         pipeline_ctx = build_data_pipeline_context(
             execution=execution, config=env_config, spark=spark, execution_date=run_date
@@ -239,6 +247,7 @@ def data_pipeline(
         )
 
     finally:
+        close_connectors(connectors)
         spark.stop()
 
 

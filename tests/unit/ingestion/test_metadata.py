@@ -40,6 +40,7 @@ def test_build_ingestion_metadata_distinguishes_logical_and_physical_time():
         "started_at": "2025-03-03T10:00:00+00:00",
         "pipeline_version": "1.0.0",
         "row_count": 12,
+        "schema_error_count": 0,
     }
 
 

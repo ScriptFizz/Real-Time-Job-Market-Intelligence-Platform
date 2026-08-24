@@ -21,9 +21,12 @@ def build_ingestion_metadata(
     *,
     run: IngestionRun,
     row_count: int,
+    schema_error_count: int = 0,
 ) -> dict[str, Any]:
     if row_count < 0:
         raise ValueError("row_count must not be negative")
+    if schema_error_count < 0:
+        raise ValueError("schema_error_count must not be negative")
 
     return {
         "run_id": run.run_id,
@@ -36,6 +39,7 @@ def build_ingestion_metadata(
         "started_at": run.started_at.isoformat(),
         "pipeline_version": run.pipeline_version,
         "row_count": row_count,
+        "schema_error_count": schema_error_count,
     }
 
 
@@ -45,6 +49,7 @@ def write_metadata(
     path: str,
     run: IngestionRun,
     row_count: int,
+    schema_error_count: int = 0,
     filename: str = "_metadata.json",
 ) -> None:
     metadata_path = join_storage_path(
@@ -56,6 +61,7 @@ def write_metadata(
         build_ingestion_metadata(
             run=run,
             row_count=row_count,
+            schema_error_count=schema_error_count,
         ),
         metadata_path,
     )

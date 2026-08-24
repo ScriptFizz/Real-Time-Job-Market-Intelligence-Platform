@@ -2,6 +2,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+ConnectorName = Literal["adzuna", "usajobs"]
+
+
+def default_connectors() -> list[ConnectorName]:
+    return ["adzuna"]
+
 
 class PathsConfig(BaseModel):
     root: str
@@ -23,11 +29,17 @@ class StorageConfig(BaseModel):
 
 
 class BronzeConfig(BaseModel):
+    connectors: list[ConnectorName] = Field(default_factory=default_connectors)
     query: str | None = None
     location: str | None = None
     country: str | None = None
     max_pages: int | None = Field(default=None, gt=0)
     min_interval_seconds: float | None = Field(default=None, gt=0)
+    connect_timeout_seconds: float = Field(default=5.0, gt=0)
+    read_timeout_seconds: float = Field(default=30.0, gt=0)
+    retry_total: int = Field(default=3, ge=0, le=10)
+    retry_backoff_factor: float = Field(default=0.5, ge=0)
+    retry_backoff_jitter: float = Field(default=0.1, ge=0)
 
 
 class GoldConfig(BaseModel):

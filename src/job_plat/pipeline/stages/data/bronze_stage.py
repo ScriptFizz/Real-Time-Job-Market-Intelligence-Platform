@@ -42,6 +42,10 @@ class BronzeStage(BaseSourceStage):
         self, records: Iterator[dict], run: IngestionRun
     ) -> Iterator[dict]:
         for record in records:
+            normalized = self.connector.normalize_with_accounting(record)
+            if normalized is None:
+                continue
+
             yield {
                 "ingestion_metadata": {
                     "run_id": run.run_id,
@@ -54,7 +58,7 @@ class BronzeStage(BaseSourceStage):
                     "canonical_schema_version": "1.0.0",
                 },
                 "raw_payload": record,
-                "payload": self.connector.normalize(record).model_dump(),
+                "payload": normalized.model_dump(),
             }
 
     def produce(self, run: IngestionRun, logger: ContextLogger) -> int:
@@ -96,12 +100,14 @@ class BronzeStage(BaseSourceStage):
             records=enriched_stream,
             path=data_path,
         )
+        schema_error_count = self.connector.schema_error_count
 
         write_metadata(
             storage=self.storage,
             path=base_path,
             run=run,
             row_count=row_count,
+            schema_error_count=schema_error_count,
         )
 
         # Save runs metadata in metadata registry
@@ -116,6 +122,7 @@ class BronzeStage(BaseSourceStage):
             path=runs_path,
             run=run,
             row_count=row_count,
+            schema_error_count=schema_error_count,
             filename=f"{run.run_id}.json",
         )
 
@@ -126,6 +133,7 @@ class BronzeStage(BaseSourceStage):
             extra={
                 "source": run.source,
                 "row_count": row_count,
+                "schema_error_count": schema_error_count,
             },
         )
         return row_count

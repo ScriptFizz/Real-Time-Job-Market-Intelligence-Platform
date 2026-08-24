@@ -26,10 +26,11 @@ def test_bronze_produce_uses_storage_paths_and_logical_date():
             }
         ]
     )
-    connector.normalize.return_value.model_dump.return_value = {
+    connector.normalize_with_accounting.return_value.model_dump.return_value = {
         "source": "adzuna",
         "source_job_id": "source-job-1",
     }
+    connector.schema_error_count = 0
 
     captured_records = []
 
@@ -101,3 +102,4 @@ def test_bronze_produce_uses_storage_paths_and_logical_date():
         assert payload["execution_date"] == "2025-03-02T00:00:00+00:00"
         assert payload["ingestion_date"] == "2025-03-02"
         assert payload["row_count"] == 1
+        assert payload["schema_error_count"] == 0

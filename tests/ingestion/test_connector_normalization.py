@@ -1,9 +1,12 @@
+from types import SimpleNamespace
+
 import pytest
 from pydantic import ValidationError
 
 from job_plat.ingestion.connectors import (
     ADZunaConnector,
     USAJobConnector,
+    build_connectors,
     require_environment_variable,
 )
 from job_plat.ingestion.job_schema import CanonicalJobV1
@@ -155,3 +158,46 @@ def test_required_environment_variable_returns_value(monkeypatch):
     monkeypatch.setenv("ADZUNA_API_KEY", "test-key")
 
     assert require_environment_variable("ADZUNA_API_KEY") == "test-key"
+
+
+def test_schema_errors_are_counted_without_logging_raw_payload(caplog):
+    connector = ADZunaConnector(
+        api_key="test-key",
+        app_id="test-app",
+    )
+    raw_job = {
+        "title": "Missing identifier",
+        "secret": "must-not-appear-in-logs",
+    }
+
+    result = connector.normalize_with_accounting(raw_job)
+
+    assert result is None
+    assert connector.schema_error_count == 1
+    assert "must-not-appear-in-logs" not in caplog.text
+
+
+def test_factory_builds_configured_usajobs_connector(monkeypatch):
+    monkeypatch.setenv("USAJOBS_API_KEY", "federal-key")
+    monkeypatch.setenv("USAJOBS_EMAIL", "jobs@example.com")
+    monkeypatch.delenv("ADZUNA_API_KEY", raising=False)
+    monkeypatch.delenv("ADZUNA_APP_ID", raising=False)
+    config = SimpleNamespace(
+        bronze=SimpleNamespace(
+            connectors=["usajobs"],
+            max_pages=2,
+            min_interval_seconds=None,
+            connect_timeout_seconds=1.0,
+            read_timeout_seconds=4.0,
+            retry_total=2,
+            retry_backoff_factor=0.25,
+            retry_backoff_jitter=0.05,
+        )
+    )
+
+    connectors = build_connectors(config)
+
+    assert len(connectors) == 1
+    assert isinstance(connectors[0], USAJobConnector)
+    assert connectors[0].headers["User-Agent"] == "jobs@example.com"
+    assert connectors[0].headers["Authorization-Key"] == "federal-key"
